@@ -334,34 +334,53 @@ def fit_hb_line(lam_hb, flam_hb, ivar_hb):
     ########################### Fit without broad component #############################
     
     ## Single component fit
+    ## Set default value = 130 km/s
     g_hb = Gaussian1D(amplitude = amp_hb, mean = 4862.683, \
-                      stddev = 1.0, name = 'hb_n')
+                      stddev = 2.1, name = 'hb_n')
     
     ## Set amplitudes > 0
     g_hb.amplitude.bounds = (0.0, None)
+    
+    ## Set narrow Hb sigma between 55-500 km/s  
+    g_hb.stddev.bounds = (0.9, 8.1)
         
     ## Initial fit
     g_init = g_hb
     fitter = fitting.LevMarLSQFitter(calc_uncertainties = True)
 
-    gfit_no_broad = fitter(g_init, lam_hb, flam_hb, weights = np.sqrt(ivar_hb), maxiter = 300)
-    rchi2_no_broad = fit_utils.calculate_red_chi2(flam_hb, gfit_no_broad(lam_hb), ivar_hb, n_free_params = 3)
+    gfit_no_broad = fitter(g_init, lam_hb, flam_hb, \
+                           weights = np.sqrt(ivar_hb), maxiter = 300)
+    rchi2_no_broad = fit_utils.calculate_red_chi2(flam_hb, gfit_no_broad(lam_hb), \
+                                                  ivar_hb, n_free_params = 3)
     
     #####################################################################################
     ########################### Fit with broad component ################################
     
     ## Two component fit
+    ## Default narrow sigma = 130 km/s
+    ## Default broad sigma -- double narrow sigma ~ 260 km/s
     g_hb_n = Gaussian1D(amplitude = amp_hb, mean = 4862.683, \
-                      stddev = 1.0, name = 'hb_n')
+                      stddev = 2.1, name = 'hb_n')
     g_hb_b = Gaussian1D(amplitude = amp_hb/3, mean = 4862.683, \
-                      stddev = 2.0, name = 'hb_b')
+                      stddev = 4.2, name = 'hb_b')
+    
+    ## Set amplitudes > 0
+    g_hb_n.amplitude.bounds = (0.0, None)
+    g_hb_b.amplitude.bounds = (0.0, None)
+    
+    ## Set narrow Hb sigma between 55-500 km/s  
+    g_hb_n.stddev.bounds = (0.9, 8.1)
+    ## Set min broad Hb sigma ~ 200 km/s
+    g_hb_b.stddev.bounds = (3.0, None)
     
     ## Initial fit
     g_init = g_hb_n + g_hb_b
     fitter = fitting.LevMarLSQFitter(calc_uncertainties = True)
     
-    gfit_broad = fitter(g_init, lam_hb, flam_hb, weights = np.sqrt(ivar_hb), maxiter = 300)
-    rchi2_broad = fit_utils.calculate_red_chi2(flam_hb, gfit_broad(lam_hb), ivar_hb, n_free_params = 6)
+    gfit_broad = fitter(g_init, lam_hb, flam_hb, \
+                        weights = np.sqrt(ivar_hb), maxiter = 300)
+    rchi2_broad = fit_utils.calculate_red_chi2(flam_hb, gfit_broad(lam_hb), \
+                                               ivar_hb, n_free_params = 6)
     
     #####################################################################################
     #####################################################################################
