@@ -249,10 +249,10 @@ def lamspace_to_velspace(del_lam, lam_ref):
     lam_ref : float
         Reference wavelength for the conversion
         
-    Return
-    ------
+    Returns
+    -------
     vel : float
-        FWHM of simga in velocity units
+        FWHM or simga in velocity units
     """
     ## Speed of light in km/s
     c = 2.99792e+5
@@ -262,3 +262,67 @@ def lamspace_to_velspace(del_lam, lam_ref):
     return (vel)
     
 ####################################################################################################
+
+def velspace_to_lamspace(vel, lam_ref):
+    """
+    This function converts velocity from velocity space to wavelength space.
+    
+    Parameters
+    ----------
+    vel : flaot
+        FWHM or sigma in velocity space
+    lam_ref : float
+        Reference wavelength for the conversion
+        
+    Returns
+    -------
+    del_lam : float
+        FWHM or sigma in wanvelength units
+    """
+    ## Speed of light in km/s
+    c = 2.99792e+5
+    
+    del_lam = (vel/c)*lam_ref
+    
+    return (del_lam)
+
+####################################################################################################
+    
+def compute_aon_emline(lam_rest, flam_rest, ivar_rest, model, emline):
+    
+    if (emline == 'hb'):
+        noise_lam = ((lam_rest >= 4700) & (lam_rest <= 4800))|((lam_rest >= 4920)&(lam_rest <= 4935))
+    elif (emline == 'sii'):
+        noise_lam = ((lam_rest >= 6650)&(lam_rest <= 6690))|((lam_rest >= 6760)&(lam_rest <= 6800))
+    elif (emline == 'oiii'):
+        noise_lam = ((lam_rest >= 4900)&(lam_rest <= 4935))|((lam_rest >= 5050)&(lam_rest <= 5100))
+    elif (emline == 'nii_ha'):
+        noise_lam = ((lam_rest >= 6330)&(lam_rest <= 6450))|((lam_rest >= 6650)&(lam_rest <= 6690))
+        
+    lam_region = lam_rest[noise_lam]
+    flam_region = flam_rest[noise_lam]
+    model_region = model(lam_region)
+    
+    res = flam_region - model_region
+    noise = np.std(res)
+    
+    n_models = model.n_submodels
+    
+    if (n_models > 1):
+        names_models = model.submodel_names
+        aon_vals = dict()
+        for name in names_models:
+            aon = model[name].amplitude/noise
+            aon_vals[name] = aon
+    else:
+        name = model.name
+        
+        aon_vals = dict()
+        aon = model.amplitude/noise
+        aon_vals[name] = aon
+    
+   
+    return (aon_vals)
+        
+####################################################################################################
+    
