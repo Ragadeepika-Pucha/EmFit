@@ -2,7 +2,7 @@
 This script consists of utility functions for emission-line fitting related stuff.
 
 Author : Ragadeepika Pucha
-Version : 2023, March 14
+Version : 2023, March 21
 """
 
 ###################################################################################################
@@ -15,6 +15,32 @@ import fitsio
 from desiutil.dust import dust_transmission
 from desispec.io import read_spectra
 from desispec.coaddition import coadd_cameras
+
+import matplotlib.pyplot as plt
+
+###################################################################################################
+
+## Making the matplotlib plots look nicer
+settings = {
+    'font.size':22,
+    'axes.linewidth':2.0,
+    'xtick.major.size':6.0,
+    'xtick.minor.size':4.0,
+    'xtick.major.width':2.0,
+    'xtick.minor.width':1.5,
+    'xtick.direction':'in', 
+    'xtick.minor.visible':True,
+    'xtick.top':True,
+    'ytick.major.size':6.0,
+    'ytick.minor.size':4.0,
+    'ytick.major.width':2.0,
+    'ytick.minor.width':1.5,
+    'ytick.direction':'in', 
+    'ytick.minor.visible':True,
+    'ytick.right':True
+}
+
+plt.rcParams.update(**settings)
 
 ###################################################################################################
 
@@ -49,7 +75,7 @@ def find_stellar_continuum(specprod, survey, program, healpix, targetid):
     """
     
     ## Fastspecfit healpix directory
-    fastspec_dir = f'/global/cfs/cdirs/desi/spectro/fastspecfit/{specprod}/v1.0/healpix'
+    fastspec_dir = f'/global/cfs/cdirs/desi/spectro/fastspecfit/{specprod}/v2.0/healpix'
     ## Specific healpix directory of the target
     target_dir = f'{survey}/{program}/{healpix//100}/{healpix}'
     ## Fastspecfit file directory of the target
@@ -144,7 +170,42 @@ def find_coadded_spectra(specprod, survey, program, healpix, targetid):
 
 ###################################################################################################
 
-def get_emline_spectra(specprod, survey, program, healpix, targetid, z = None, rest_frame = False):
+def plot_spectra_continuum(lam, flam, total_cont, axs = None):
+    """
+    This function overplots the stellar continuum on the spectra.
+    
+    Parameters
+    ----------
+    lam : numpy array
+        Wavelength array of the spectra. 
+        
+    flam : numpy array
+        Flux array of the spectra
+        
+    total_cont : numpy array
+        Total stellar continuum of the spectra
+        
+    axs : axis object
+        Axes where the plot needs to be. Default is None.
+        
+    Returns
+    -------
+        None
+    """
+    
+    if (axs == None):
+        plt.figure(figsize = (24, 8))
+        axs = plt.gca()
+
+    axs.plot(lam, flam, color = 'grey', alpha = 0.8, label = 'Spectra')
+    axs.plot(lam, total_cont, color = 'r', lw = 2.0, label = 'Total continuum')
+    axs.set(xlabel = '$\lambda$', ylabel = '$F_{\lambda}$')
+    axs.legend(fontsize = 16, loc = 'best')
+    
+###################################################################################################
+
+def get_emline_spectra(specprod, survey, program, healpix, targetid,\
+                       z = None, rest_frame = False, plot_continuum = False):
     """
     This function finds the coadded spectra and stellar continuum model of a given target and
     returns the continuum-subtracted emission-line spectra
@@ -174,6 +235,10 @@ def get_emline_spectra(specprod, survey, program, healpix, targetid, z = None, r
         Whether or not to return the emission-line spectra in the rest-frame.
         Default is False
         
+    plot_continuum : bool
+        Whether or not to plot spectra+continuum for the given object.
+        Default is False
+        
     Returns
     -------
     lam : numpy array
@@ -200,6 +265,9 @@ def get_emline_spectra(specprod, survey, program, healpix, targetid, z = None, r
         emline_spec = emline_spec*(1+z)
         ivar = ivar/((1+z)**2)
 
+    if (plot_continuum == True):
+        plot_spectra_continuum(lam, flam, total_cont)
+        
     return (lam, emline_spec, ivar)
 
 ###################################################################################################
