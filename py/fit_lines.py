@@ -2,7 +2,7 @@
 The functions in this script are useful for fitting different emission-lines.
 
 Ragadeepika Pucha
-Version : 2023, March 14
+Version : 2023, March 21
 """
 
 ###################################################################################################
@@ -10,7 +10,7 @@ Version : 2023, March 14
 import numpy as np
 
 from astropy.modeling import fitting
-from astropy.modeling.models import Gaussian1D
+from astropy.modeling.models import Gaussian1D, Polynomial1D
 
 import fit_utils
 
@@ -357,7 +357,6 @@ def fit_hb_line(lam_hb, flam_hb, ivar_hb):
         Reduced chi2 of the best-fit
     """
     
-    
     ## Initial estimate of amplitude
     amp_hb = np.max(flam_hb)
     
@@ -376,7 +375,7 @@ def fit_hb_line(lam_hb, flam_hb, ivar_hb):
     g_hb.stddev.bounds = (0.9, 8.1)
         
     ## Initial fit
-    g_init = g_hb
+    g_init = g_hb 
     fitter = fitting.LevMarLSQFitter(calc_uncertainties = True)
 
     gfit_no_broad = fitter(g_init, lam_hb, flam_hb, \
@@ -405,7 +404,7 @@ def fit_hb_line(lam_hb, flam_hb, ivar_hb):
     g_hb_b.stddev.bounds = (3.0, None)
     
     ## Initial fit
-    g_init = g_hb_n + g_hb_b
+    g_init = g_hb_n + g_hb_b 
     fitter = fitting.LevMarLSQFitter(calc_uncertainties = True)
     
     gfit_broad = fitter(g_init, lam_hb, flam_hb, \
