@@ -49,14 +49,20 @@ def fit_sii_lines(lam_sii, flam_sii, ivar_sii):
     ########################### One-component fit #######################################
     
     ## Initial gaussian fits  
+    ## Set default sigma values to 130 km/s
+    
     g_sii6716 = Gaussian1D(amplitude = amp_sii, mean = 6718.294, \
-                           stddev = 1.0, name = 'sii6716')
+                           stddev = 2.9, name = 'sii6716')
     g_sii6731 = Gaussian1D(amplitude = amp_sii, mean = 6732.673, \
-                           stddev = 1.0, name = 'sii6731')
+                           stddev = 2.9, name = 'sii6731')
     
     ## Set amplitudes > 0
     g_sii6716.amplitude.bounds = (0.0, None)
     g_sii6731.amplitude.bounds = (0.0, None)
+    
+    ## Set bounds for sigma -- 55 - 500 km/s
+    g_sii6716.stddev.bounds = (1.2, 11.2)
+    g_sii6731.stddev.bounds = (1.2, 11.2)
     
     ## Tie means of the two gaussians
     def tie_mean_sii(model):
@@ -75,28 +81,35 @@ def fit_sii_lines(lam_sii, flam_sii, ivar_sii):
     fitter = fitting.LevMarLSQFitter(calc_uncertainties = True)
     
     ## Fit
-    gfit_1comp = fitter(g_init, lam_sii, flam_sii, weights = np.sqrt(ivar_sii), maxiter = 300)
-    rchi2_1comp = fit_utils.calculate_red_chi2(flam_sii, gfit_1comp(lam_sii), ivar_sii, n_free_params = 4)
+    gfit_1comp = fitter(g_init, lam_sii, flam_sii, \
+                        weights = np.sqrt(ivar_sii), maxiter = 300)
+    rchi2_1comp = fit_utils.calculate_red_chi2(flam_sii, gfit_1comp(lam_sii),\
+                                               ivar_sii, n_free_params = 4)
     
     #####################################################################################
     ########################### Two-component fit #######################################
     
     ## Initial gaussian fits
+    ## Default values of sigma ~ 130 km/s
     g_sii6716 = Gaussian1D(amplitude = amp_sii/2, mean = 6718.294, \
-                           stddev = 1.0, name = 'sii6716')
+                           stddev = 2.9, name = 'sii6716')
     g_sii6731 = Gaussian1D(amplitude = amp_sii/2, mean = 6732.673, \
-                           stddev = 1.0, name = 'sii6731')
+                           stddev = 2.9, name = 'sii6731')
     
     g_sii6716_out = Gaussian1D(amplitude = amp_sii/4, mean = 6718.294, \
-                           stddev = 3.0, name = 'sii6716_out')
+                           stddev = 2.9, name = 'sii6716_out')
     g_sii6731_out = Gaussian1D(amplitude = amp_sii/4, mean = 6732.673, \
-                           stddev = 3.0, name = 'sii6731_out')
+                           stddev = 2.9, name = 'sii6731_out')
     
     ## Set amplitudes > 0
     g_sii6716.amplitude.bounds = (0.0, None)
     g_sii6716_out.amplitude.bounds = (0.0, None)
     g_sii6731.amplitude.bounds = (0.0, None)
     g_sii6731_out.amplitude.bounds = (0.0, None)
+    
+    ## Set bounds for sigma -- 55 - 500 km/s
+    g_sii6716.stddev.bounds = (1.2, 11.2)
+    g_sii6731.stddev.bounds = (1.2, 11.2)
     
     ## Tie means of the main gaussian components
     def tie_mean_sii(model):
@@ -118,13 +131,15 @@ def fit_sii_lines(lam_sii, flam_sii, ivar_sii):
     
     ## Tie standard deviations of the outflow components
     def tie_std_sii_out(model):
-        return (model['sii6716_out'].stddev)*(model['sii6731_out'].mean/model['sii6716_out'].mean)
+        return (model['sii6716_out'].stddev)*\
+    (model['sii6731_out'].mean/model['sii6716_out'].mean)
     
     g_sii6731_out.stddev.tied = tie_std_sii_out
     
     ## Tie amplitudes of all the four components
     def tie_amp_sii(model):
-        return ((model['sii6731'].amplitude/model['sii6716'].amplitude)*model['sii6716_out'].amplitude)
+        return ((model['sii6731'].amplitude/model['sii6716'].amplitude)\
+                *model['sii6716_out'].amplitude)
     
     g_sii6731_out.amplitude.tied = tie_amp_sii
     
@@ -132,8 +147,10 @@ def fit_sii_lines(lam_sii, flam_sii, ivar_sii):
     g_init = g_sii6716 + g_sii6731 + g_sii6716_out + g_sii6731_out
     fitter = fitting.LevMarLSQFitter(calc_uncertainties = True)
     
-    gfit_2comp = fitter(g_init, lam_sii, flam_sii, weights = np.sqrt(ivar_sii), maxiter = 300)
-    rchi2_2comp = fit_utils.calculate_red_chi2(flam_sii, gfit_2comp(lam_sii), ivar_sii, n_free_params = 7)
+    gfit_2comp = fitter(g_init, lam_sii, flam_sii, \
+                        weights = np.sqrt(ivar_sii), maxiter = 300)
+    rchi2_2comp = fit_utils.calculate_red_chi2(flam_sii, gfit_2comp(lam_sii), \
+                                               ivar_sii, n_free_params = 7)
     
     #####################################################################################
     #####################################################################################
