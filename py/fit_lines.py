@@ -201,14 +201,18 @@ def fit_oiii_lines(lam_oiii, flam_oiii, ivar_oiii):
     ########################### One-component fit #######################################
     
     ## Initial gaussian fits
+    ## Set default values of sigma ~ 130 km/s
     g_oiii4959 = Gaussian1D(amplitude = amp_oiii4959, mean = 4960.295, \
-                            stddev = 1.0, name = 'oiii4959')
+                            stddev = 2.1, name = 'oiii4959')
     g_oiii5007 = Gaussian1D(amplitude = amp_oiii5007, mean = 5008.239, \
-                          stddev = 1.0, name = 'oiii5007')
+                          stddev = 2.1, name = 'oiii5007')
     
     ## Set amplitudes > 0
     g_oiii4959.amplitude.bounds = (0.0, None)
     g_oiii5007.amplitude.bounds = (0.0, None)
+    ## Set bounds for sigma values - 55-500 km/s
+    g_oiii4959.stddev.bounds = (0.9, 8.3)
+    g_oiii4959.stddev.bounds = (0.9, 8.3)
     
     ## Tie Means of the two gaussians
     def tie_mean_oiii(model):
@@ -234,17 +238,20 @@ def fit_oiii_lines(lam_oiii, flam_oiii, ivar_oiii):
     ## Fitter
     fitter = fitting.LevMarLSQFitter(calc_uncertainties = True)
     
-    gfit_1comp = fitter(g_init, lam_oiii, flam_oiii, weights = np.sqrt(ivar_oiii), maxiter = 300)
-    rchi2_1comp = fit_utils.calculate_red_chi2(flam_oiii, gfit_1comp(lam_oiii), ivar_oiii, n_free_params = 3) 
+    gfit_1comp = fitter(g_init, lam_oiii, flam_oiii, \
+                        weights = np.sqrt(ivar_oiii), maxiter = 300)
+    rchi2_1comp = fit_utils.calculate_red_chi2(flam_oiii, gfit_1comp(lam_oiii), \
+                                               ivar_oiii, n_free_params = 3) 
     
     #####################################################################################
     ########################### Two-component fit #######################################
     
     ## Initial gaussians
+    ## Set default values of sigma ~ 130 km/s
     g_oiii4959 = Gaussian1D(amplitude = amp_oiii4959/2, mean = 4960.295, \
-                            stddev = 1.0, name = 'oiii4959')
+                            stddev = 2.1, name = 'oiii4959')
     g_oiii5007 = Gaussian1D(amplitude = amp_oiii5007/2, mean = 5008.239, \
-                          stddev = 1.0, name = 'oiii5007')
+                          stddev = 2.1, name = 'oiii5007')
     
     g_oiii4959_out = Gaussian1D(amplitude = amp_oiii4959/4, mean = 4960.295, \
                                 stddev = 4.0, name = 'oiii4959_out')
@@ -256,6 +263,10 @@ def fit_oiii_lines(lam_oiii, flam_oiii, ivar_oiii):
     g_oiii5007.amplitude.bounds = (0.0, None)
     g_oiii4959_out.amplitude.bounds = (0.0, None)
     g_oiii5007_out.amplitude.bounds = (0.0, None)
+    
+    ## Set bounds for sigma values - 55-500 km/s
+    g_oiii4959.stddev.bounds = (0.9, 8.3)
+    g_oiii4959.stddev.bounds = (0.9, 8.3)
     
     ## Tie Means of the two gaussians
     def tie_mean_oiii(model):
@@ -289,7 +300,8 @@ def fit_oiii_lines(lam_oiii, flam_oiii, ivar_oiii):
 
     ## Tie standard deviations of the outflow components in the velocity space
     def tie_std_oiii_out(model):
-        return (model['oiii4959_out'].stddev)*(model['oiii5007_out'].mean/model['oiii4959_out'].mean)
+        return (model['oiii4959_out'].stddev)*\
+    (model['oiii5007_out'].mean/model['oiii4959_out'].mean)
 
     g_oiii5007_out.stddev.tied = tie_std_oiii_out
     
@@ -299,8 +311,10 @@ def fit_oiii_lines(lam_oiii, flam_oiii, ivar_oiii):
     ## Fitter
     fitter = fitting.LevMarLSQFitter(calc_uncertainties = True)
     
-    gfit_2comp = fitter(g_init, lam_oiii, flam_oiii, weights = np.sqrt(ivar_oiii), maxiter = 300)
-    rchi2_2comp = fit_utils.calculate_red_chi2(flam_oiii, gfit_2comp(lam_oiii), ivar_oiii, n_free_params = 6)
+    gfit_2comp = fitter(g_init, lam_oiii, flam_oiii, \
+                        weights = np.sqrt(ivar_oiii), maxiter = 300)
+    rchi2_2comp = fit_utils.calculate_red_chi2(flam_oiii, gfit_2comp(lam_oiii), \
+                                               ivar_oiii, n_free_params = 6)
     
     #####################################################################################
     #####################################################################################
