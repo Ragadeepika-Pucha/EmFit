@@ -19,7 +19,7 @@ from astropy.table import Table
 import fitsio
 import matplotlib.pyplot as plt
 
-import fit_utils
+import measure_fits as mfit
 
 ###################################################################################################
 
@@ -169,7 +169,7 @@ def plot_spectra_fits(targetid, lam_rest, flam_rest, fits, rchi2s):
     
     if (n_hb == 1):
         hb.plot(lam_hb, hb_fit(lam_hb), color = 'orange')
-        sig_hb_n = fit_utils.lamspace_to_velspace(hb_fit.stddev.value, \
+        sig_hb_n = mfit.lamspace_to_velspace(hb_fit.stddev.value, \
                                                   hb_fit.mean.value)
         hb.annotate('$\sigma (H\\beta;n)$ = '+str(round(sig_hb_n, 1))+' km/s',\
                     xy = (4870, 0.9), xycoords = hb.get_xaxis_transform(),\
@@ -178,9 +178,9 @@ def plot_spectra_fits(targetid, lam_rest, flam_rest, fits, rchi2s):
         hb.plot(lam_hb, hb_fit['hb_n'](lam_hb), color = 'orange')
         hb.plot(lam_hb, hb_fit['hb_b'](lam_hb), color = 'blue')
         
-        sig_hb_n = fit_utils.lamspace_to_velspace(hb_fit['hb_n'].stddev.value,\
+        sig_hb_n = mfit.lamspace_to_velspace(hb_fit['hb_n'].stddev.value,\
                                                   hb_fit['hb_n'].mean.value)
-        sig_hb_b = fit_utils.lamspace_to_velspace(hb_fit['hb_b'].stddev.value,\
+        sig_hb_b = mfit.lamspace_to_velspace(hb_fit['hb_b'].stddev.value,\
                                                   hb_fit['hb_b'].mean.value)
         hb.annotate('$\sigma (H\\beta;n)$ = '+str(round(sig_hb_n, 1))+' km/s', xy = (4870, 0.9),\
                     xycoords = hb.get_xaxis_transform(), fontsize = 16, color = 'k')
@@ -215,7 +215,7 @@ def plot_spectra_fits(targetid, lam_rest, flam_rest, fits, rchi2s):
     
     for ii in range(n_oiii):
         oiii.plot(lam_oiii, oiii_fit[names_oiii[ii]](lam_oiii), color = 'orange')
-        sig_val = fit_utils.lamspace_to_velspace(oiii_fit[names_oiii[ii]].stddev.value, \
+        sig_val = mfit.lamspace_to_velspace(oiii_fit[names_oiii[ii]].stddev.value, \
                                                  oiii_fit[names_oiii[ii]].mean.value)
         oiii.annotate(f'$\sigma$ ({names_oiii[ii]}) = {round(sig_val, 1)} km/s', \
                       xy = (4905, 0.8-(ii*0.05)), xycoords = oiii.get_xaxis_transform(),\
@@ -250,7 +250,7 @@ def plot_spectra_fits(targetid, lam_rest, flam_rest, fits, rchi2s):
     if ('ha_b' in names_ha):
         for ii in range(n_ha-2):
             ha.plot(lam_nii, nii_ha_fit[names_ha[ii]](lam_nii), color = 'orange')
-            sig_val = fit_utils.lamspace_to_velspace(nii_ha_fit[names_ha[ii]].stddev.value,\
+            sig_val = mfit.lamspace_to_velspace(nii_ha_fit[names_ha[ii]].stddev.value,\
                                                      nii_ha_fit[names_ha[ii]].mean.value)
             ha.annotate(f'$\sigma$ ({names_ha[ii]}) = \n{round(sig_val, 1)} km/s',\
                         xy = (6600, 0.9-(ii*0.1)), xycoords = ha.get_xaxis_transform(),\
@@ -258,9 +258,9 @@ def plot_spectra_fits(targetid, lam_rest, flam_rest, fits, rchi2s):
         ha.plot(lam_nii, nii_ha_fit['ha_n'](lam_nii), color = 'orange')
         ha.plot(lam_nii, nii_ha_fit['ha_b'](lam_nii), color = 'blue')
         
-        sig_ha_n = fit_utils.lamspace_to_velspace(nii_ha_fit['ha_n'].stddev.value,\
+        sig_ha_n = mfit.lamspace_to_velspace(nii_ha_fit['ha_n'].stddev.value,\
                                                   nii_ha_fit['ha_n'].mean.value)
-        sig_ha_b = fit_utils.lamspace_to_velspace(nii_ha_fit['ha_b'].stddev.value,\
+        sig_ha_b = mfit.lamspace_to_velspace(nii_ha_fit['ha_b'].stddev.value,\
                                                   nii_ha_fit['ha_b'].mean.value)
         ha.annotate('$\sigma (H\\alpha;n)$ = '+str(round(sig_ha_n,1))+' km/s',\
                     xy = (6405, 0.8),xycoords = ha.get_xaxis_transform(),\
@@ -271,14 +271,14 @@ def plot_spectra_fits(targetid, lam_rest, flam_rest, fits, rchi2s):
     else:
         for ii in range(n_ha-1):
             ha.plot(lam_nii, nii_ha_fit[names_ha[ii]](lam_nii), color = 'orange')
-            sig_val = fit_utils.lamspace_to_velspace(nii_ha_fit[names_ha[ii]].stddev.value,\
+            sig_val = mfit.lamspace_to_velspace(nii_ha_fit[names_ha[ii]].stddev.value,\
                                                      nii_ha_fit[names_ha[ii]].mean.value)
             ha.annotate(f'$\sigma$ ({names_ha[ii]}) = \n{round(sig_val, 1)} km/s',\
                         xy = (6600, 0.9-(ii*0.1)), xycoords = ha.get_xaxis_transform(),\
                         fontsize = 16, color = 'k')
         ha.plot(lam_nii, nii_ha_fit['ha_n'](lam_nii), color = 'orange')
         
-        sig_ha_n = fit_utils.lamspace_to_velspace(nii_ha_fit['ha_n'].stddev.value,\
+        sig_ha_n = mfit.lamspace_to_velspace(nii_ha_fit['ha_n'].stddev.value,\
                                                   nii_ha_fit['ha_n'].mean.value)
         ha.annotate('$\sigma (H\\alpha;n)$ = '+str(round(sig_ha_n, 1))+' km/s',\
                     xy = (6405, 0.8),xycoords = ha.get_xaxis_transform(),\
@@ -314,7 +314,7 @@ def plot_spectra_fits(targetid, lam_rest, flam_rest, fits, rchi2s):
     
     for ii in range(n_sii):
         sii.plot(lam_sii, sii_fit[names_sii[ii]](lam_sii), color = 'orange')
-        sig_val = fit_utils.lamspace_to_velspace(sii_fit[names_sii[ii]].stddev.value,\
+        sig_val = mfit.lamspace_to_velspace(sii_fit[names_sii[ii]].stddev.value,\
                                                  sii_fit[names_sii[ii]].mean.value)
         sii.annotate(f'$\sigma$ ({names_sii[ii]}) = \n{round(sig_val, 1)} km/s',\
                      xy = (6655, 0.75-(ii*0.1)), xycoords = sii.get_xaxis_transform(),\
