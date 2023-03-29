@@ -13,6 +13,7 @@ from astropy.modeling import fitting
 from astropy.modeling.models import Gaussian1D, Polynomial1D
 
 import fit_utils
+import measure_fits as mfit
 
 ###################################################################################################
 
@@ -35,6 +36,9 @@ def fit_sii_lines(lam_sii, flam_sii, ivar_sii):
         
     Returns
     -------
+    fitter : Astropy fitter
+        Fitter for computing uncertainties
+    
     gfit : Astropy model
         Best-fit 1 component or 2 component model
         
@@ -74,12 +78,12 @@ def fit_sii_lines(lam_sii, flam_sii, ivar_sii):
     
     ## Initial Gaussian fit
     g_init = g_sii6716 + g_sii6731
-    fitter = fitting.LevMarLSQFitter()
+    fitter_1comp = fitting.LevMarLSQFitter(calc_uncertainties = True)
     
     ## Fit
-    gfit_1comp = fitter(g_init, lam_sii, flam_sii, \
-                        weights = np.sqrt(ivar_sii), maxiter = 300)
-    rchi2_1comp = fit_utils.calculate_red_chi2(flam_sii, gfit_1comp(lam_sii),\
+    gfit_1comp = fitter_1comp(g_init, lam_sii, flam_sii, \
+                        weights = np.sqrt(ivar_sii), maxiter = 1000)
+    rchi2_1comp = mfit.calculate_red_chi2(flam_sii, gfit_1comp(lam_sii),\
                                                ivar_sii, n_free_params = 4)
     
     #####################################################################################
@@ -138,11 +142,11 @@ def fit_sii_lines(lam_sii, flam_sii, ivar_sii):
     
     ## Initial gaussian
     g_init = g_sii6716 + g_sii6731 + g_sii6716_out + g_sii6731_out
-    fitter = fitting.LevMarLSQFitter()
+    fitter_2comp = fitting.LevMarLSQFitter(calc_uncertainties = True)
     
-    gfit_2comp = fitter(g_init, lam_sii, flam_sii, \
-                        weights = np.sqrt(ivar_sii), maxiter = 300)
-    rchi2_2comp = fit_utils.calculate_red_chi2(flam_sii, gfit_2comp(lam_sii), \
+    gfit_2comp = fitter_2comp(g_init, lam_sii, flam_sii, \
+                        weights = np.sqrt(ivar_sii), maxiter = 1000)
+    rchi2_2comp = mfit.calculate_red_chi2(flam_sii, gfit_2comp(lam_sii), \
                                                ivar_sii, n_free_params = 7)
     
     #####################################################################################
@@ -154,9 +158,9 @@ def fit_sii_lines(lam_sii, flam_sii, ivar_sii):
     del_rchi2 = ((rchi2_1comp - rchi2_2comp)/rchi2_1comp)*100
     
     if (del_rchi2 >= 20):
-        return (gfit_2comp, rchi2_2comp)
+        return (fitter_2comp, gfit_2comp, rchi2_2comp)
     else:
-        return (gfit_1comp, rchi2_1comp)
+        return (fitter_1comp, gfit_1comp, rchi2_1comp)
     
 ####################################################################################################
 
@@ -179,6 +183,9 @@ def fit_oiii_lines(lam_oiii, flam_oiii, ivar_oiii):
         
     Returns
     -------
+    fitter : Astropy fitter
+        Fitter for computing uncertainties
+        
     gfit : Astropy model
         Best-fit 1 component or 2 component model
         
@@ -218,7 +225,8 @@ def fit_oiii_lines(lam_oiii, flam_oiii, ivar_oiii):
 
     ## Tie standard deviations in velocity space
     def tie_std_oiii(model):
-        return ((model['oiii4959'].stddev)*(model['oiii5007'].mean/model['oiii4959'].mean))
+        return ((model['oiii4959'].stddev)*\
+                (model['oiii5007'].mean/model['oiii4959'].mean))
 
     g_oiii5007.stddev.tied = tie_std_oiii
     
@@ -226,11 +234,11 @@ def fit_oiii_lines(lam_oiii, flam_oiii, ivar_oiii):
     g_init = g_oiii4959 + g_oiii5007
     
     ## Fitter
-    fitter = fitting.LevMarLSQFitter()
+    fitter_1comp = fitting.LevMarLSQFitter(calc_uncertainties = True)
     
-    gfit_1comp = fitter(g_init, lam_oiii, flam_oiii, \
-                        weights = np.sqrt(ivar_oiii), maxiter = 300)
-    rchi2_1comp = fit_utils.calculate_red_chi2(flam_oiii, gfit_1comp(lam_oiii), \
+    gfit_1comp = fitter_1comp(g_init, lam_oiii, flam_oiii, \
+                        weights = np.sqrt(ivar_oiii), maxiter = 1000)
+    rchi2_1comp = mfit.calculate_red_chi2(flam_oiii, gfit_1comp(lam_oiii), \
                                                ivar_oiii, n_free_params = 3) 
     
     #####################################################################################
@@ -268,7 +276,8 @@ def fit_oiii_lines(lam_oiii, flam_oiii, ivar_oiii):
 
     ## Tie standard deviations in velocity space
     def tie_std_oiii(model):
-        return ((model['oiii4959'].stddev)*(model['oiii5007'].mean/model['oiii4959'].mean))
+        return ((model['oiii4959'].stddev)*\
+                (model['oiii5007'].mean/model['oiii4959'].mean))
 
     g_oiii5007.stddev.tied = tie_std_oiii
     
@@ -295,11 +304,11 @@ def fit_oiii_lines(lam_oiii, flam_oiii, ivar_oiii):
     g_init = g_oiii4959 + g_oiii5007 + g_oiii4959_out + g_oiii5007_out
     
     ## Fitter
-    fitter = fitting.LevMarLSQFitter()
+    fitter_2comp = fitting.LevMarLSQFitter()
     
-    gfit_2comp = fitter(g_init, lam_oiii, flam_oiii, \
-                        weights = np.sqrt(ivar_oiii), maxiter = 300)
-    rchi2_2comp = fit_utils.calculate_red_chi2(flam_oiii, gfit_2comp(lam_oiii), \
+    gfit_2comp = fitter_2comp(g_init, lam_oiii, flam_oiii, \
+                        weights = np.sqrt(ivar_oiii), maxiter = 1000)
+    rchi2_2comp = mfit.calculate_red_chi2(flam_oiii, gfit_2comp(lam_oiii), \
                                                ivar_oiii, n_free_params = 6)
     
     #####################################################################################
@@ -311,9 +320,9 @@ def fit_oiii_lines(lam_oiii, flam_oiii, ivar_oiii):
     del_rchi2 = ((rchi2_1comp - rchi2_2comp)/rchi2_1comp)*100
     
     if (del_rchi2 >= 20):
-        return (gfit_2comp, rchi2_2comp)
+        return (fitter_2comp, gfit_2comp, rchi2_2comp)
     else:
-        return (gfit_1comp, rchi2_1comp)
+        return (fitter_1comp, gfit_1comp, rchi2_1comp)
 
 ####################################################################################################
 
@@ -336,6 +345,9 @@ def fit_hb_line(lam_hb, flam_hb, ivar_hb):
         
     Returns
     -------
+    fitter : Astropy fitter
+        Fitter for computing uncertainties
+    
     gfit : Astropy model
         Best-fit "without-broad" or "with-broad" component
         
@@ -361,11 +373,11 @@ def fit_hb_line(lam_hb, flam_hb, ivar_hb):
         
     ## Initial fit
     g_init = g_hb 
-    fitter = fitting.LevMarLSQFitter()
+    fitter_no_broad = fitting.LevMarLSQFitter(calc_uncertainties = True)
 
-    gfit_no_broad = fitter(g_init, lam_hb, flam_hb, \
-                           weights = np.sqrt(ivar_hb), maxiter = 300)
-    rchi2_no_broad = fit_utils.calculate_red_chi2(flam_hb, gfit_no_broad(lam_hb), \
+    gfit_no_broad = fitter_no_broad(g_init, lam_hb, flam_hb, \
+                           weights = np.sqrt(ivar_hb), maxiter = 1000)
+    rchi2_no_broad = mfit.calculate_red_chi2(flam_hb, gfit_no_broad(lam_hb), \
                                                   ivar_hb, n_free_params = 3)
     
     #####################################################################################
@@ -388,11 +400,11 @@ def fit_hb_line(lam_hb, flam_hb, ivar_hb):
     
     ## Initial fit
     g_init = g_hb_n + g_hb_b 
-    fitter = fitting.LevMarLSQFitter()
+    fitter_broad = fitting.LevMarLSQFitter()
     
-    gfit_broad = fitter(g_init, lam_hb, flam_hb, \
-                        weights = np.sqrt(ivar_hb), maxiter = 300)
-    rchi2_broad = fit_utils.calculate_red_chi2(flam_hb, gfit_broad(lam_hb), \
+    gfit_broad = fitter_broad(g_init, lam_hb, flam_hb, \
+                        weights = np.sqrt(ivar_hb), maxiter = 1000)
+    rchi2_broad = mfit.calculate_red_chi2(flam_hb, gfit_broad(lam_hb), \
                                                ivar_hb, n_free_params = 6)
     
     #####################################################################################
@@ -404,9 +416,9 @@ def fit_hb_line(lam_hb, flam_hb, ivar_hb):
     del_rchi2 = ((rchi2_no_broad - rchi2_broad)/rchi2_no_broad)*100
     
     if (del_rchi2 >= 20):
-        return (gfit_broad, rchi2_broad)
+        return (fitter_broad, gfit_broad, rchi2_broad)
     else:
-        return (gfit_no_broad, rchi2_no_broad)
+        return (fitter_no_broad, gfit_no_broad, rchi2_no_broad)
     
 ####################################################################################################
 
@@ -474,7 +486,7 @@ def fit_nii_ha_lines(lam_nii, flam_nii, ivar_nii, hb_bestfit, sii_bestfit):
                         stddev = 2*stddev_ha, name = 'ha_b')
     
     ## Set amplitude > 0
-    g_ha_b.amplitude.bounds
+    g_ha_b.amplitude.bounds = (0.0, None)
     
     ## [NII] parameters
     ## Model [NII] as [SII] including outflows
