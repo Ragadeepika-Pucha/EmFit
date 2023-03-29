@@ -84,40 +84,7 @@ def compute_aon_emline(lam_rest, flam_rest, ivar_rest, model, emline):
         
 ####################################################################################################
 
-def compute_emline_flux(amplitude, stddev, amplitude_err = None, stddev_err = None):
-    """
-    Function to compute emission-line flux, given it is modeled as a Gaussian.
-    
-    Parameters
-    ----------
-    amplitude : float
-        Amplitude of the Gaussian
-        
-    stddev : float
-        Standard Deviation of the Gaussian
-        
-    amplitude_err : float
-        Amplitude error of the Gaussian. Default is None.
-        
-    stddev_err : float
-        Standard Deviation error of the Gaussian. Default is None.
-        
-    Returns
-    -------
-    flux : float
-        Flux of the emission-line which is modeled as a Gaussian
-    """
-    
-    
-    flux = np.sqrt(2*np.pi)*amplitude*stddev
-    
-    if ((amplitude_err is not None)&(stddev_err is not None)):
-        flux_err = flux*np.sqrt(((amplitude_err/amplitude)**2) + ((stddev_err/stddev)**2))
-        return (flux, flux_err)
-    else:
-        return (flux)
 
-####################################################################################################
 
 def get_params(gfit):
     mean = gfit.mean.value
