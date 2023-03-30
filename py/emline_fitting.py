@@ -119,7 +119,7 @@ def fit_emline_spectra(specprod, survey, program, healpix, targetid, z):
     hb_params = emp.get_hb_params(fitter_hb, gfit_hb)
     oiii_params = emp.get_oiii_params(fitter_oiii, gfit_oiii)
     nii_ha_params = emp.get_nii_ha_params_template(fitter_nii_ha, gfit_nii_ha)
-    sii_params = emp.get_sii_parameters(fitter_sii, gfit_sii)
+    sii_params = emp.get_sii_params(fitter_sii, gfit_sii)
     
     hb_noise = mfit.compute_noise_emline(lam_rest, flam_rest, \
                                          gfit_hb, em_line = 'hb')
