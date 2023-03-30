@@ -336,6 +336,7 @@ def plot_spectra_fits(targetid, lam_rest, flam_rest, fits, rchi2s):
     sii_res.set_ylabel('Data - Model', fontsize = 14)
     
     plt.tight_layout()
+    plt.close()
     
     return (fig)
     
@@ -395,6 +396,8 @@ def plot_emline_fit(lam_win, flam_win, emfit, narrow_components = None, \
     ax2.axhline(0.0, color = 'k', ls = ':')
     ax2.set(xlabel = '$\lambda$')
     ax2.set_ylabel('Data - Model', fontsize = 14)
+    
+    plt.close()
     
     return (fig)
     

@@ -3,15 +3,17 @@ This script consists of functions related to fitting the emission line spectra,
 and plotting the models and residuals.
 
 Author : Ragadeepika Pucha
-Version : 2023, March 14
+Version : 2023, March 29
 """
 
 ####################################################################################################
 
 import numpy as np
 
-import fit_utils
+import fit_utils, spec_utils
 import fit_lines
+import measure_fits as mfit
+import emline_params as emp
 
 import matplotlib.pyplot as plt
 
@@ -42,20 +44,29 @@ plt.rcParams.update(**settings)
 ####################################################################################################
 
 
-def fit_emline_spectra(lam_rest, flam_rest, ivar_rest):
+def fit_emline_spectra(specprod, survey, program, healpix, targetid, z):
     """
     Fit [SII], Hb, [OIII], [NII]+Ha emission lines for a given emission line spectra.
     
     Parameters
     ----------
-    lam_rest : numpy array
-        Restframe wavelength array of the emission-line spectra
+    pecprod : str
+        Spectral Production Pipeline name fuji|guadalupe|...
         
-    flam_rest : numpy array
-        Restframe flux array of the emission-line spectra
+    survey : str
+        Survey name for the spectra
         
-    ivar_rest : numpy array
-        Restframe inverse variance array of the emission-line spectra
+    program : str
+        Program name for the spectra
+        
+    healpix : str
+        Healpix number of the target
+        
+    targetid : int64
+        The unique TARGETID associated with the target
+        
+    z : float
+        Redshift of the target
         
     Returns
     -------
@@ -69,40 +80,68 @@ def fit_emline_spectra(lam_rest, flam_rest, ivar_rest):
     
     """
     
-    ## Select Hb region for fitting
-    lam_hb, flam_hb, ivar_hb = fit_utils.get_fit_window(lam_rest, flam_rest, \
-                                                        ivar_rest, em_line = 'hb')
+    lam_rest, flam_rest, ivar_rest = spec_utils.get_emline_spectra(specprod, survey, program, \
+                                                                   healpix, targetid, z, \
+                                                                   rest_frame = True, \
+                                                                   plot_continuum = False)
     
-    ## Select [OIII] region for fitting
-    lam_oiii, flam_oiii, ivar_oiii = fit_utils.get_fit_window(lam_rest, flam_rest, \
-                                                              ivar_rest, em_line = 'oiii')
+    lam_hb, flam_hb, ivar_hb = spec_utils.get_fit_window(lam_rest, flam_rest, \
+                                                         ivar_rest, em_line = 'hb')
+    lam_oiii, flam_oiii, ivar_oiii = spec_utils.get_fit_window(lam_rest, flam_rest, \
+                                                               ivar_rest, em_line = 'oiii')
+    lam_nii_ha, flam_nii_ha, ivar_nii_ha = spec_utils.get_fit_window(lam_rest, flam_rest, \
+                                                                     ivar_rest, em_line = 'nii_ha')
+    lam_sii, flam_sii, ivar_sii = spec_utils.get_fit_window(lam_rest, flam_rest, \
+                                                            ivar_rest, em_line = 'sii')
     
-    ## Select [NII] + Ha region for fitting
-    lam_nii_ha, flam_nii_ha, ivar_nii_ha = fit_utils.get_fit_window(lam_rest, flam_rest, \
-                                                                    ivar_rest, em_line = 'nii_ha')
+    fitter_sii, gfit_sii, rchi2_sii = fit_lines.fit_sii_lines(lam_sii, flam_sii, ivar_sii)
+    fitter_oiii, gfit_oiii, rchi2_oiii = fit_lines.fit_oiii_lines(lam_oiii, flam_oiii, ivar_oiii)
+    fitter_hb, gfit_hb, rchi2_hb = fit_lines.fit_hb_line(lam_hb, flam_hb, ivar_hb)
     
-    ## Select [SII] region for fitting
-    lam_sii, flam_sii, ivar_sii = fit_utils.get_fit_window(lam_rest, flam_rest, \
-                                                           ivar_rest, em_line = 'sii')
+    if (gfit_sii.n_submodels == 2):
+        fitter_nii_ha,\
+        gfit_nii_ha,\
+        rchi2_nii_ha = fit_lines.fit_nii_ha_lines_template(lam_nii_ha, \
+                                                           flam_nii_ha, \
+                                                           ivar_nii_ha, \
+                                                           temp_fit = gfit_sii['sii6716'], \
+                                                           frac_temp = 100)
+    elif (gfit_sii.n_submodels == 4):
+        fitter_nii_ha, \
+        gfit_nii_ha, \
+        rchi2_nii_ha = fit_lines.fit_nii_ha_lines_template(lam_nii_ha, \
+                                                           flam_nii_ha, \
+                                                           ivar_nii_ha, \
+                                                           temp_fit = gfit_sii['sii6716'], \
+                                                           temp_out_fit = gfit_sii['sii6716_out'], \
+                                                           frac_temp = 100)
     
-    ## Fit [SII] emission-lines
-    sii_fit, rchi2_sii = fit_lines.fit_sii_lines(lam_sii, flam_sii, ivar_sii)
+    hb_params = emp.get_hb_params(fitter_hb, gfit_hb)
+    oiii_params = emp.get_oiii_params(fitter_oiii, gfit_oiii)
+    nii_ha_params = emp.get_nii_ha_params_template(fitter_nii_ha, gfit_nii_ha)
+    sii_params = emp.get_sii_parameters(fitter_sii, gfit_sii)
     
-    ## Fit [OIII] emission-lines
-    oiii_fit, rchi2_oiii = fit_lines.fit_oiii_lines(lam_oiii, flam_oiii, ivar_oiii)
+    hb_noise = mfit.compute_noise_emline(lam_rest, flam_rest, \
+                                         gfit_hb, em_line = 'hb')
+    oiii_noise = mfit.compute_noise_emline(lam_rest, flam_rest, \
+                                           gfit_oiii, em_line = 'oiii')
+    nii_ha_noise = mfit.compute_noise_emline(lam_rest, flam_rest, \
+                                             gfit_nii_ha, em_line = 'nii_ha')
+    sii_noise = mfit.compute_noise_emline(lam_rest, flam_rest, \
+                                          gfit_sii, em_line = 'sii')
     
-    ## Fit Hb 
-    hb_fit, rchi2_hb = fit_lines.fit_hb_line(lam_hb, flam_hb, ivar_hb)#, sii_fit['sii6716'])
+    tgts = [targetid, specprod, survey, program, healpix, z]
     
-    ## Fit [NII]+Ha
-    nii_ha_fit, rchi2_nii_ha = fit_lines.fit_nii_ha_lines(lam_nii_ha, flam_nii_ha, ivar_nii_ha, \
-                                                              hb_fit, sii_fit)
-    
+    row = tgts+hb_params+[hb_noise, rchi2_hb]+\
+    oiii_params+[oiii_noise, rchi2_oiii]+\
+    nii_ha_params+[nii_ha_noise, rchi2_nii_ha]+\
+    sii_params+[sii_noise, rchi2_sii]
+        
     ## All the fits and rchi2 values in increasing order of wavelength
-    fits = [hb_fit, oiii_fit, nii_ha_fit, sii_fit]
+    fits = [gfit_hb, gfit_oiii, gfit_nii_ha, gfit_sii]
     rchi2s = [rchi2_hb, rchi2_oiii, rchi2_nii_ha, rchi2_sii]
     
-    return (fits, rchi2s)
+    return (fits, rchi2s, row)
 
 ####################################################################################################
     
