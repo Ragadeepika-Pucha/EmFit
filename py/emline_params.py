@@ -265,8 +265,8 @@ def get_oiii_params(fitter_oiii, gfit_oiii):
 #         sig_oiii5007_out, sigerr_oiii5007_out, \
 #         flux_oiii5007_out, fluxerr_oiii5007_out = np.zeros(4)
 
-        sig_oiii4959, flux_oiii4959, \
-        sig_oiii5007, flux_oiii5007 = np.zeros(4)
+        sig_oiii4959_out, flux_oiii4959_out, \
+        sig_oiii5007_out, flux_oiii5007_out = np.zeros(4)
         
     elif (n_oiii == 4):
         
