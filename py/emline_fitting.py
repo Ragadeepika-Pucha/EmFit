@@ -3,7 +3,7 @@ This script consists of functions related to fitting the emission line spectra,
 and plotting the models and residuals.
 
 Author : Ragadeepika Pucha
-Version : 2023, March 29
+Version : 2023, March 30
 """
 
 ####################################################################################################
@@ -44,7 +44,8 @@ plt.rcParams.update(**settings)
 ####################################################################################################
 
 
-def fit_emline_spectra(specprod, survey, program, healpix, targetid, z):
+def fit_emline_spectra(specprod, survey, program, healpix, targetid, z, \
+                       plot_spectra_fit = False):
     """
     Fit [SII], Hb, [OIII], [NII]+Ha emission lines for a given emission line spectra.
     
@@ -68,6 +69,9 @@ def fit_emline_spectra(specprod, survey, program, healpix, targetid, z):
     z : float
         Redshift of the target
         
+    plot_spectra_fit : bool
+        Whether or not to plot the spectra+fit
+        
     Returns
     -------
     fits : list
@@ -81,6 +85,9 @@ def fit_emline_spectra(specprod, survey, program, healpix, targetid, z):
     row : Astropy Table row
         Row with the parameters from different fits.
         For each emission-line - (AMPLITUDE, MEAN, STD, SIGMA, FLUX)
+        
+    fig : Figure
+        If plot_spectra_fit = True, return the figure with spectra+fit
     
     """
     
@@ -145,7 +152,11 @@ def fit_emline_spectra(specprod, survey, program, healpix, targetid, z):
     fits = [gfit_hb, gfit_oiii, gfit_nii_ha, gfit_sii]
     rchi2s = [rchi2_hb, rchi2_oiii, rchi2_nii_ha, rchi2_sii]
     
-    return (fits, rchi2s, row)
+    if (plot_spectra_fit == True):
+        fig = plot_utils.plot_spectra_fits(targetid, lam_rest, flam_rest, fits, rchi2s)
+        return (fits, rchi2s, row, fig)
+    else:
+        return (fits, rchi2s, row)
 
 ####################################################################################################
     
