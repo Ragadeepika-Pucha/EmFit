@@ -10,7 +10,7 @@ Version : 2023, March 30
 
 import numpy as np
 
-import fit_utils, spec_utils
+import fit_utils, spec_utils, plot_utils
 import fit_lines
 import measure_fits as mfit
 import emline_params as emp

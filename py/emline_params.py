@@ -968,7 +968,7 @@ def get_nii_ha_params_template(fitter_nii_ha, gfit_nii_ha):
 #         fluxerr_nii6548_out, fluxerr_nii6583_out, fluxerr_ha_b = np.zeros(6)
 
         sig_nii6548_out, sig_nii6583_out, sig_ha_b, \
-        flux_nii6548_out, flux_nii6548_out, flux_ha_b = np.zeros(6)
+        flux_nii6548_out, flux_nii6583_out, flux_ha_b = np.zeros(6)
 
     elif (n_nii_ha == 4):
         # No outflow components
