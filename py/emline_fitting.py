@@ -50,7 +50,7 @@ def fit_emline_spectra(specprod, survey, program, healpix, targetid, z):
     
     Parameters
     ----------
-    pecprod : str
+    specprod : str
         Spectral Production Pipeline name fuji|guadalupe|...
         
     survey : str
@@ -77,6 +77,10 @@ def fit_emline_spectra(specprod, survey, program, healpix, targetid, z):
     rchi2 : list
         List of reduced chi2 values for the fits in the order of increasing wavelength.
         rchi2_hb, rchi2_oiii, rchi2_nii_ha, rchi2_sii
+        
+    row : Astropy Table row
+        Row with the parameters from different fits.
+        For each emission-line - (AMPLITUDE, MEAN, STD, SIGMA, FLUX)
     
     """
     
