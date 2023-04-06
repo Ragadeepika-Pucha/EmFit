@@ -322,7 +322,7 @@ def fit_oiii_lines(lam_oiii, flam_oiii, ivar_oiii):
 
 ####################################################################################################
 
-def fit_hb_line(lam_hb, flam_hb, ivar_hb):
+def fit_hb_line(lam_hb, flam_hb, ivar_hb, outflow = False):
     """
     Function to fit Hb emission line
     The code fits both with and without broad-component fits and picks the best version.
@@ -354,13 +354,28 @@ def fit_hb_line(lam_hb, flam_hb, ivar_hb):
     ## Initial estimate of amplitude
     amp_hb = np.max(flam_hb)
     
+    if (outflow == False):
+        ## Single component fit
+        g_hb_n = Gaussian1D(amplitude = amp_hb, mean = 4862.683, \
+                          stddev = 1.0, name = 'hb_n', \
+                          bounds = {'amplitude' : (0.0, None), 'stddev' : (None, 8.1)})
+        
+        g_hb = g_hb_n
+        
+    else:
+        ## Two component fit
+        g_hb_n = Gaussian1D(amplitude = amp_hb/2, mean = 4862.683, \
+                          stddev = 1.0, name = 'hb_n', \
+                          bounds = {'amplitude' : (0.0, None), 'stddev' : (None, 8.1)})
+        
+        g_hb_out = Gaussian1D(amplitude = amp_hb/4, mean = 4862.683, \
+                              stddev = 2.0, name = 'hb_out', \
+                              bounds = {'amplitude' : (0.0, None)})
+        
+        g_hb = g_hb_n + g_hb_out
+    
     #####################################################################################
     ########################### Fit without broad component #############################
-    
-    ## Single component fit
-    g_hb = Gaussian1D(amplitude = amp_hb, mean = 4862.683, \
-                      stddev = 1.0, name = 'hb_n', \
-                      bounds = {'amplitude' : (0.0, None), 'stddev' : (None, 8.1)})
             
     ## Initial fit
     g_init = g_hb 
@@ -368,33 +383,37 @@ def fit_hb_line(lam_hb, flam_hb, ivar_hb):
 
     gfit_no_broad = fitter_no_broad(g_init, lam_hb, flam_hb, \
                            weights = np.sqrt(ivar_hb), maxiter = 1000)
-    rchi2_no_broad = mfit.calculate_red_chi2(flam_hb, gfit_no_broad(lam_hb), \
-                                                  ivar_hb, n_free_params = 3)
+    
+    if (outflow == False):
+        rchi2_no_broad = mfit.calculate_red_chi2(flam_hb, gfit_no_broad(lam_hb), \
+                                                      ivar_hb, n_free_params = 3)
+    else:
+        rchi2_no_broad = mfit.calculate_red_chi2(flam_hb, gfit_no_broad(lam_hb), \
+                                                      ivar_hb, n_free_params = 6)
     
     #####################################################################################
     ########################### Fit with broad component ################################
     
-    ## Two component fit
-    ## Set amplitudes > 0    
-    g_hb_n = Gaussian1D(amplitude = amp_hb, mean = 4862.683, \
-                        stddev = 1.0, name = 'hb_n', \
-                        bounds = {'amplitude' : (0.0, None), 'stddev' : (None, 8.1)})
     g_hb_b = Gaussian1D(amplitude = amp_hb/3, mean = 4862.683, \
                         stddev = 2.0, name = 'hb_b', \
                         bounds = {'amplitude' : (0.0, None)})
     
     ## Initial fit
-    g_init = g_hb_n + g_hb_b 
-    fitter_broad = fitting.LevMarLSQFitter()
+    g_init = g_hb + g_hb_b 
+    fitter_broad = fitting.LevMarLSQFitter(calc_uncertainties = True)
     
     gfit_broad = fitter_broad(g_init, lam_hb, flam_hb, \
                         weights = np.sqrt(ivar_hb), maxiter = 1000)
-    rchi2_broad = mfit.calculate_red_chi2(flam_hb, gfit_broad(lam_hb), \
-                                               ivar_hb, n_free_params = 6)
+    
+    if (outflow == False):
+        rchi2_broad = mfit.calculate_red_chi2(flam_hb, gfit_broad(lam_hb), \
+                                                   ivar_hb, n_free_params = 6)
+    else:
+        rchi2_broad = mfit.calculate_red_chi2(flam_hb, gfit_broad(lam_hb), \
+                                                   ivar_hb, n_free_params = 9)
     
     #####################################################################################
     #####################################################################################
-    
     ## Select the best-fit based on rchi2
     ## If the rchi2 of 2-component is better by 20%, then the 2-component fit is picked.
     ## Otherwise, 1-component fit is the best fit.
@@ -703,7 +722,6 @@ def fit_hb_line_template(lam_hb, flam_hb, ivar_hb, sii_bestfit, frac_temp = 40):
     n_sii = sii_bestfit.n_submodels
     ## If n_sii = 2, no outflow components
     ## If n_sii = 4, outflow components
-    print (n_sii)
     
     ## Template fit
     temp_std = sii_bestfit['sii6716'].stddev.value
