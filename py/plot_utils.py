@@ -272,14 +272,14 @@ def plot_spectra_fits(targetid, lam_rest, flam_rest, fits, rchi2s):
     
     sig_nii = mfit.lamspace_to_velspace(nii_ha_fit['nii6548'].stddev.value, \
                                         nii_ha_fit['nii6548'].mean.value)
-    ha.annotate('$\sigma$ ([NII]) = '+str(round(sig_nii, 1))+' km/s', \
-                xy = (6550, 0.9), xycoords = ha.get_xaxis_transform(), \
+    ha.annotate('$\sigma$ ([NII]) = \n'+str(round(sig_nii, 1))+' km/s', \
+                xy = (6600, 0.9), xycoords = ha.get_xaxis_transform(), \
                 fontsize = 16, color = 'k')
     
     sig_ha = mfit.lamspace_to_velspace(nii_ha_fit['ha_n'].stddev.value, \
                                        nii_ha_fit['ha_n'].mean.value)
-    ha.annotate('$\sigma \\rm(H\\alpha)$ = '+str(round(sig_ha, 1))+' km/s', \
-                xy = (6550, 0.8), xycoords = ha.get_xaxis_transform(), \
+    ha.annotate('$\sigma \\rm(H\\alpha)$ = \n'+str(round(sig_ha, 1))+' km/s', \
+                xy = (6600, 0.8), xycoords = ha.get_xaxis_transform(), \
                 fontsize = 16, color = 'k')
     
     ## Outflow components
@@ -291,15 +291,15 @@ def plot_spectra_fits(targetid, lam_rest, flam_rest, fits, rchi2s):
         sig_nii_out = mfit.lamspace_to_velspace(nii_ha_fit['nii6548_out'].stddev.value, \
                                                 nii_ha_fit['nii6548_out'].mean.value)
         
-        ha.annotate('$\sigma$ ([NII];out) = '+str(round(sig_nii_out, 1))+' km/s', \
-                    xy = (6550, 0.7), xycoords = ha.get_xaxis_transform(), \
+        ha.annotate('$\sigma$ ([NII];out) = \n'+str(round(sig_nii_out, 1))+' km/s', \
+                    xy = (6600, 0.7), xycoords = ha.get_xaxis_transform(), \
                     fontsize = 16, color = 'k')
         
         sig_ha_out = mfit.lamspace_to_velspace(nii_ha_fit['ha_out'].stddev.value, \
                                                nii_ha_fit['ha_out'].mean.value)
         
-        ha.annotate('$\sigma \\rm(H\\alpha;out)$ = '+str(round(sig_ha_out, 1))+' km/s', \
-                    xy = (6550, 0.6), xycoords = ha.get_xaxis_transform(), \
+        ha.annotate('$\sigma \\rm(H\\alpha;out)$ = \n'+str(round(sig_ha_out, 1))+' km/s', \
+                    xy = (6600, 0.6), xycoords = ha.get_xaxis_transform(), \
                     fontsize = 16, color = 'k')
         
     ## Broad component
@@ -356,7 +356,7 @@ def plot_spectra_fits(targetid, lam_rest, flam_rest, fits, rchi2s):
                                                 sii_fit['sii6716_out'].mean.value)
         
         sii.annotate('$\sigma$ ([SII];out) = '+str(round(sig_sii_out, 1))+' km/s', \
-                     xy = (6655, 0.6), xycoords = sii.get_xaxis_transform(), \
+                     xy = (6650, 0.6), xycoords = sii.get_xaxis_transform(), \
                      fontsize = 16, color = 'k')
         
     ## Rchi2 value
