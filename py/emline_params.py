@@ -3,7 +3,7 @@ This script consists of functions for computing the parameters of the emission-l
 It consists of the following functions:
 
 Author : Ragadeepika Pucha
-Version : 2023, March 29
+Version : 2023, April 7
 """
 
 ###################################################################################################
