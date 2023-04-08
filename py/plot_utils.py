@@ -201,11 +201,11 @@ def plot_spectra_fits(targetid, lam_rest, flam_rest, fits, rchi2s):
                         fontsize = 16, color = 'k')
         
     ## Rchi2 value
-    hb.annotate('$H\\beta$', xy = (4805, 0.9), \
+    hb.annotate('$H\\beta$', xy = (4800, 0.9), \
                 xycoords = hb.get_xaxis_transform(), \
                 fontsize = 16, color = 'k')
     hb.annotate('$\chi^{2}_{red}$ = '+str(round(rchi2_hb, 2)), \
-                xy = (4805, 0.8), xycoords = hb.get_xaxis_transform(), \
+                xy = (4800, 0.8), xycoords = hb.get_xaxis_transform(), \
                 fontsize = 16, color = 'k')
                 
     ## Hb fit residuals
@@ -228,11 +228,11 @@ def plot_spectra_fits(targetid, lam_rest, flam_rest, fits, rchi2s):
     
     for ii in range(n_oiii):
         oiii.plot(lam_oiii, oiii_fit[names_oiii[ii]](lam_oiii), color = 'orange')
-        
+                
     sig_oiii = mfit.lamspace_to_velspace(oiii_fit['oiii5007'].stddev.value, \
                                          oiii_fit['oiii5007'].mean.value)
     oiii.annotate('$\sigma$ ([OIII]) = '+str(round(sig_oiii, 1))+' km/s', \
-                  xy = (4905, 0.7), xycoords = oiii.get_xaxis_transform(), \
+                  xy = (4900, 0.7), xycoords = oiii.get_xaxis_transform(), \
                   fontsize = 16, color = 'k')
     
     if ('oiii4959_out' in names_oiii):
@@ -240,14 +240,14 @@ def plot_spectra_fits(targetid, lam_rest, flam_rest, fits, rchi2s):
                                                  oiii_fit['oiii5007_out'].mean.value)
         
         oiii.annotate('$\sigma$ ([OIII];out) = '+str(round(sig_oiii_out, 1))+ ' km/s', \
-                      xy = (4905, 0.6), xycoords = oiii.get_xaxis_tranform(), \
+                      xy = (4900, 0.6), xycoords = oiii.get_xaxis_transform(), \
                       fontsize = 16, color = 'k')
     ## Rchi2 value
-    oiii.annotate('[OIII]4959,5007', xy = (4905, 0.9), \
+    oiii.annotate('[OIII]4959,5007', xy = (4900, 0.9), \
                   xycoords = oiii.get_xaxis_transform(),\
                   fontsize = 16, color = 'k')
     oiii.annotate('$\chi^{2}_{red}$ = '+str(round(rchi2_oiii, 2)), \
-                  xy = (4905, 0.8), xycoords = oiii.get_xaxis_transform(), \
+                  xy = (4900, 0.8), xycoords = oiii.get_xaxis_transform(), \
                   fontsize = 16, color = 'k')
     
     ## [OIII] fit residuals
@@ -273,13 +273,13 @@ def plot_spectra_fits(targetid, lam_rest, flam_rest, fits, rchi2s):
     sig_nii = mfit.lamspace_to_velspace(nii_ha_fit['nii6548'].stddev.value, \
                                         nii_ha_fit['nii6548'].mean.value)
     ha.annotate('$\sigma$ ([NII]) = '+str(round(sig_nii, 1))+' km/s', \
-                xy = (6600, 0.9), xycoords = ha.get_xaxis_transform(), \
+                xy = (6550, 0.9), xycoords = ha.get_xaxis_transform(), \
                 fontsize = 16, color = 'k')
     
     sig_ha = mfit.lamspace_to_velspace(nii_ha_fit['ha_n'].stddev.value, \
                                        nii_ha_fit['ha_n'].mean.value)
     ha.annotate('$\sigma \\rm(H\\alpha)$ = '+str(round(sig_ha, 1))+' km/s', \
-                xy = (6600, 0.8), xycoords = ha.get_xaxis_tranform(), \
+                xy = (6550, 0.8), xycoords = ha.get_xaxis_transform(), \
                 fontsize = 16, color = 'k')
     
     ## Outflow components
@@ -292,14 +292,14 @@ def plot_spectra_fits(targetid, lam_rest, flam_rest, fits, rchi2s):
                                                 nii_ha_fit['nii6548_out'].mean.value)
         
         ha.annotate('$\sigma$ ([NII];out) = '+str(round(sig_nii_out, 1))+' km/s', \
-                    xy = (6600, 0.7), xycoords = ha.get_xaxis_transform(), \
+                    xy = (6550, 0.7), xycoords = ha.get_xaxis_transform(), \
                     fontsize = 16, color = 'k')
         
         sig_ha_out = mfit.lamspace_to_velspace(nii_ha_fit['ha_out'].stddev.value, \
                                                nii_ha_fit['ha_out'].mean.value)
         
         ha.annotate('$\sigma \\rm(H\\alpha;out)$ = '+str(round(sig_ha_out, 1))+' km/s', \
-                    xy = (6600, 0.6), xycoords = ha.get_xaxis_tranform(), \
+                    xy = (6550, 0.6), xycoords = ha.get_xaxis_transform(), \
                     fontsize = 16, color = 'k')
         
     ## Broad component
@@ -310,16 +310,16 @@ def plot_spectra_fits(targetid, lam_rest, flam_rest, fits, rchi2s):
                                              nii_ha_fit['ha_b'].mean.value)
         
         ha.annotate('$\sigma \\rm(H\\alpha;b)$ = '+str(round(sig_ha_b))+' km/s', \
-                    xy = (6405, 0.7), xycoords = ha.get_xaxis_tranform(), \
+                    xy = (6400, 0.7), xycoords = ha.get_xaxis_transform(), \
                     fontsize = 16, color = 'k')
             
             
     ## Rchi2 value
-    ha.annotate('$H\\alpha$ + [NII]6548,6583', xy = (6405, 0.9),\
+    ha.annotate('$H\\alpha$ + [NII]6548,6583', xy = (6400, 0.9),\
                 xycoords = ha.get_xaxis_transform(),\
                 fontsize = 16, color = 'k')
     ha.annotate('$\chi^{2}_{red}$ = '+str(round(rchi2_nii_ha, 2)),\
-                xy = (6405, 0.8), xycoords = ha.get_xaxis_transform(),\
+                xy = (6400, 0.8), xycoords = ha.get_xaxis_transform(),\
                 fontsize = 16, color = 'k')
         
     ## [NII]+Ha fit residuals
@@ -348,7 +348,7 @@ def plot_spectra_fits(targetid, lam_rest, flam_rest, fits, rchi2s):
                                         sii_fit['sii6716'].mean.value)
     
     sii.annotate('$\sigma$ ([SII]) = '+str(round(sig_sii, 1))+' km/s', \
-                 xy = (6655, 0.7), xycoords = sii.get_xaxis_tranform(), \
+                 xy = (6650, 0.7), xycoords = sii.get_xaxis_transform(), \
                  fontsize = 16, color = 'k')
     
     if ('sii6716_out' in names_sii):
@@ -356,15 +356,15 @@ def plot_spectra_fits(targetid, lam_rest, flam_rest, fits, rchi2s):
                                                 sii_fit['sii6716_out'].mean.value)
         
         sii.annotate('$\sigma$ ([SII];out) = '+str(round(sig_sii_out, 1))+' km/s', \
-                     xy = (6655, 0.6), xycoords = sii.get_xaxis_tranform(), \
+                     xy = (6655, 0.6), xycoords = sii.get_xaxis_transform(), \
                      fontsize = 16, color = 'k')
         
     ## Rchi2 value
-    sii.annotate('[SII]6716, 6731', xy = (6655, 0.9),\
+    sii.annotate('[SII]6716, 6731', xy = (6650, 0.9),\
                  xycoords = sii.get_xaxis_transform(),\
                  fontsize = 16, color = 'k')
     sii.annotate('$\chi^{2}_{red}$ = '+str(round(rchi2_sii, 2)),\
-                 xy = (6655, 0.8), xycoords = sii.get_xaxis_transform(),\
+                 xy = (6650, 0.8), xycoords = sii.get_xaxis_transform(),\
                  fontsize = 16, color = 'k')
         
     ## [SII] fit residuals
