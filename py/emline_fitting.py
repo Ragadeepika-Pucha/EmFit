@@ -10,6 +10,8 @@ Version : 2023, March 30
 
 import numpy as np
 
+from astropy.table import Table
+
 import fit_utils, spec_utils, plot_utils
 import fit_lines
 import measure_fits as mfit
@@ -44,7 +46,7 @@ plt.rcParams.update(**settings)
 ####################################################################################################
 
 
-def fit_emline_spectra(specprod, survey, program, healpix, targetid, z, \
+def fit_emline_spectra(specprod, survey, program, healpix, targetid, z, bl_id = None, \
                        plot_spectra_fit = False):
     """
     Fit [SII], Hb, [OIII], [NII]+Ha emission lines for a given emission line spectra.
@@ -68,6 +70,9 @@ def fit_emline_spectra(specprod, survey, program, healpix, targetid, z, \
         
     z : float
         Redshift of the target
+        
+    bl_id : str
+        BL ID of the target
         
     plot_spectra_fit : bool
         Whether or not to plot the spectra+fit
@@ -107,30 +112,21 @@ def fit_emline_spectra(specprod, survey, program, healpix, targetid, z, \
     
     fitter_sii, gfit_sii, rchi2_sii = fit_lines.fit_sii_lines(lam_sii, flam_sii, ivar_sii)
     fitter_oiii, gfit_oiii, rchi2_oiii = fit_lines.fit_oiii_lines(lam_oiii, flam_oiii, ivar_oiii)
-    fitter_hb, gfit_hb, rchi2_hb = fit_lines.fit_hb_line(lam_hb, flam_hb, ivar_hb)
+    fitter_hb, gfit_hb, rchi2_hb = fit_lines.fit_hb_line_siitemplate(lam_hb, flam_hb, ivar_hb, \
+                                                                  gfit_sii, frac_temp = 60)
+    fitter_nii_ha, gfit_nii_ha, rchi2_nii_ha = fit_lines.fit_nii_ha_lines_siitemplate(lam_nii_ha, flam_nii_ha, ivar_nii_ha,\
+                                                                                      gfit_sii, frac_temp = 60) 
     
-    if (gfit_sii.n_submodels == 2):
-        fitter_nii_ha,\
-        gfit_nii_ha,\
-        rchi2_nii_ha = fit_lines.fit_nii_ha_lines_template(lam_nii_ha, \
-                                                           flam_nii_ha, \
-                                                           ivar_nii_ha, \
-                                                           temp_fit = gfit_sii['sii6716'], \
-                                                           frac_temp = 100)
-    elif (gfit_sii.n_submodels == 4):
-        fitter_nii_ha, \
-        gfit_nii_ha, \
-        rchi2_nii_ha = fit_lines.fit_nii_ha_lines_template(lam_nii_ha, \
-                                                           flam_nii_ha, \
-                                                           ivar_nii_ha, \
-                                                           temp_fit = gfit_sii['sii6716'], \
-                                                           temp_out_fit = gfit_sii['sii6716_out'], \
-                                                           frac_temp = 100)
-    
-    hb_params = emp.get_hb_params(fitter_hb, gfit_hb)
-    oiii_params = emp.get_oiii_params(fitter_oiii, gfit_oiii)
-    nii_ha_params = emp.get_nii_ha_params_template(fitter_nii_ha, gfit_nii_ha)
-    sii_params = emp.get_sii_params(fitter_sii, gfit_sii)
+
+    hb_models = ['hb_n', 'hb_out', 'hb_b']
+    oiii_models = ['oiii4959', 'oiii4959_out', 'oiii5007', 'oiii5007_out']
+    nii_ha_models = ['nii6548', 'nii6548_out', 'nii6583', 'nii6583_out', 'ha_n', 'ha_out', 'ha_b']
+    sii_models = ['sii6716', 'sii6716_out', 'sii6731', 'sii6731_out']
+
+    hb_params = emp.get_parameters(gfit_hb, hb_models)
+    oiii_params = emp.get_parameters(gfit_oiii, oiii_models)
+    nii_ha_params = emp.get_parameters(gfit_nii_ha, nii_ha_models)
+    sii_params = emp.get_parameters(gfit_sii, sii_models)
     
     hb_noise = mfit.compute_noise_emline(lam_rest, flam_rest, \
                                          gfit_hb, em_line = 'hb')
@@ -141,22 +137,40 @@ def fit_emline_spectra(specprod, survey, program, healpix, targetid, z, \
     sii_noise = mfit.compute_noise_emline(lam_rest, flam_rest, \
                                           gfit_sii, em_line = 'sii')
     
-    tgts = [targetid, specprod, survey, program, healpix, z]
+    hb_params['hb_noise'] = [hb_noise]
+    oiii_params['oiii_noise'] = [oiii_noise]
+    nii_ha_params['nii_ha_noise'] = [nii_ha_noise]
+    sii_params['sii_noise'] = [sii_noise]
     
-    row = tgts+hb_params+[hb_noise, rchi2_hb]+\
-    oiii_params+[oiii_noise, rchi2_oiii]+\
-    nii_ha_params+[nii_ha_noise, rchi2_nii_ha]+\
-    sii_params+[sii_noise, rchi2_sii]
+    hb_params['hb_rchi2'] = [rchi2_hb]
+    oiii_params['oiii_rchi2'] = [rchi2_oiii]
+    nii_ha_params['nii_ha_rchi2'] = [rchi2_nii_ha]
+    sii_params['sii_rchi2'] = [rchi2_sii]
+    
+    tgt = {}
+    tgt['targetid'] = [targetid]
+    tgt['specprod'] = [specprod]
+    tgt['survey'] = [survey]
+    tgt['program'] = [program]
+    tgt['healpix'] = [healpix]
+    tgt['z'] = [z]
+    
+    params = tgt|hb_params|oiii_params|nii_ha_params|sii_params
+    
+    ## Convert dictionary to table
+    t_params = Table(params)
         
     ## All the fits and rchi2 values in increasing order of wavelength
     fits = [gfit_hb, gfit_oiii, gfit_nii_ha, gfit_sii]
     rchi2s = [rchi2_hb, rchi2_oiii, rchi2_nii_ha, rchi2_sii]
-    
+        
     if (plot_spectra_fit == True):
-        fig = plot_utils.plot_spectra_fits(targetid, lam_rest, flam_rest, fits, rchi2s)
-        return (fits, rchi2s, row, fig)
+        title = f'{bl_id}; TARGETID = {targetid}; \n https://www.legacysurvey.org/viewer-desi/desi-spectrum/daily/targetid{targetid}'
+        
+        fig = plot_utils.plot_spectra_fits(lam_rest, flam_rest, fits, rchi2s, title = title)
+        return (t_params, fig)
     else:
-        return (fits, rchi2s, row)
+        return (t_params)
 
 ####################################################################################################
     
