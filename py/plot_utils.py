@@ -82,15 +82,12 @@ def plot_spectra_continuum(lam, flam, total_cont, axs = None):
     
 ###################################################################################################
 
-def plot_spectra_fits(targetid, lam_rest, flam_rest, fits, rchi2s):
+def plot_spectra_fits(lam_rest, flam_rest, fits, rchi2s, title = None):
     """
     Plot spectra, fits and residuals in Hb, [OIII], Ha+[NII], and [SII] regions.
     
     Parameters
-    ----------
-    targetid : int64
-        TARGETID of the object
-    
+    ----------    
     lam_rest : numpy array
         Restframe wavelength array of the emission-line spectra
         
@@ -104,6 +101,9 @@ def plot_spectra_fits(targetid, lam_rest, flam_rest, fits, rchi2s):
     rchi2 : list
         List of reduced chi2 values for the fits in the order of increasing wavelength.
         rchi2_hb, rchi2_oiii, rchi2_nii_ha, rchi2_sii
+        
+    title : str
+        Title for the plot
     
     Returns
     -------
@@ -135,8 +135,7 @@ def plot_spectra_fits(targetid, lam_rest, flam_rest, fits, rchi2s):
     rchi2_hb, rchi2_oiii, rchi2_nii_ha, rchi2_sii = rchi2s
     
     fig = plt.figure(figsize = (30, 7))
-    plt.suptitle(f'https://www.legacysurvey.org/viewer-desi/desi-spectrum/daily/targetid{targetid}',\
-                 fontsize = 16)
+    plt.suptitle(title, fontsize = 16)
     gs = fig.add_gridspec(5, 16)
     gs.update(hspace = 0.0)
     
