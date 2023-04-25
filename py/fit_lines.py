@@ -892,7 +892,7 @@ class fit_nii_ha_lines:
         sii_bestfit : Astropy model
             Best fit model for the [SII] emission-lines.
             
-         Returns
+        Returns
         -------
         gfit : Astropy model
             Best-fit 1 component model
@@ -995,7 +995,7 @@ class fit_nii_ha_lines:
 
         ## Initial gaussian fit
         g_init = g_nii + g_ha + g_ha_b
-        fitter_broad = fitting.LevMarLSQFitter(calc_uncertainties = True)
+        fitter_broad = fitting.LevMarLSQFitter()
 
         gfit_broad = fitter_broad(g_init, lam_nii, flam_nii,\
                                   weights = np.sqrt(ivar_nii), maxiter = 1000)

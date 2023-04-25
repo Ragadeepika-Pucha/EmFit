@@ -49,17 +49,17 @@ def get_parameters(gfit, models):
             sig = mfit.lamspace_to_velspace(std, mean)
             flux = mfit.compute_emline_flux(amp, std)
             
-            params[f'{model}_amplitude'] = amp
-            params[f'{model}_mean'] = mean
-            params[f'{model}_std'] = std
-            params[f'{model}_sigma'] = sig
-            params[f'{model}_flux'] = flux
+            params[f'{model}_amplitude'] = [amp]
+            params[f'{model}_mean'] = [mean]
+            params[f'{model}_std'] = [std]
+            params[f'{model}_sigma'] = [sig]
+            params[f'{model}_flux'] = [flux]
         else:
-            params[f'{model}_amplitude'] = 0.0
-            params[f'{model}_mean'] = 0.0
-            params[f'{model}_std'] = 0.0
-            params[f'{model}_sigma'] = 0.0
-            params[f'{model}_flux'] = 0.0
+            params[f'{model}_amplitude'] = [0.0]
+            params[f'{model}_mean'] = [0.0]
+            params[f'{model}_std'] = [0.0]
+            params[f'{model}_sigma'] = [0.0]
+            params[f'{model}_flux'] = [0.0]
             
     return (params)
     

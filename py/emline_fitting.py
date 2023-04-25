@@ -46,8 +46,8 @@ plt.rcParams.update(**settings)
 ####################################################################################################
 
 
-def fit_emline_spectra(specprod, survey, program, healpix, targetid, z, bl_id = None, \
-                       plot_spectra_fit = False):
+def fit_emline_spectra(specprod, survey, program, healpix, targetid, z, return_plot_only = False, \
+                       plot_spectra_fit = False, title = None):
     """
     Fit [SII], Hb, [OIII], [NII]+Ha emission lines for a given emission line spectra.
     
@@ -76,6 +76,9 @@ def fit_emline_spectra(specprod, survey, program, healpix, targetid, z, bl_id = 
         
     plot_spectra_fit : bool
         Whether or not to plot the spectra+fit
+        
+    title : str
+        If plot_spectra_fit == True, then include the title for the plot
         
     Returns
     -------
@@ -164,11 +167,12 @@ def fit_emline_spectra(specprod, survey, program, healpix, targetid, z, bl_id = 
     fits = [gfit_hb, gfit_oiii, gfit_nii_ha, gfit_sii]
     rchi2s = [rchi2_hb, rchi2_oiii, rchi2_nii_ha, rchi2_sii]
         
-    if (plot_spectra_fit == True):
-        title = f'{bl_id}; TARGETID = {targetid}; \n https://www.legacysurvey.org/viewer-desi/desi-spectrum/daily/targetid{targetid}'
-        
+    if (plot_spectra_fit == True):        
         fig = plot_utils.plot_spectra_fits(lam_rest, flam_rest, fits, rchi2s, title = title)
         return (t_params, fig)
+    elif (return_plot_only == True):
+        fig = plot_utils.plot_spectra_fits(lam_rest, flam_rest, fits, rchi2s, title = title)
+        return (fig)
     else:
         return (t_params)
 
