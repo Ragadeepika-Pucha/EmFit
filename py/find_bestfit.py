@@ -3,7 +3,7 @@ This script consists of functions for fitting emission-lines.
 The different functions are divided into different classes for different emission lines.
 
 Author : Ragadeepika Pucha
-Version : 2023, April 20
+Version : 2023, April 25
 """
 
 ###################################################################################################
@@ -180,15 +180,36 @@ def find_hb_best_fit(lam_hb, flam_hb, ivar_hb, sii_bestfit):
             
         per_diff = (sig_sii - sig_hb)*100/sig_sii
                 
-        if ((per_diff <= -29)|(per_diff >= 29)):
+        if ((per_diff <= -30)|(per_diff >= 30)):
             gfit_hb, rchi2_hb = fl.fit_hb_line.fit_fixed_one_component(lam_hb, flam_hb, \
                                                                       ivar_hb, sii_bestfit)
         else:
             gfit_hb, rchi2_hb = gfit_free, rchi2_free
             
     else:
-        gfit_hb, rchi2_hb = fl.fit_hb_line.fit_fixed_two_components(lam_hb, flam_hb, \
-                                                                   ivar_hb, sii_bestfit)
+        gfit_free, rchi2_free = fl.fit_hb_line.fit_free_two_components(lam_hb, flam_hb, \
+                                                                      ivar_hb, sii_bestfit, \
+                                                                      frac_temp = 60.)
+        
+        sig_sii = mfit.lamspace_to_velspace(sii_bestfit['sii6716'].stddev.value, \
+                                           sii_bestfit['sii6716'].mean.value)
+        sig_sii_out = mfit.lamspace_to_velspace(sii_bestfit['sii6716_out'].stddev.value, \
+                                               sii_bestfit['sii6716_out'].mean.value)
+        
+        sig_hb = mfit.lamspace_to_velspace(gfit_free['hb_n'].stddev.value, \
+                                          gfit_free['hb_n'].mean.value)
+        sig_hb_out = mfit.lamspace_to_velspace(gfit_free['hb_out'].stddev.value, \
+                                              gfit_free['hb_out'].mean.value)
+        
+        per_diff_n = (sig_sii - sig_hb)*100/sig_sii
+        per_diff_out = (sig_sii_out - sig_hb_out)*100/sig_sii_out
+        
+        if (((per_diff_n <= -30)|(per_diff_n >= 30))|((per_diff_out <= -30)|(per_diff_out >= 30))):
+            gfit_hb, rchi2_hb = fl.fit_hb_line.fit_fixed_two_components(lam_hb, flam_hb, \
+                                                                       ivar_hb, sii_bestfit)
+        else:
+            gfit_hb, rchi2_hb = gfit_free, rchi2_free
+            
         
     return (gfit_hb, rchi2_hb)
     
@@ -223,15 +244,13 @@ def find_nii_ha_best_fit(lam_nii, flam_nii, ivar_nii, sii_bestfit):
     """
     n_sii = sii_bestfit.n_submodels
     
-    ## If n_sii == 2, first try fixing [NII] to [SII] and letting Ha free
+    ## first try fixing [NII] to [SII] and letting Ha free
     ## If Ha fit doesn't converge, fix Ha to [SII] as well
-    ## If n_sii == 4, fix [NII] and Ha to [SII], including outflows
     
     if (n_sii == 2):
-        gfit_free, rchi2_free = fl.fit_nii_ha_lines.fit_fixed_nii_free_ha(lam_nii, flam_nii, ivar_nii, \
-                                                                      sii_bestfit, frac_temp = 60.)
+        gfit_free, rchi2_free = fl.fit_nii_ha_lines.fit_free_ha_one_component(lam_nii, flam_nii, ivar_nii, \
+                                                                              sii_bestfit, frac_temp = 60.)
 
-        
         sig_sii = mfit.lamspace_to_velspace(sii_bestfit['sii6716'].stddev.value, \
                                            sii_bestfit['sii6716'].mean.value)
 
@@ -240,7 +259,7 @@ def find_nii_ha_best_fit(lam_nii, flam_nii, ivar_nii, sii_bestfit):
 
         per_diff = (sig_sii - sig_ha)*100/sig_sii
     
-        if ((per_diff <= -29)|(per_diff >= 29)):
+        if ((per_diff <= -30)|(per_diff >= 30)):
             gfit_nii_ha, rchi2_nii_ha = fl.fit_nii_ha_lines.fit_fixed_one_component(lam_nii, flam_nii, \
                                                                                     ivar_nii, sii_bestfit)
             
@@ -248,8 +267,28 @@ def find_nii_ha_best_fit(lam_nii, flam_nii, ivar_nii, sii_bestfit):
             gfit_nii_ha, rchi2_nii_ha = gfit_free, rchi2_free
             
     else:
-        gfit_nii_ha, rchi2_nii_ha = fl.fit_nii_ha_lines.fit_fixed_two_components(lam_nii, flam_nii, \
-                                                                            ivar_nii, sii_bestfit)
+        gfit_free, rchi2_free = fl.fit_nii_ha_lines.fit_free_ha_two_components(lam_nii, flam_nii, ivar_nii, \
+                                                                               sii_bestfit, frac_temp = 60.)
+        
+        sig_sii = mfit.lamspace_to_velspace(sii_bestfit['sii6716'].stddev.value, \
+                                           sii_bestfit['sii6716'].mean.value)
+        sig_sii_out = mfit.lamspace_to_velspace(sii_bestfit['sii6716_out'].stddev.value, \
+                                               sii_bestfit['sii6716_out'].mean.value)
+        
+        sig_ha = mfit.lamspace_to_velspace(gfit_free['ha_n'].stddev.value, \
+                                          gfit_free['ha_n'].mean.value)
+        sig_ha_out = mfit.lamspace_to_velspace(gfit_free['ha_out'].stddev.value, \
+                                              gfit_free['ha_out'].mean.value)
+        
+        per_diff_n = (sig_sii - sig_ha)*100/sig_sii
+        per_diff_out = (sig_sii_out - sig_ha_out)*100/sig_sii_out
+        
+        
+        if (((per_diff_n <= -30)|(per_diff_n >= 30))|((per_diff_out <= -30)|(per_diff_out >= 30))):
+            gfit_nii_ha, rchi2_nii_ha = fl.fit_nii_ha_lines.fit_fixed_two_components(lam_nii, flam_nii, \
+                                                                                ivar_nii, sii_bestfit)
+        else:
+            gfit_nii_ha, rchi2_nii_ha = gfit_free, rchi2_free
         
     
     return (gfit_nii_ha, rchi2_nii_ha)
