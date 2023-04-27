@@ -43,8 +43,6 @@ settings = {
 plt.rcParams.update(**settings)
 
 ###################################################################################################
-
-
     
 def compute_aon_emline(lam_rest, flam_rest, ivar_rest, model, emline):
     
@@ -84,8 +82,6 @@ def compute_aon_emline(lam_rest, flam_rest, ivar_rest, model, emline):
         
 ####################################################################################################
 
-
-
 def get_params(gfit):
     mean = gfit.mean.value
     stddev = gfit.stddev.value
@@ -96,4 +92,6 @@ def get_params(gfit):
     return (amplitude, mean, stddev, sigma, flux)
 
 ####################################################################################################
+
+    
 
