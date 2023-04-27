@@ -3,7 +3,7 @@ This script consists of funcitons for fitting emission-lines.
 The different functions are divided into different classes for different emission lines.
 
 Author : Ragadeepika Pucha
-Version : 2023, April 25
+Version : 2023, April 27
 """
 
 ###################################################################################################
@@ -404,8 +404,16 @@ class fit_hb_line:
 
         rchi2: float
             Reduced chi2 of the best-fit
+            
+        flag_bits : numpy array
+            Array of flag bits for free one-component Hbeta fitting
+                0 : Free one component fitting
+                4 : chi^2 for broad-component fit improves by 20%
+                5 : sigma (Hbeta broad) < sigma (Hbeta narrow)
         """
 
+        flag_bits = np.array([])
+        
         ## Template fit
         temp_std = sii_bestfit['sii6716'].stddev.value
         temp_std_kms = mfit.lamspace_to_velspace(temp_std, sii_bestfit['sii6716'].mean.value)
@@ -423,7 +431,7 @@ class fit_hb_line:
         ## Single component fit
         g_hb_n = Gaussian1D(amplitude = amp_hb, mean = 4862.683, \
                           stddev = temp_std, name = 'hb_n', \
-                          bounds = {'amplitude' : (0.0, None)})
+                          bounds = {'amplitude' : (0.0, None), 'stddev' : (0.5, None)})
 
         g_hb_n.stddev.bounds = (min_std, max_std)
 
@@ -449,7 +457,7 @@ class fit_hb_line:
         ## Two component fit
         g_hb_b = Gaussian1D(amplitude = amp_hb/3, mean = 4862.683, \
                             stddev = 3.0, name = 'hb_b', \
-                            bounds = {'amplitude' : (0.0, None)})
+                            bounds = {'amplitude' : (0.0, None), 'stddev' : (1.0, None)})
 
         ## Initial fit
         g_init = g_hb + g_hb_b 
@@ -469,16 +477,25 @@ class fit_hb_line:
         ## Otherwise, 1-component fit is the best fit.
         del_rchi2 = ((rchi2_no_broad - rchi2_broad)/rchi2_no_broad)*100
         
-        ## Further conditions -- sigma_broad > sigma_narrow
+        ## If sigma_hb_b < narrow sigma -- exchage the gaussians
         sig_hb_n = mfit.lamspace_to_velspace(gfit_broad['hb_n'].stddev.value, \
                                              gfit_broad['hb_n'].mean.value)
         sig_hb_b = mfit.lamspace_to_velspace(gfit_broad['hb_b'].stddev.value, \
                                              gfit_broad['hb_b'].mean.value)
         
+        ## Set flags 
+        flag_bits = np.append(flag_bits, 0)
+        if (del_rchi2 >= 20):
+            flag_bits = np.append(flag_bits, 4)
+        if (sig_hb_b < sig_hb_n):
+            flag_bits = np.append(flag_bits, 5)
+
+        flag_bits = np.sort(flag_bits.astype(int))
+        
         if ((del_rchi2 >= 20)&(sig_hb_b > sig_hb_n)):
-            return (gfit_broad, rchi2_broad)
+            return (gfit_broad, rchi2_broad, flag_bits)
         else:
-            return (gfit_no_broad, rchi2_no_broad)
+            return (gfit_no_broad, rchi2_no_broad, flag_bits)
         
 ####################################################################################################
 
@@ -516,7 +533,16 @@ class fit_hb_line:
 
         rchi2: float
             Reduced chi2 of the best-fit
+            
+        flag_bits : numpy array
+            Array of flag bits for free two-component Hbeta fitting
+                2 : Free two component fitting
+                4 : chi^2 for broad-component fit improves by 20%
+                5 : sigma (Hbeta broad) < sigma (Hbeta narrow)
+                6 : sigma (Hbeta outflow) > sigma (Hbeta broad)
         """
+        
+        flag_bits = np.array([])
         
         ## Template fit
         temp_std = sii_bestfit['sii6716'].stddev.value
@@ -545,10 +571,10 @@ class fit_hb_line:
         ## Two component fit for the narrow Hb
         g_hb_n = Gaussian1D(amplitude = amp_hb/2, mean = 4862.683, \
                             stddev = temp_std, name = 'hb_n', \
-                            bounds = {'amplitude' : (0.0, None)})
+                            bounds = {'amplitude' : (0.0, None), 'stddev' : (0.5, None)})
         g_hb_out = Gaussian1D(amplitude = amp_hb/4, mean = 4862.683, \
                               stddev = temp_out_std, name = 'hb_out', \
-                              bounds = {'amplitude' : (0.0, None)})
+                              bounds = {'amplitude' : (0.0, None), 'stddev' : (0.5, None)})
 
         g_hb_n.stddev.bounds = (min_std, max_std)
         g_hb_out.stddev.bounds = (min_out, max_out)
@@ -575,7 +601,7 @@ class fit_hb_line:
         ## Two component fit
         g_hb_b = Gaussian1D(amplitude = amp_hb/3, mean = 4862.683, \
                             stddev = 3.0, name = 'hb_b', \
-                            bounds = {'amplitude' : (0.0, None)})
+                            bounds = {'amplitude' : (0.0, None), 'stddev' : (1.0, None)})
 
         ## Initial fit
         g_init = g_hb + g_hb_b 
@@ -595,6 +621,7 @@ class fit_hb_line:
                                                 gfit_broad['hb_out'].mean.value)
         
         if (sigma_hb_b < sigma_hb_out):
+            flag_bits = np.append(flag_bits, 6)
             g_hb_n = Gaussian1D(amplitude = gfit_broad['hb_n'].amplitude, \
                                 mean = gfit_broad['hb_n'].mean, \
                                 stddev = gfit_broad['hb_n'].stddev, name = 'hb_n')
@@ -623,10 +650,19 @@ class fit_hb_line:
         sig_hb_b = mfit.lamspace_to_velspace(gfit_broad['hb_b'].stddev.value, \
                                              gfit_broad['hb_b'].mean.value)
         
+        ## Set flags
+        flag_bits = np.append(flag_bits, 2)
+        if (del_rchi2 >= 20):
+            flag_bits = np.append(flag_bits, 4)
+        if (sig_hb_b < sig_hb_n):
+            flag_bits = np.append(flag_bits, 5)
+        
+        flag_bits = np.sort(flag_bits.astype(int))
+        
         if ((del_rchi2 >= 20)&(sig_hb_b > sig_hb_n)):
-            return (gfit_broad, rchi2_broad)
+            return (gfit_broad, rchi2_broad, flag_bits, flag_bits)
         else:
-            return (gfit_no_broad, rchi2_no_broad)
+            return (gfit_no_broad, rchi2_no_broad, flag_bits)
     
 ####################################################################################################
 
@@ -658,7 +694,15 @@ class fit_hb_line:
 
         rchi2: float
             Reduced chi2 of the best-fit
+            
+        flag_bits : numpy array
+            Array of flag bits for fixed one-component Hbeta fitting
+                1 : Fixed one component fitting
+                4 : chi^2 for broad-component fit improves by 20%
+                5 : sigma (Hbeta broad) < sigma (Hbeta narrow)            
         """
+        
+        flag_bits = np.array([])
         
         ## Initial estimate of amplitude
         amp_hb = np.max(flam_hb)
@@ -670,7 +714,7 @@ class fit_hb_line:
 
         g_hb_n = Gaussian1D(amplitude = amp_hb, mean = 4862.683, \
                           stddev = std_hb, name = 'hb_n', \
-                          bounds = {'amplitude' : (0.0, None)})
+                          bounds = {'amplitude' : (0.0, None), 'stddev' : (0.5, None)})
 
         ## Fix sigma of Hb narrow to [SII]
         def tie_std_hb(model):
@@ -706,7 +750,7 @@ class fit_hb_line:
         ## Two component fit
         g_hb_b = Gaussian1D(amplitude = amp_hb/4, mean = 4862.683, \
                             stddev = 4.0, name = 'hb_b', \
-                            bounds = {'amplitude' : (0.0, None)})
+                            bounds = {'amplitude' : (0.0, None), 'stddev' : (1.0, None)})
 
         ## Initial fit
         g_init = g_hb + g_hb_b 
@@ -732,11 +776,20 @@ class fit_hb_line:
                                              gfit_broad['hb_n'].mean.value)
         sig_hb_b = mfit.lamspace_to_velspace(gfit_broad['hb_b'].stddev.value, \
                                              gfit_broad['hb_b'].mean.value)
+        
+        ## Set flags
+        flag_bits = np.append(flag_bits, 1)
+        if (del_rchi2 >= 20):
+            flag_bits = np.append(flag_bits, 4)
+        if (sig_hb_b < sig_hb_n):
+            flag_bits = np.append(flag_bits, 5)
+            
+        flag_bits = np.sort(flag_bits.astype(int))
 
         if ((del_rchi2 >= 20)&(sig_hb_b > sig_hb_n)):
-            return (gfit_broad, rchi2_broad)
+            return (gfit_broad, rchi2_broad, flag_bits)
         else:
-            return (gfit_no_broad, rchi2_no_broad)
+            return (gfit_no_broad, rchi2_no_broad, flag_bits)
         
 ####################################################################################################
 
@@ -768,8 +821,15 @@ class fit_hb_line:
 
         rchi2: float
             Reduced chi2 of the best-fit
+            
+        flag_bits : numpy array
+            Array of flag bits for fixed two-component Hbeta fitting
+                3 : Fixed two component fitting
+                4 : chi^2 for broad-component fit improves by 20%
+                5 : sigma (Hbeta broad) < sigma (Hbeta narrow)
         """
-
+        flag_bits = np.array([])
+        
         ## Initial estimate of amplitude
         amp_hb = np.max(flam_hb)
         
@@ -782,11 +842,11 @@ class fit_hb_line:
 
         g_hb_n = Gaussian1D(amplitude = amp_hb, mean = 4862.683, \
                           stddev = std_hb, name = 'hb_n', \
-                          bounds = {'amplitude' : (0.0, None)})
+                          bounds = {'amplitude' : (0.0, None), 'stddev' : (0.5, None)})
 
         g_hb_out = Gaussian1D(amplitude = amp_hb/3, mean = 4862.683, \
                              stddev = std_hb_out, name = 'hb_out', \
-                             bounds = {'amplitude' : (0.0, None)})
+                             bounds = {'amplitude' : (0.0, None), 'stddev' : (0.5, None)})
 
         ## Fix sigma of narrow Hb to narrow [SII]
         def tie_std_hb(model):
@@ -825,7 +885,7 @@ class fit_hb_line:
         ## Two component fit
         g_hb_b = Gaussian1D(amplitude = amp_hb/4, mean = 4862.683, \
                             stddev = 4.0, name = 'hb_b', \
-                            bounds = {'amplitude' : (0.0, None)})
+                            bounds = {'amplitude' : (0.0, None), 'stddev' : (1.0, None)})
 
         ## Initial fit
         g_init = g_hb + g_hb_b 
@@ -851,11 +911,21 @@ class fit_hb_line:
                                              gfit_broad['hb_n'].mean.value)
         sig_hb_b = mfit.lamspace_to_velspace(gfit_broad['hb_b'].stddev.value, \
                                              gfit_broad['hb_b'].mean.value)
-
+        
+        ## Set flags
+         ## Set flags
+        flag_bits = np.append(flag_bits, 3)
+        if (del_rchi2 >= 20):
+            flag_bits = np.append(flag_bits, 4)
+        if (sig_hb_b < sig_hb_n):
+            flag_bits = np.append(flag_bits, 5)
+        
+        flag_bits = np.sort(flag_bits.astype(int))
+        
         if ((del_rchi2 >= 20)&(sig_hb_b > sig_hb_n)):
-            return (gfit_broad, rchi2_broad)
+            return (gfit_broad, rchi2_broad, flag_bits)
         else:
-            return (gfit_no_broad, rchi2_no_broad)
+            return (gfit_no_broad, rchi2_no_broad, flag_bits)
         
 ####################################################################################################
 ####################################################################################################
@@ -901,8 +971,16 @@ class fit_nii_ha_lines:
 
         rchi2: float
             Reduced chi2 of the best-fit
+            
+        flag_bits : numpy array
+            Array of flag bits for free one-component fitting
+                0 : free one component fit
+                4 : chi^2 for broad-line fit improves by 20%
+                5 : sigma (Ha; b) < sigma (Ha; n)
         """
-                
+        
+        flag_bits = np.array([])
+                        
         ## Initial estimate of amplitudes
         amp_nii6548 = np.max(flam_nii[(lam_nii > 6548)&(lam_nii < 6550)])
         amp_nii6583 = np.max(flam_nii[(lam_nii > 6583)&(lam_nii < 6586)])
@@ -932,7 +1010,7 @@ class fit_nii_ha_lines:
 
         ## Tie amplitudes of two [NII] gaussians
         def tie_amp_nii(model):
-            return (model['nii6548'].amplitude*3.05)
+            return (model['nii6548'].amplitude*2.96)
 
         g_nii6583.amplitude.tied = tie_amp_nii
 
@@ -965,7 +1043,7 @@ class fit_nii_ha_lines:
         
         g_ha_n = Gaussian1D(amplitude = amp_ha, mean = 6564.312, \
                             stddev = temp_std, name = 'ha_n', \
-                            bounds = {'amplitude' : (0.0, None)})
+                            bounds = {'amplitude' : (0.0, None), 'stddev' : (0.85, None)})
 
         ## Set narrow Ha within 60% of the template fit
         g_ha_n.stddev.bounds = (min_std_ha, max_std_ha)
@@ -995,7 +1073,7 @@ class fit_nii_ha_lines:
         ## Broad Ha parameters
         g_ha_b = Gaussian1D(amplitude = amp_ha/3, mean = 6564.312, \
                             stddev = 4.0, name = 'ha_b', \
-                            bounds = {'amplitude' : (0.0, None)})
+                            bounds = {'amplitude' : (0.0, None), 'stddev' : (1.5, None)})
 
         ## Initial gaussian fit
         g_init = g_nii + g_ha + g_ha_b
@@ -1017,15 +1095,24 @@ class fit_nii_ha_lines:
         del_rchi2 = ((rchi2_no_broad - rchi2_broad)/rchi2_no_broad)*100
         
         ## Also sigma (broad Ha) > sigma (narrow Ha)
-        std_ha_b = mfit.lamspace_to_velspace(gfit_broad['ha_b'].stddev.value, \
+        sig_ha_b = mfit.lamspace_to_velspace(gfit_broad['ha_b'].stddev.value, \
                                              gfit_broad['ha_b'].mean.value)
-        std_ha_n = mfit.lamspace_to_velspace(gfit_broad['ha_n'].stddev.value, \
+        sig_ha_n = mfit.lamspace_to_velspace(gfit_broad['ha_n'].stddev.value, \
                                              gfit_broad['ha_n'].mean.value)
+        
+        ## Set flags
+        flag_bits = np.append(flag_bits, 0)
+        if (del_rchi2 >= 20):
+            flag_bits = np.append(flag_bits, 4)
+        if (sig_ha_b < sig_ha_n):
+            flag_bits = np.append(flag_bits, 5)
+            
+        flag_bits = np.sort(flag_bits.astype(int))
 
-        if ((del_rchi2 >= 20)&(std_ha_b > std_ha_n)):
-            return (gfit_broad, rchi2_broad)
+        if ((del_rchi2 >= 20)&(sig_ha_b > sig_ha_n)):
+            return (gfit_broad, rchi2_broad, flag_bits)
         else:
-            return (gfit_no_broad, rchi2_no_broad)
+            return (gfit_no_broad, rchi2_no_broad, flag_bits)
         
 ####################################################################################################
 
@@ -1065,7 +1152,16 @@ class fit_nii_ha_lines:
 
         rchi2: float
             Reduced chi2 of the best-fit
+            
+        flag_bits : numpy array
+            Array of flag bits for fixed one-component fitting
+                1 : fixed one component fit
+                4 : chi^2 for broad-line fit improves by 20%
+                5 : sigma (Ha; b) < sigma (Ha; n)
+                6 : sigma (Ha; out) > sigma (Ha; b)
         """
+        
+        flag_bits = np.array([])
         
         ## Initial estimate of amplitudes
         amp_nii6548 = np.max(flam_nii[(lam_nii > 6548)&(lam_nii < 6550)])
@@ -1108,7 +1204,7 @@ class fit_nii_ha_lines:
 
         ## Tie amplitudes of two [NII] gaussians
         def tie_amp_nii(model):
-            return (model['nii6548'].amplitude*3.05)
+            return (model['nii6548'].amplitude*2.96)
 
         g_nii6583.amplitude.tied = tie_amp_nii
 
@@ -1135,7 +1231,7 @@ class fit_nii_ha_lines:
 
         ## Tie amplitudes of two [NII] gaussians
         def tie_amp_nii_out(model):
-            return (model['nii6548_out'].amplitude*3.05)
+            return (model['nii6548_out'].amplitude*2.96)
 
         g_nii6583_out.amplitude.tied = tie_amp_nii_out
 
@@ -1168,7 +1264,7 @@ class fit_nii_ha_lines:
         
         g_ha_n = Gaussian1D(amplitude = amp_ha/2, mean = 6564.312, \
                             stddev = temp_std, name = 'ha_n', \
-                            bounds = {'amplitude' : (0.0, None)})
+                            bounds = {'amplitude' : (0.0, None), 'stddev' : (0.85, None)})
 
         ## Set narrow Ha within 60% of the template fit
         g_ha_n.stddev.bounds = (min_std_ha, max_std_ha)
@@ -1186,7 +1282,7 @@ class fit_nii_ha_lines:
 
         g_ha_out = Gaussian1D(amplitude = amp_ha/3, mean = 6564.312, \
                              stddev = temp_out_std, name = 'ha_out', \
-                             bounds = {'amplitude': (0.0, None)})
+                             bounds = {'amplitude': (0.0, None), 'stddev' : (0.85, None)})
         
         g_ha_out.stddev.bounds = (min_out, max_out)
         
@@ -1213,7 +1309,7 @@ class fit_nii_ha_lines:
         ## Broad Ha parameters
         g_ha_b = Gaussian1D(amplitude = amp_ha/2, mean = 6564.312, \
                             stddev = 4.0, name = 'ha_b', \
-                            bounds = {'amplitude' : (0.0, None)})
+                            bounds = {'amplitude' : (0.0, None), 'stddev' : (1.5, None)})
 
         ## Initial gaussian fit
         g_init = g_nii + g_ha + g_ha_b
@@ -1235,6 +1331,7 @@ class fit_nii_ha_lines:
                                                 gfit_broad['ha_out'].mean.value)
         
         if (sigma_ha_b < sigma_ha_out):
+            flag_bits = np.append(flag_bits, 6)
             g_ha_n = Gaussian1D(amplitude = gfit_broad['ha_n'].amplitude, \
                                mean = gfit_broad['ha_n'].mean, \
                                stddev = gfit_broad['ha_n'].stddev, name = 'ha_n')
@@ -1258,15 +1355,24 @@ class fit_nii_ha_lines:
         del_rchi2 = ((rchi2_no_broad - rchi2_broad)/rchi2_no_broad)*100
         
         ## Also sigma (broad Ha) > sigma (narrow Ha)
-        std_ha_b = mfit.lamspace_to_velspace(gfit_broad['ha_b'].stddev.value, \
+        sig_ha_b = mfit.lamspace_to_velspace(gfit_broad['ha_b'].stddev.value, \
                                              gfit_broad['ha_b'].mean.value)
-        std_ha_n = mfit.lamspace_to_velspace(gfit_broad['ha_n'].stddev.value, \
+        sig_ha_n = mfit.lamspace_to_velspace(gfit_broad['ha_n'].stddev.value, \
                                              gfit_broad['ha_n'].mean.value)
+        
+        ## Set flags
+        flag_bits = np.append(flag_bits, 2)
+        if (del_rchi2 >= 20):
+            flag_bits = np.append(flag_bits, 4)
+        if (sig_ha_b < sig_ha_n):
+            flag_bits = np.append(flag_bits, 5)
+            
+        flag_bits = np.sort(flag_bits.astype(int))
 
-        if ((del_rchi2 >= 20)&(std_ha_b > std_ha_n)):
-            return (gfit_broad, rchi2_broad)
+        if ((del_rchi2 >= 20)&(sig_ha_b > sig_ha_n)):
+            return (gfit_broad, rchi2_broad, flag_bits)
         else:
-            return (gfit_no_broad, rchi2_no_broad)
+            return (gfit_no_broad, rchi2_no_broad, flag_bits)
 
 ####################################################################################################
     
@@ -1298,7 +1404,15 @@ class fit_nii_ha_lines:
 
         rchi2: float
             Reduced chi2 of the best-fit
+            
+        flag_bits : numpy array
+            Array of flag bits for free one-component fitting
+                2 : free two component fit
+                4 : chi^2 for broad-line fit improves by 20%
+                5 : sigma (Ha; b) < sigma (Ha; n)
         """
+        
+        flag_bits = np.array([])
         
         ## Initial estimate of amplitudes
         amp_nii6548 = np.max(flam_nii[(lam_nii > 6548)&(lam_nii < 6550)])
@@ -1329,7 +1443,7 @@ class fit_nii_ha_lines:
 
         ## Tie amplitudes of two [NII] gaussians
         def tie_amp_nii(model):
-            return (model['nii6548'].amplitude*3.05)
+            return (model['nii6548'].amplitude*2.96)
 
         g_nii6583.amplitude.tied = tie_amp_nii
 
@@ -1357,7 +1471,7 @@ class fit_nii_ha_lines:
 
         g_ha_n = Gaussian1D(amplitude = amp_ha, mean = 6564.312, \
                             stddev = stddev_ha, name = 'ha_n', \
-                            bounds = {'amplitude' : (0.0, None)})
+                            bounds = {'amplitude' : (0.0, None), 'stddev' : (0.85, None)})
 
         ## Tie standard deviation of Ha
         def tie_std_ha(model):
@@ -1391,7 +1505,7 @@ class fit_nii_ha_lines:
         ## Broad Ha parameters
         g_ha_b = Gaussian1D(amplitude = amp_ha/4, mean = 6564.312, \
                             stddev = 5.0, name = 'ha_b', \
-                            bounds = {'amplitude' : (0.0, None)})
+                            bounds = {'amplitude' : (0.0, None), 'stddev' : (1.5, None)})
 
         ## Initial gaussian fit
         g_init = g_nii + g_ha + g_ha_b
@@ -1413,16 +1527,24 @@ class fit_nii_ha_lines:
         del_rchi2 = ((rchi2_no_broad - rchi2_broad)/rchi2_no_broad)*100
         
         ## Also sigma (broad Ha) > sigma (narrow Ha)
-        std_ha_b = mfit.lamspace_to_velspace(gfit_broad['ha_b'].stddev.value, \
+        sig_ha_b = mfit.lamspace_to_velspace(gfit_broad['ha_b'].stddev.value, \
                                              gfit_broad['ha_b'].mean.value)
-        std_ha_n = mfit.lamspace_to_velspace(gfit_broad['ha_n'].stddev.value, \
+        sig_ha_n = mfit.lamspace_to_velspace(gfit_broad['ha_n'].stddev.value, \
                                              gfit_broad['ha_n'].mean.value)
+        
+        ## Set flags
+        flag_bits = np.append(flag_bits, 1)
+        if (del_rchi2 >= 20):
+            flag_bits = np.append(flag_bits, 4)
+        if (sig_ha_b < sig_ha_n):
+            flag_bits = np.append(flag_bits, 5)
+            
+        flag_bits = np.sort(flag_bits.astype(int))
 
-
-        if ((del_rchi2 >= 20)&(std_ha_b > std_ha_n)):
-            return (gfit_broad, rchi2_broad)
+        if ((del_rchi2 >= 20)&(sig_ha_b > sig_ha_n)):
+            return (gfit_broad, rchi2_broad, flag_bits)
         else:
-            return (gfit_no_broad, rchi2_no_broad)
+            return (gfit_no_broad, rchi2_no_broad, flag_bits)
         
 ####################################################################################################
 
@@ -1454,7 +1576,15 @@ class fit_nii_ha_lines:
 
         rchi2: float
             Reduced chi2 of the best-fit
+            
+        flag_bits : numpy array
+            Array of flag bits for fixed two-component fitting
+                3 : fixed one component fit
+                4 : chi^2 for broad-line fit improves by 20%
+                5 : sigma (Ha; b) < sigma (Ha; n)
         """
+        
+        flag_bits = np.array([])
         
         ## Initial estimate of amplitudes
         amp_nii6548 = np.max(flam_nii[(lam_nii > 6548)&(lam_nii < 6550)])
@@ -1497,7 +1627,7 @@ class fit_nii_ha_lines:
 
         ## Tie amplitudes of two [NII] gaussians
         def tie_amp_nii(model):
-            return (model['nii6548'].amplitude*3.05)
+            return (model['nii6548'].amplitude*2.96)
 
         g_nii6583.amplitude.tied = tie_amp_nii
 
@@ -1524,7 +1654,7 @@ class fit_nii_ha_lines:
 
         ## Tie amplitudes of two [NII] gaussians
         def tie_amp_nii_out(model):
-            return (model['nii6548_out'].amplitude*3.05)
+            return (model['nii6548_out'].amplitude*2.96)
 
         g_nii6583_out.amplitude.tied = tie_amp_nii_out
 
@@ -1557,11 +1687,11 @@ class fit_nii_ha_lines:
 
         g_ha_n = Gaussian1D(amplitude = amp_ha/2, mean = 6564.312, \
                             stddev = stddev_ha, name = 'ha_n', \
-                            bounds = {'amplitude' : (0.0, None)})
+                            bounds = {'amplitude' : (0.0, None), 'stddev' : (0.85, None)})
 
         g_ha_out = Gaussian1D(amplitude = amp_ha/3, mean = 6564.312, \
                               stddev = stddev_ha_out, name = 'ha_out', \
-                              bounds = {'amplitude' : (0.0, None)})
+                              bounds = {'amplitude' : (0.0, None), 'stddev' : (0.85, None)})
 
         ## Tie standard deviation of Ha
         def tie_std_ha(model):
@@ -1602,7 +1732,7 @@ class fit_nii_ha_lines:
         ## Broad Ha parameters
         g_ha_b = Gaussian1D(amplitude = amp_ha/2, mean = 6564.312, \
                             stddev = 4.0, name = 'ha_b', \
-                            bounds = {'amplitude' : (0.0, None)})
+                            bounds = {'amplitude' : (0.0, None), 'stddev' : (1.5, None)})
 
         ## Initial gaussian fit
         g_init = g_nii + g_ha + g_ha_b
@@ -1624,15 +1754,23 @@ class fit_nii_ha_lines:
         del_rchi2 = ((rchi2_no_broad - rchi2_broad)/rchi2_no_broad)*100
         
         ## Also sigma (broad Ha) > sigma (narrow Ha)
-        std_ha_b = mfit.lamspace_to_velspace(gfit_broad['ha_b'].stddev.value, \
+        sig_ha_b = mfit.lamspace_to_velspace(gfit_broad['ha_b'].stddev.value, \
                                              gfit_broad['ha_b'].mean.value)
-        std_ha_n = mfit.lamspace_to_velspace(gfit_broad['ha_n'].stddev.value, \
+        sig_ha_n = mfit.lamspace_to_velspace(gfit_broad['ha_n'].stddev.value, \
                                              gfit_broad['ha_n'].mean.value)
+        ## Set flags
+        flag_bits = np.append(flag_bits, 3)
+        if (del_rchi2 >= 20):
+            flag_bits = np.append(flag_bits, 4)
+        if (sig_ha_b < sig_ha_n):
+            flag_bits = np.append(flag_bits, 5)
+            
+        flag_bits = np.sort(flag_bits.astype(int))
 
-        if ((del_rchi2 >= 20)&(std_ha_b > std_ha_n)):
-            return (gfit_broad, rchi2_broad)
+        if ((del_rchi2 >= 20)&(sig_ha_b > sig_ha_n)):
+            return (gfit_broad, rchi2_broad, flag_bits)
         else:
-            return (gfit_no_broad, rchi2_no_broad)
+            return (gfit_no_broad, rchi2_no_broad, flag_bits)
         
 ####################################################################################################
 ####################################################################################################
