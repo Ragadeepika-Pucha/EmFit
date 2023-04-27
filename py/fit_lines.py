@@ -3,7 +3,7 @@ This script consists of funcitons for fitting emission-lines.
 The different functions are divided into different classes for different emission lines.
 
 Author : Ragadeepika Pucha
-Version : 2023, April 24
+Version : 2023, April 25
 """
 
 ###################################################################################################
@@ -908,7 +908,7 @@ class fit_nii_ha_lines:
         amp_nii6583 = np.max(flam_nii[(lam_nii > 6583)&(lam_nii < 6586)])
         
         ## Initial guess of amplitude for Ha
-        amp_ha = np.max(flam_nii[(lam_nii > 6563)&(lam_nii < 6565)])
+        amp_ha = np.max(flam_nii[(lam_nii > 6550)&(lam_nii < 6575)])
         
         ## Initial estimates of standard deviation
         stddev_nii6548 = (6549.852/sii_bestfit['sii6716'].mean.value)*\
@@ -993,7 +993,7 @@ class fit_nii_ha_lines:
         ########################## Fit with broad component #################################
 
         ## Broad Ha parameters
-        g_ha_b = Gaussian1D(amplitude = amp_ha/2, mean = 6564.312, \
+        g_ha_b = Gaussian1D(amplitude = amp_ha/3, mean = 6564.312, \
                             stddev = 4.0, name = 'ha_b', \
                             bounds = {'amplitude' : (0.0, None)})
 
@@ -1072,7 +1072,7 @@ class fit_nii_ha_lines:
         amp_nii6583 = np.max(flam_nii[(lam_nii > 6583)&(lam_nii < 6586)])
         
         ## Initial guess of amplitude for Ha
-        amp_ha = np.max(flam_nii[(lam_nii > 6563)&(lam_nii < 6565)])
+        amp_ha = np.max(flam_nii[(lam_nii > 6550)&(lam_nii < 6575)])
         
         ## Initial estimates of standard deviation
         stddev_nii6548 = (6549.852/sii_bestfit['sii6716'].mean.value)*\
@@ -1305,7 +1305,7 @@ class fit_nii_ha_lines:
         amp_nii6583 = np.max(flam_nii[(lam_nii > 6583)&(lam_nii < 6586)])
         
         ## Initial guess of amplitude for Ha
-        amp_ha = np.max(flam_nii[(lam_nii > 6563)&(lam_nii < 6565)])
+        amp_ha = np.max(flam_nii[(lam_nii > 6550)&(lam_nii < 6575)])
         
         ## Initial estimates of standard deviation
         stddev_nii6548 = (6549.852/sii_bestfit['sii6716'].mean.value)*\
@@ -1389,8 +1389,8 @@ class fit_nii_ha_lines:
         ########################## Fit with broad component #################################
 
         ## Broad Ha parameters
-        g_ha_b = Gaussian1D(amplitude = amp_ha/2, mean = 6564.312, \
-                            stddev = 4.0, name = 'ha_b', \
+        g_ha_b = Gaussian1D(amplitude = amp_ha/4, mean = 6564.312, \
+                            stddev = 5.0, name = 'ha_b', \
                             bounds = {'amplitude' : (0.0, None)})
 
         ## Initial gaussian fit
@@ -1461,7 +1461,7 @@ class fit_nii_ha_lines:
         amp_nii6583 = np.max(flam_nii[(lam_nii > 6583)&(lam_nii < 6586)])
         
         ## Initial guess of amplitude for Ha
-        amp_ha = np.max(flam_nii[(lam_nii > 6563)&(lam_nii < 6565)])
+        amp_ha = np.max(flam_nii[(lam_nii > 6550)&(lam_nii < 6575)])
         
         ## Initial estimates of standard deviation
         stddev_nii6548 = (6549.852/sii_bestfit['sii6716'].mean.value)*\

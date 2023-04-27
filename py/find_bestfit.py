@@ -164,7 +164,7 @@ def find_hb_best_fit(lam_hb, flam_hb, ivar_hb, sii_bestfit):
     
     if (n_sii == 2):
         gfit_free, rchi2_free = fl.fit_hb_line.fit_free_one_component(lam_hb, flam_hb, ivar_hb, \
-                                                                     sii_bestfit, frac_temp = 60.)
+                                                                     sii_bestfit, frac_temp = 100.)
         
         sig_sii = mfit.lamspace_to_velspace(sii_bestfit['sii6716'].stddev.value, \
                                            sii_bestfit['sii6716'].mean.value)
@@ -189,7 +189,7 @@ def find_hb_best_fit(lam_hb, flam_hb, ivar_hb, sii_bestfit):
     else:
         gfit_free, rchi2_free = fl.fit_hb_line.fit_free_two_components(lam_hb, flam_hb, \
                                                                       ivar_hb, sii_bestfit, \
-                                                                      frac_temp = 60.)
+                                                                      frac_temp = 100.)
         
         sig_sii = mfit.lamspace_to_velspace(sii_bestfit['sii6716'].stddev.value, \
                                            sii_bestfit['sii6716'].mean.value)
@@ -249,7 +249,7 @@ def find_nii_ha_best_fit(lam_nii, flam_nii, ivar_nii, sii_bestfit):
     
     if (n_sii == 2):
         gfit_free, rchi2_free = fl.fit_nii_ha_lines.fit_free_ha_one_component(lam_nii, flam_nii, ivar_nii, \
-                                                                              sii_bestfit, frac_temp = 60.)
+                                                                              sii_bestfit, frac_temp = 100.)
 
         sig_sii = mfit.lamspace_to_velspace(sii_bestfit['sii6716'].stddev.value, \
                                            sii_bestfit['sii6716'].mean.value)
@@ -268,7 +268,7 @@ def find_nii_ha_best_fit(lam_nii, flam_nii, ivar_nii, sii_bestfit):
             
     else:
         gfit_free, rchi2_free = fl.fit_nii_ha_lines.fit_free_ha_two_components(lam_nii, flam_nii, ivar_nii, \
-                                                                               sii_bestfit, frac_temp = 60.)
+                                                                               sii_bestfit, frac_temp = 100.)
         
         sig_sii = mfit.lamspace_to_velspace(sii_bestfit['sii6716'].stddev.value, \
                                            sii_bestfit['sii6716'].mean.value)
