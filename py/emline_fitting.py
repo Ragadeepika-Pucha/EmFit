@@ -3,7 +3,7 @@ This script consists of functions related to fitting the emission line spectra,
 and plotting the models and residuals.
 
 Author : Ragadeepika Pucha
-Version : 2023, April 27
+Version : 2023, April 29
 """
 
 ####################################################################################################
@@ -91,12 +91,12 @@ def fit_emline_spectra(specprod, survey, program, healpix, targetid, z):
     lam_sii, flam_sii, ivar_sii = spec_utils.get_fit_window(lam_rest, flam_rest, \
                                                             ivar_rest, em_line = 'sii')
     
-    gfit_sii, rchi2_sii, sii_bits = find_bestfit.find_sii_best_fit(lam_sii, flam_sii, ivar_sii)
-    gfit_oiii, rchi2_oiii, oiii_bits = find_bestfit.find_oiii_best_fit(lam_oiii, flam_oiii, ivar_oiii)
-    gfit_hb, rchi2_hb, hb_bits = find_bestfit.find_hb_best_fit(lam_hb, flam_hb, ivar_hb, gfit_sii)
-    gfit_nii_ha, rchi2_nii_ha, nii_ha_bits = find_bestfit.find_nii_ha_best_fit(lam_nii_ha, flam_nii_ha, \
+    gfit_sii, rchi2_sii, sii_bits, sii_delrchi2 = find_bestfit.find_sii_best_fit(lam_sii, flam_sii, ivar_sii)
+    gfit_oiii, rchi2_oiii, oiii_bits, oiii_delrchi2 = find_bestfit.find_oiii_best_fit(lam_oiii, flam_oiii, ivar_oiii)
+    gfit_hb, rchi2_hb, hb_bits, hb_delrchi2 = find_bestfit.find_hb_best_fit(lam_hb, flam_hb, ivar_hb, gfit_sii)
+    gfit_nii_ha, rchi2_nii_ha, nii_ha_bits, nii_ha_delrchi2 = find_bestfit.find_nii_ha_best_fit(lam_nii_ha, flam_nii_ha, \
                                                                                ivar_nii_ha, gfit_sii)
-    
+        
     hb_models = ['hb_n', 'hb_out', 'hb_b']
     oiii_models = ['oiii4959', 'oiii4959_out', 'oiii5007', 'oiii5007_out']
     nii_ha_models = ['nii6548', 'nii6548_out', 'nii6583', 'nii6583_out', 'ha_n', 'ha_out', 'ha_b']
@@ -136,6 +136,11 @@ def fit_emline_spectra(specprod, survey, program, healpix, targetid, z):
     nii_ha_params['nii_ha_flag'] = [nii_ha_flag]
     sii_params['sii_flag'] = [sii_flag]
     
+    hb_params['hb_delta_rchi2'] = [hb_delrchi2]
+    oiii_params['oiii_delta_rchi2'] = [oiii_delrchi2]
+    nii_ha_params['nii_ha_delta_rchi2'] = [nii_ha_delrchi2]
+    sii_params['sii_delta_rchi2'] = [sii_delrchi2]
+    
     tgt = {}
     tgt['targetid'] = [targetid]
     tgt['specprod'] = [specprod]
@@ -144,10 +149,13 @@ def fit_emline_spectra(specprod, survey, program, healpix, targetid, z):
     tgt['healpix'] = [healpix]
     tgt['z'] = [z]
     
-    params = tgt|hb_params|oiii_params|nii_ha_params|sii_params
+    params = tgt|hb_params|oiii_params|nii_ha_params|sii_params    
     
     ## Convert dictionary to table
     t_params = Table(params)
+    
+    fits = [gfit_hb, gfit_oiii, gfit_nii_ha, gfit_sii]
+    rchi2s = [rchi2_hb, rchi2_oiii, rchi2_nii_ha, rchi2_sii]
     
     return (t_params)
     

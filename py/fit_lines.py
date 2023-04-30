@@ -3,7 +3,7 @@ This script consists of funcitons for fitting emission-lines.
 The different functions are divided into different classes for different emission lines.
 
 Author : Ragadeepika Pucha
-Version : 2023, April 27
+Version : 2023, April 29
 """
 
 ###################################################################################################
@@ -410,6 +410,9 @@ class fit_hb_line:
                 0 : Free one component fitting
                 4 : chi^2 for broad-component fit improves by 20%
                 5 : sigma (Hbeta broad) < sigma (Hbeta narrow)
+                
+        del_rchi2 : float
+            Percentage difference between rchi2 with and without broad-line.
         """
 
         flag_bits = np.array([])
@@ -489,13 +492,15 @@ class fit_hb_line:
             flag_bits = np.append(flag_bits, 4)
         if (sig_hb_b < sig_hb_n):
             flag_bits = np.append(flag_bits, 5)
+        if (sig_hb_n < 40):
+            flag_bits = np.append(flag_bits, 9)
 
         flag_bits = np.sort(flag_bits.astype(int))
         
-        if ((del_rchi2 >= 20)&(sig_hb_b > sig_hb_n)):
-            return (gfit_broad, rchi2_broad, flag_bits)
+        if ((del_rchi2 >= 20)&(sig_hb_b > sig_hb_n)&(sig_hb_n >= 40.)):
+            return (gfit_broad, rchi2_broad, flag_bits, del_rchi2)
         else:
-            return (gfit_no_broad, rchi2_no_broad, flag_bits)
+            return (gfit_no_broad, rchi2_no_broad, flag_bits, del_rchi2)
         
 ####################################################################################################
 
@@ -540,6 +545,9 @@ class fit_hb_line:
                 4 : chi^2 for broad-component fit improves by 20%
                 5 : sigma (Hbeta broad) < sigma (Hbeta narrow)
                 6 : sigma (Hbeta outflow) > sigma (Hbeta broad)
+                
+        del_rchi2 : float
+            Percentage difference between rchi2 with and without broad-line.
         """
         
         flag_bits = np.array([])
@@ -656,13 +664,15 @@ class fit_hb_line:
             flag_bits = np.append(flag_bits, 4)
         if (sig_hb_b < sig_hb_n):
             flag_bits = np.append(flag_bits, 5)
+        if (sig_hb_n < 40):
+            flag_bits = np.append(flag_bits, 9)
         
         flag_bits = np.sort(flag_bits.astype(int))
         
-        if ((del_rchi2 >= 20)&(sig_hb_b > sig_hb_n)):
-            return (gfit_broad, rchi2_broad, flag_bits, flag_bits)
+        if ((del_rchi2 >= 20)&(sig_hb_b > sig_hb_n)&(sig_hb_n >= 40)):
+            return (gfit_broad, rchi2_broad, flag_bits, del_rchi2)
         else:
-            return (gfit_no_broad, rchi2_no_broad, flag_bits)
+            return (gfit_no_broad, rchi2_no_broad, flag_bits, del_rchi2)
     
 ####################################################################################################
 
@@ -699,7 +709,10 @@ class fit_hb_line:
             Array of flag bits for fixed one-component Hbeta fitting
                 1 : Fixed one component fitting
                 4 : chi^2 for broad-component fit improves by 20%
-                5 : sigma (Hbeta broad) < sigma (Hbeta narrow)            
+                5 : sigma (Hbeta broad) < sigma (Hbeta narrow)  
+                
+        del_rchi2 : float
+            Percentage difference between rchi2 with and without broad-line.
         """
         
         flag_bits = np.array([])
@@ -783,13 +796,15 @@ class fit_hb_line:
             flag_bits = np.append(flag_bits, 4)
         if (sig_hb_b < sig_hb_n):
             flag_bits = np.append(flag_bits, 5)
+        if (sig_hb_n < 40):
+            flag_bits = np.append(flag_bits, 9)
             
         flag_bits = np.sort(flag_bits.astype(int))
 
-        if ((del_rchi2 >= 20)&(sig_hb_b > sig_hb_n)):
-            return (gfit_broad, rchi2_broad, flag_bits)
+        if ((del_rchi2 >= 20)&(sig_hb_b > sig_hb_n)&(sig_hb_n >= 40.)):
+            return (gfit_broad, rchi2_broad, flag_bits, del_rchi2)
         else:
-            return (gfit_no_broad, rchi2_no_broad, flag_bits)
+            return (gfit_no_broad, rchi2_no_broad, flag_bits, del_rchi2)
         
 ####################################################################################################
 
@@ -827,6 +842,9 @@ class fit_hb_line:
                 3 : Fixed two component fitting
                 4 : chi^2 for broad-component fit improves by 20%
                 5 : sigma (Hbeta broad) < sigma (Hbeta narrow)
+                
+        del_rchi2 : float
+            Percentage difference between rchi2 with and without broad-line.
         """
         flag_bits = np.array([])
         
@@ -919,13 +937,15 @@ class fit_hb_line:
             flag_bits = np.append(flag_bits, 4)
         if (sig_hb_b < sig_hb_n):
             flag_bits = np.append(flag_bits, 5)
+        if (sig_hb_n < 40):
+            flag_bits = np.append(flag_bits, 9)
         
         flag_bits = np.sort(flag_bits.astype(int))
         
-        if ((del_rchi2 >= 20)&(sig_hb_b > sig_hb_n)):
-            return (gfit_broad, rchi2_broad, flag_bits)
+        if ((del_rchi2 >= 20)&(sig_hb_b > sig_hb_n)&(sig_hb_n >= 40.)):
+            return (gfit_broad, rchi2_broad, flag_bits, del_rchi2)
         else:
-            return (gfit_no_broad, rchi2_no_broad, flag_bits)
+            return (gfit_no_broad, rchi2_no_broad, flag_bits, del_rchi2)
         
 ####################################################################################################
 ####################################################################################################
@@ -977,6 +997,9 @@ class fit_nii_ha_lines:
                 0 : free one component fit
                 4 : chi^2 for broad-line fit improves by 20%
                 5 : sigma (Ha; b) < sigma (Ha; n)
+                
+        del_rchi2 : float
+            Percentage difference between rchi2 with and without broad-line.
         """
         
         flag_bits = np.array([])
@@ -1106,13 +1129,15 @@ class fit_nii_ha_lines:
             flag_bits = np.append(flag_bits, 4)
         if (sig_ha_b < sig_ha_n):
             flag_bits = np.append(flag_bits, 5)
+        if (sig_ha_n < 40):
+            flag_bits = np.append(flag_bits, 10)
             
         flag_bits = np.sort(flag_bits.astype(int))
 
-        if ((del_rchi2 >= 20)&(sig_ha_b > sig_ha_n)):
-            return (gfit_broad, rchi2_broad, flag_bits)
+        if ((del_rchi2 >= 20)&(sig_ha_b > sig_ha_n)&(sig_ha_n >= 40.)):
+            return (gfit_broad, rchi2_broad, flag_bits, del_rchi2)
         else:
-            return (gfit_no_broad, rchi2_no_broad, flag_bits)
+            return (gfit_no_broad, rchi2_no_broad, flag_bits, del_rchi2)
         
 ####################################################################################################
 
@@ -1159,6 +1184,9 @@ class fit_nii_ha_lines:
                 4 : chi^2 for broad-line fit improves by 20%
                 5 : sigma (Ha; b) < sigma (Ha; n)
                 6 : sigma (Ha; out) > sigma (Ha; b)
+                
+        del_rchi2 : float
+            Percentage difference between rchi2 with and without broad-line.
         """
         
         flag_bits = np.array([])
@@ -1366,13 +1394,15 @@ class fit_nii_ha_lines:
             flag_bits = np.append(flag_bits, 4)
         if (sig_ha_b < sig_ha_n):
             flag_bits = np.append(flag_bits, 5)
+        if (sig_ha_n < 40):
+            flag_bits = np.append(flag_bits, 10)
             
         flag_bits = np.sort(flag_bits.astype(int))
 
-        if ((del_rchi2 >= 20)&(sig_ha_b > sig_ha_n)):
-            return (gfit_broad, rchi2_broad, flag_bits)
+        if ((del_rchi2 >= 20)&(sig_ha_b > sig_ha_n)&(sig_ha_n >= 40.)):
+            return (gfit_broad, rchi2_broad, flag_bits, del_rchi2)
         else:
-            return (gfit_no_broad, rchi2_no_broad, flag_bits)
+            return (gfit_no_broad, rchi2_no_broad, flag_bits, del_rchi2)
 
 ####################################################################################################
     
@@ -1410,6 +1440,9 @@ class fit_nii_ha_lines:
                 2 : free two component fit
                 4 : chi^2 for broad-line fit improves by 20%
                 5 : sigma (Ha; b) < sigma (Ha; n)
+                
+        del_rchi2 : float
+            Percentage difference between rchi2 with and without broad-line.
         """
         
         flag_bits = np.array([])
@@ -1538,13 +1571,15 @@ class fit_nii_ha_lines:
             flag_bits = np.append(flag_bits, 4)
         if (sig_ha_b < sig_ha_n):
             flag_bits = np.append(flag_bits, 5)
+        if (sig_ha_n < 40):
+            flag_bits = np.append(flag_bits, 10)
             
         flag_bits = np.sort(flag_bits.astype(int))
 
-        if ((del_rchi2 >= 20)&(sig_ha_b > sig_ha_n)):
-            return (gfit_broad, rchi2_broad, flag_bits)
+        if ((del_rchi2 >= 20)&(sig_ha_b > sig_ha_n)&(sig_ha_n >= 40.)):
+            return (gfit_broad, rchi2_broad, flag_bits, del_rchi2)
         else:
-            return (gfit_no_broad, rchi2_no_broad, flag_bits)
+            return (gfit_no_broad, rchi2_no_broad, flag_bits, del_rchi2)
         
 ####################################################################################################
 
@@ -1582,6 +1617,9 @@ class fit_nii_ha_lines:
                 3 : fixed one component fit
                 4 : chi^2 for broad-line fit improves by 20%
                 5 : sigma (Ha; b) < sigma (Ha; n)
+                
+        del_rchi2 : float
+            Percentage difference between rchi2 with and without broad-line.
         """
         
         flag_bits = np.array([])
@@ -1764,13 +1802,15 @@ class fit_nii_ha_lines:
             flag_bits = np.append(flag_bits, 4)
         if (sig_ha_b < sig_ha_n):
             flag_bits = np.append(flag_bits, 5)
+        if (sig_ha_n < 40):
+            flag_bits = np.append(flag_bits, 10)
             
         flag_bits = np.sort(flag_bits.astype(int))
 
-        if ((del_rchi2 >= 20)&(sig_ha_b > sig_ha_n)):
-            return (gfit_broad, rchi2_broad, flag_bits)
+        if ((del_rchi2 >= 20)&(sig_ha_b > sig_ha_n)&(sig_ha_n >= 40.)):
+            return (gfit_broad, rchi2_broad, flag_bits, del_rchi2)
         else:
-            return (gfit_no_broad, rchi2_no_broad, flag_bits)
+            return (gfit_no_broad, rchi2_no_broad, flag_bits, del_rchi2)
         
 ####################################################################################################
 ####################################################################################################
