@@ -801,7 +801,7 @@ class fit_hb_line:
             
         flag_bits = np.sort(flag_bits.astype(int))
 
-        if ((del_rchi2 >= 20)&(sig_hb_b > sig_hb_n)&(sig_hb_n >= 40.)):
+        if ((del_rchi2 >= 20)&(sig_hb_b > sig_hb_n)):
             return (gfit_broad, rchi2_broad, flag_bits, del_rchi2)
         else:
             return (gfit_no_broad, rchi2_no_broad, flag_bits, del_rchi2)
@@ -942,7 +942,7 @@ class fit_hb_line:
         
         flag_bits = np.sort(flag_bits.astype(int))
         
-        if ((del_rchi2 >= 20)&(sig_hb_b > sig_hb_n)&(sig_hb_n >= 40.)):
+        if ((del_rchi2 >= 20)&(sig_hb_b > sig_hb_n)):
             return (gfit_broad, rchi2_broad, flag_bits, del_rchi2)
         else:
             return (gfit_no_broad, rchi2_no_broad, flag_bits, del_rchi2)
@@ -1123,6 +1123,8 @@ class fit_nii_ha_lines:
         sig_ha_n = mfit.lamspace_to_velspace(gfit_broad['ha_n'].stddev.value, \
                                              gfit_broad['ha_n'].mean.value)
         
+        fwhm_ha_b = 2.355*sig_ha_b
+        
         ## Set flags
         flag_bits = np.append(flag_bits, 0)
         if (del_rchi2 >= 20):
@@ -1134,7 +1136,7 @@ class fit_nii_ha_lines:
             
         flag_bits = np.sort(flag_bits.astype(int))
 
-        if ((del_rchi2 >= 20)&(sig_ha_b > sig_ha_n)&(sig_ha_n >= 40.)):
+        if ((del_rchi2 >= 20)&(sig_ha_b > sig_ha_n)&(sig_ha_n >= 40.)&(fwhm_ha_b >= 300.)):
             return (gfit_broad, rchi2_broad, flag_bits, del_rchi2)
         else:
             return (gfit_no_broad, rchi2_no_broad, flag_bits, del_rchi2)
@@ -1388,6 +1390,8 @@ class fit_nii_ha_lines:
         sig_ha_n = mfit.lamspace_to_velspace(gfit_broad['ha_n'].stddev.value, \
                                              gfit_broad['ha_n'].mean.value)
         
+        fwhm_ha_b = 2.355*sig_ha_b
+        
         ## Set flags
         flag_bits = np.append(flag_bits, 2)
         if (del_rchi2 >= 20):
@@ -1399,7 +1403,7 @@ class fit_nii_ha_lines:
             
         flag_bits = np.sort(flag_bits.astype(int))
 
-        if ((del_rchi2 >= 20)&(sig_ha_b > sig_ha_n)&(sig_ha_n >= 40.)):
+        if ((del_rchi2 >= 20)&(sig_ha_b > sig_ha_n)&(sig_ha_n >= 40.)&(fwhm_ha_b >= 300.)):
             return (gfit_broad, rchi2_broad, flag_bits, del_rchi2)
         else:
             return (gfit_no_broad, rchi2_no_broad, flag_bits, del_rchi2)
@@ -1565,6 +1569,8 @@ class fit_nii_ha_lines:
         sig_ha_n = mfit.lamspace_to_velspace(gfit_broad['ha_n'].stddev.value, \
                                              gfit_broad['ha_n'].mean.value)
         
+        fwhm_ha_b = 2.355*sig_ha_b
+        
         ## Set flags
         flag_bits = np.append(flag_bits, 1)
         if (del_rchi2 >= 20):
@@ -1576,7 +1582,7 @@ class fit_nii_ha_lines:
             
         flag_bits = np.sort(flag_bits.astype(int))
 
-        if ((del_rchi2 >= 20)&(sig_ha_b > sig_ha_n)&(sig_ha_n >= 40.)):
+        if ((del_rchi2 >= 20)&(sig_ha_b > sig_ha_n)&(fwhm_ha_b >= 300.)):
             return (gfit_broad, rchi2_broad, flag_bits, del_rchi2)
         else:
             return (gfit_no_broad, rchi2_no_broad, flag_bits, del_rchi2)
@@ -1796,6 +1802,9 @@ class fit_nii_ha_lines:
                                              gfit_broad['ha_b'].mean.value)
         sig_ha_n = mfit.lamspace_to_velspace(gfit_broad['ha_n'].stddev.value, \
                                              gfit_broad['ha_n'].mean.value)
+        
+        fwhm_ha_b = 2.355*sig_ha_b
+        
         ## Set flags
         flag_bits = np.append(flag_bits, 3)
         if (del_rchi2 >= 20):
@@ -1807,7 +1816,7 @@ class fit_nii_ha_lines:
             
         flag_bits = np.sort(flag_bits.astype(int))
 
-        if ((del_rchi2 >= 20)&(sig_ha_b > sig_ha_n)&(sig_ha_n >= 40.)):
+        if ((del_rchi2 >= 20)&(sig_ha_b > sig_ha_n)&(fwhm_ha_b >= 300.)):
             return (gfit_broad, rchi2_broad, flag_bits, del_rchi2)
         else:
             return (gfit_no_broad, rchi2_no_broad, flag_bits, del_rchi2)
