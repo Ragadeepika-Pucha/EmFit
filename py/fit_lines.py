@@ -3,7 +3,7 @@ This script consists of funcitons for fitting emission-lines.
 The different functions are divided into different classes for different emission lines.
 
 Author : Ragadeepika Pucha
-Version : 2023, April 29
+Version : 2023, May 5
 """
 
 ###################################################################################################
@@ -950,869 +950,7 @@ class fit_hb_line:
 ####################################################################################################
 ####################################################################################################
 
-# class fit_nii_ha_lines:
-#     """
-#     Different functions associated with fitting [NII]+Ha emission-lines:
-#         1) fit_free_ha_one_component(lam_nii, flam_nii, ivar_nii, sii_bestfit, frac_temp)
-#         2) fit_free_ha_two_components(lam_nii, flam_nii, ivar_nii, sii_bestfit, frac_temp)
-#         3) fit_fixed_one_component(lam_nii, flam_nii, ivar_nii, sii_bestfit)
-#         4) fit_fixed_two_components(lam_nii, flam_nii, ivar_nii, sii_bestfit)
-#     """
-    
-#     def fit_free_ha_one_component(lam_nii, flam_nii, ivar_nii, sii_bestfit, frac_temp = 60.):
-#         """
-#         Function to fit [NII]6548, 6583 emission lines.
-#         Sigma of [NII] is kept fixed to [SII] and
-#         Ha is allowed to vary within some percent (default = 60%) of [SII].
-#         The broad component fit needs to be >20% better to be picked.
-#         Code works only for one-component [SII] fits -- no outflow components.
-        
-#         Parameters
-#         ----------
-#         lam_nii : numpy array
-#             Wavelength array of the [NII]+Ha region where the fits need to be performed.
-#         flam_nii : numpy array
-#             Flux array of the spectra in the [NII]+Ha region.
-#         ivar_nii : numpy array
-#             Inverse variance array of the spectra in the [NII]+Ha region.
-            
-#         sii_bestfit : Astropy model
-#             Best fit model for the [SII] emission-lines.
-            
-#         frac_temp : float
-#             The %age of [SII] width within which narrow Halpha width can vary
-            
-#         Returns
-#         -------
-#         gfit : Astropy model
-#             Best-fit 1 component model
-#         rchi2: float
-#             Reduced chi2 of the best-fit
-            
-#         flag_bits : numpy array
-#             Array of flag bits for free one-component fitting
-#                 0 : free one component fit
-#                 4 : chi^2 for broad-line fit improves by 20%
-#                 5 : sigma (Ha; b) < sigma (Ha; n)
-                
-#         del_rchi2 : float
-#             Percentage difference between rchi2 with and without broad-line.
-#         """
-        
-#         flag_bits = np.array([])
-                        
-#         ## Initial estimate of amplitudes
-#         amp_nii6548 = np.max(flam_nii[(lam_nii > 6548)&(lam_nii < 6550)])
-#         amp_nii6583 = np.max(flam_nii[(lam_nii > 6583)&(lam_nii < 6586)])
-        
-#         ## Initial guess of amplitude for Ha
-#         amp_ha = np.max(flam_nii[(lam_nii > 6550)&(lam_nii < 6575)])
-        
-#         ## Initial estimates of standard deviation
-#         stddev_nii6548 = (6549.852/sii_bestfit['sii6716'].mean.value)*\
-#         sii_bestfit['sii6716'].stddev.value
-#         stddev_nii6583 = (6585.277/sii_bestfit['sii6716'].mean.value)*\
-#         sii_bestfit['sii6716'].stddev.value
-        
-#         ## Two component fits
-#         g_nii6548 = Gaussian1D(amplitude = amp_nii6548/2, mean = 6549.852, \
-#                                stddev = stddev_nii6548, name = 'nii6548', \
-#                                bounds = {'amplitude' : (0.0, None)})
-#         g_nii6583 = Gaussian1D(amplitude = amp_nii6583/2, mean = 6585.277, \
-#                                stddev = stddev_nii6583, name = 'nii6583', \
-#                                bounds = {'amplitude' : (0.0, None)})
-
-#         ## Tie means of [NII] doublet gaussians
-#         def tie_mean_nii(model):
-#             return (model['nii6548'].mean + 35.425)
-
-#         g_nii6583.mean.tied = tie_mean_nii
-
-#         ## Tie amplitudes of two [NII] gaussians
-#         def tie_amp_nii(model):
-#             return (model['nii6548'].amplitude*2.96)
-
-#         g_nii6583.amplitude.tied = tie_amp_nii
-
-#         ## Tie standard deviations of all the narrow components
-#         def tie_std_nii6548(model):
-#             return ((model['nii6548'].mean/sii_bestfit['sii6716'].mean)*\
-#                     sii_bestfit['sii6716'].stddev)
-
-#         g_nii6548.stddev.tied = tie_std_nii6548
-#         g_nii6548.stddev.fixed = True
-
-#         def tie_std_nii6583(model):
-#             return ((model['nii6583'].mean/sii_bestfit['sii6716'].mean)*\
-#                     sii_bestfit['sii6716'].stddev)
-
-#         g_nii6583.stddev.tied = tie_std_nii6583
-#         g_nii6583.stddev.fixed = True
-
-#         g_nii = g_nii6548 + g_nii6583 
-        
-#         ## Template fit
-#         temp_std = sii_bestfit['sii6716'].stddev.value
-#         temp_std_kms = mfit.lamspace_to_velspace(temp_std, \
-#                                                  sii_bestfit['sii6716'].mean.value)
-#         min_std_kms = temp_std_kms - ((frac_temp/100)*temp_std_kms)
-#         max_std_kms = temp_std_kms + ((frac_temp/100)*temp_std_kms)
-
-#         min_std_ha = mfit.velspace_to_lamspace(min_std_kms, 6564.312)
-#         max_std_ha = mfit.velspace_to_lamspace(max_std_kms, 6564.312)
-        
-#         g_ha_n = Gaussian1D(amplitude = amp_ha, mean = 6564.312, \
-#                             stddev = temp_std, name = 'ha_n', \
-#                             bounds = {'amplitude' : (0.0, None), 'stddev' : (0.85, None)})
-
-#         ## Set narrow Ha within 60% of the template fit
-#         g_ha_n.stddev.bounds = (min_std_ha, max_std_ha)
-        
-#         # Total Halpha components
-#         g_ha = g_ha_n
-        
-#         #####################################################################################
-#         ########################## Fit without broad component ##############################
-
-#         ## Initial gaussian fit
-#         g_init = g_nii + g_ha
-
-#         fitter_no_broad = fitting.LevMarLSQFitter()
-
-#         gfit_no_broad = fitter_no_broad(g_init, lam_nii, flam_nii,\
-#                                      weights = np.sqrt(ivar_nii), maxiter = 1000)
-
-        
-#         rchi2_no_broad = mfit.calculate_red_chi2(flam_nii, gfit_no_broad(lam_nii),\
-#                                                           ivar_nii, n_free_params = 5)
-        
-
-#         #####################################################################################
-#         ########################## Fit with broad component #################################
-
-#         ## Broad Ha parameters
-#         g_ha_b = Gaussian1D(amplitude = amp_ha/3, mean = 6564.312, \
-#                             stddev = 4.0, name = 'ha_b', \
-#                             bounds = {'amplitude' : (0.0, None), 'stddev' : (1.5, None)})
-
-#         ## Initial gaussian fit
-#         g_init = g_nii + g_ha + g_ha_b
-#         fitter_broad = fitting.LevMarLSQFitter()
-
-#         gfit_broad = fitter_broad(g_init, lam_nii, flam_nii,\
-#                                   weights = np.sqrt(ivar_nii), maxiter = 1000)
-
-        
-#         rchi2_broad = mfit.calculate_red_chi2(flam_nii, gfit_broad(lam_nii), \
-#                                                        ivar_nii, n_free_params = 8)
-
-#         #####################################################################################
-#         #####################################################################################
-
-#         ## Select the best-fit based on rchi2
-#         ## If the rchi2 of 2-component is better by 20%, then the 2-component fit is picked.
-#         ## Otherwise, 1-component fit is the best fit.
-#         del_rchi2 = ((rchi2_no_broad - rchi2_broad)/rchi2_no_broad)*100
-        
-#         ## Also sigma (broad Ha) > sigma (narrow Ha)
-#         sig_ha_b = mfit.lamspace_to_velspace(gfit_broad['ha_b'].stddev.value, \
-#                                              gfit_broad['ha_b'].mean.value)
-#         sig_ha_n = mfit.lamspace_to_velspace(gfit_broad['ha_n'].stddev.value, \
-#                                              gfit_broad['ha_n'].mean.value)
-        
-#         fwhm_ha_b = 2.355*sig_ha_b
-        
-#         ## Set flags
-#         flag_bits = np.append(flag_bits, 0)
-#         if (del_rchi2 >= 20):
-#             flag_bits = np.append(flag_bits, 4)
-#         if (sig_ha_b < sig_ha_n):
-#             flag_bits = np.append(flag_bits, 5)
-#         if (sig_ha_n < 40):
-#             flag_bits = np.append(flag_bits, 10)
-            
-#         flag_bits = np.sort(flag_bits.astype(int))
-
-#         if ((del_rchi2 >= 20)&(sig_ha_b > sig_ha_n)&(sig_ha_n >= 40.)&(fwhm_ha_b >= 300.)):
-#             return (gfit_broad, rchi2_broad, flag_bits, del_rchi2)
-#         else:
-#             return (gfit_no_broad, rchi2_no_broad, flag_bits, del_rchi2)
-        
-# ####################################################################################################
-
-#     def fit_free_ha_two_components(lam_nii, flam_nii, ivar_nii, \
-#                                              sii_bestfit, frac_temp = 60.):
-        
-#         """
-#         Function to fit [NII]6548, 6583 emission lines.
-#         Sigma of [NII] is kept fixed to [SII] and
-#         Ha, including outflow component is allowed to 
-#         vary within some percent (default = 60%) of [SII].
-        
-#         The broad component fit needs to be >20% better to be picked.
-#         Code works only for two-component [SII] fits, including outflow components.
-        
-#         Parameters
-#         ----------
-#         lam_nii : numpy array
-#             Wavelength array of the [NII]+Ha region where the fits need to be performed.
-#         flam_nii : numpy array
-#             Flux array of the spectra in the [NII]+Ha region.
-#         ivar_nii : numpy array
-#             Inverse variance array of the spectra in the [NII]+Ha region.
-            
-#         sii_bestfit : Astropy model
-#             Best fit model for the [SII] emission-lines.
-            
-#         frac_temp : float
-#             The %age of [SII] width within which narrow Halpha width can vary
-            
-#          Returns
-#         -------
-#         gfit : Astropy model
-#             Best-fit 2 component model
-#         rchi2: float
-#             Reduced chi2 of the best-fit
-            
-#         flag_bits : numpy array
-#             Array of flag bits for fixed one-component fitting
-#                 1 : fixed one component fit
-#                 4 : chi^2 for broad-line fit improves by 20%
-#                 5 : sigma (Ha; b) < sigma (Ha; n)
-#                 6 : sigma (Ha; out) > sigma (Ha; b)
-                
-#         del_rchi2 : float
-#             Percentage difference between rchi2 with and without broad-line.
-#         """
-        
-#         flag_bits = np.array([])
-        
-#         ## Initial estimate of amplitudes
-#         amp_nii6548 = np.max(flam_nii[(lam_nii > 6548)&(lam_nii < 6550)])
-#         amp_nii6583 = np.max(flam_nii[(lam_nii > 6583)&(lam_nii < 6586)])
-        
-#         ## Initial guess of amplitude for Ha
-#         amp_ha = np.max(flam_nii[(lam_nii > 6550)&(lam_nii < 6575)])
-        
-#         ## Initial estimates of standard deviation
-#         stddev_nii6548 = (6549.852/sii_bestfit['sii6716'].mean.value)*\
-#         sii_bestfit['sii6716'].stddev.value
-#         stddev_nii6583 = (6585.277/sii_bestfit['sii6716'].mean.value)*\
-#         sii_bestfit['sii6716'].stddev.value
-
-#         stddev_nii6548_out = (6549.852/sii_bestfit['sii6716_out'].mean.value)*\
-#         sii_bestfit['sii6716_out'].stddev.value
-#         stddev_nii6583_out = (6585.277/sii_bestfit['sii6716_out'].mean.value)*\
-#         sii_bestfit['sii6716_out'].stddev.value
-
-#         ## Two component fits
-#         g_nii6548 = Gaussian1D(amplitude = amp_nii6548/2, mean = 6549.852, \
-#                                stddev = stddev_nii6548, name = 'nii6548', \
-#                                bounds = {'amplitude' : (0.0, None)})
-#         g_nii6583 = Gaussian1D(amplitude = amp_nii6583/2, mean = 6585.277, \
-#                                stddev = stddev_nii6583, name = 'nii6583', \
-#                                bounds = {'amplitude' : (0.0, None)})
-
-#         g_nii6548_out = Gaussian1D(amplitude = amp_nii6548/4, mean = 6549.852, \
-#                                    stddev = stddev_nii6548_out, name = 'nii6548_out', \
-#                                    bounds = {'amplitude' : (0.0, None)})
-#         g_nii6583_out = Gaussian1D(amplitude = amp_nii6583/4, mean = 6585.277, \
-#                                    stddev = stddev_nii6583_out, name = 'nii6583_out', \
-#                                    bounds = {'amplitude' : (0.0, None)})
-
-#         ## Tie means of [NII] doublet gaussians
-#         def tie_mean_nii(model):
-#             return (model['nii6548'].mean + 35.425)
-
-#         g_nii6583.mean.tied = tie_mean_nii
-
-#         ## Tie amplitudes of two [NII] gaussians
-#         def tie_amp_nii(model):
-#             return (model['nii6548'].amplitude*2.96)
-
-#         g_nii6583.amplitude.tied = tie_amp_nii
-
-#         ## Tie standard deviations of all the narrow components
-#         def tie_std_nii6548(model):
-#             return ((model['nii6548'].mean/sii_bestfit['sii6716'].mean)*\
-#                     sii_bestfit['sii6716'].stddev)
-
-#         g_nii6548.stddev.tied = tie_std_nii6548
-#         g_nii6548.stddev.fixed = True
-
-#         def tie_std_nii6583(model):
-#             return ((model['nii6583'].mean/sii_bestfit['sii6716'].mean)*\
-#                     sii_bestfit['sii6716'].stddev)
-
-#         g_nii6583.stddev.tied = tie_std_nii6583
-#         g_nii6583.stddev.fixed = True
-
-#         ## Tie means of [NII] outflow components
-#         def tie_mean_nii_out(model):
-#             return (model['nii6548_out'].mean + 35.425)
-
-#         g_nii6583_out.mean.tied = tie_mean_nii_out
-
-#         ## Tie amplitudes of two [NII] gaussians
-#         def tie_amp_nii_out(model):
-#             return (model['nii6548_out'].amplitude*2.96)
-
-#         g_nii6583_out.amplitude.tied = tie_amp_nii_out
-
-#         ## Tie standard deviations of all the outflow components
-#         def tie_std_nii6548_out(model):
-#             return ((model['nii6548_out'].mean/sii_bestfit['sii6716_out'].mean)*\
-#                     sii_bestfit['sii6716_out'].stddev)
-
-#         g_nii6548_out.stddev.tied = tie_std_nii6548_out
-#         g_nii6548_out.stddev.fixed = True
-
-#         def tie_std_nii6583_out(model):
-#             return ((model['nii6583_out'].mean/sii_bestfit['sii6716_out'].mean)*\
-#                     sii_bestfit['sii6716_out'].stddev)
-
-#         g_nii6583_out.stddev.tied = tie_std_nii6583_out
-#         g_nii6583_out.stddev.fixed = True
-
-#         g_nii = g_nii6548 + g_nii6583 + g_nii6548_out + g_nii6583_out
-        
-#         ## Template fit
-#         temp_std = sii_bestfit['sii6716'].stddev.value
-#         temp_std_kms = mfit.lamspace_to_velspace(temp_std, \
-#                                                  sii_bestfit['sii6716'].mean.value)
-#         min_std_kms = temp_std_kms - ((frac_temp/100)*temp_std_kms)
-#         max_std_kms = temp_std_kms + ((frac_temp/100)*temp_std_kms)
-
-#         min_std_ha = mfit.velspace_to_lamspace(min_std_kms, 6564.312)
-#         max_std_ha = mfit.velspace_to_lamspace(max_std_kms, 6564.312)
-        
-#         g_ha_n = Gaussian1D(amplitude = amp_ha/2, mean = 6564.312, \
-#                             stddev = temp_std, name = 'ha_n', \
-#                             bounds = {'amplitude' : (0.0, None), 'stddev' : (0.85, None)})
-
-#         ## Set narrow Ha within 60% of the template fit
-#         g_ha_n.stddev.bounds = (min_std_ha, max_std_ha)
-        
-#         ## Outflow components
-#         temp_out_std = sii_bestfit['sii6716_out'].stddev.value
-#         temp_out_std_kms = mfit.lamspace_to_velspace(temp_out_std, \
-#                                                      sii_bestfit['sii6716_out'].mean.value)
-
-#         min_out_kms = temp_out_std_kms - ((frac_temp/100)*temp_out_std_kms)
-#         max_out_kms = temp_out_std_kms + ((frac_temp/100)*temp_out_std_kms)
-
-#         min_out = mfit.velspace_to_lamspace(min_out_kms, 6564.312)
-#         max_out = mfit.velspace_to_lamspace(max_out_kms, 6564.312)
-
-#         g_ha_out = Gaussian1D(amplitude = amp_ha/3, mean = 6564.312, \
-#                              stddev = temp_out_std, name = 'ha_out', \
-#                              bounds = {'amplitude': (0.0, None), 'stddev' : (0.85, None)})
-        
-#         g_ha_out.stddev.bounds = (min_out, max_out)
-        
-#         g_ha = g_ha_n + g_ha_out
-        
-#         #####################################################################################
-#         ########################## Fit without broad component ##############################
-
-#         ## Initial gaussian fit
-#         g_init = g_nii + g_ha
-
-#         fitter_no_broad = fitting.LevMarLSQFitter()
-
-#         gfit_no_broad = fitter_no_broad(g_init, lam_nii, flam_nii,\
-#                                      weights = np.sqrt(ivar_nii), maxiter = 1000)
-
-        
-#         rchi2_no_broad = mfit.calculate_red_chi2(flam_nii, gfit_no_broad(lam_nii),\
-#                                                           ivar_nii, n_free_params = 10)
-
-#         #####################################################################################
-#         ########################## Fit with broad component #################################
-
-#         ## Broad Ha parameters
-#         g_ha_b = Gaussian1D(amplitude = amp_ha/2, mean = 6564.312, \
-#                             stddev = 4.0, name = 'ha_b', \
-#                             bounds = {'amplitude' : (0.0, None), 'stddev' : (1.5, None)})
-
-#         ## Initial gaussian fit
-#         g_init = g_nii + g_ha + g_ha_b
-#         fitter_broad = fitting.LevMarLSQFitter()
-
-#         gfit_broad = fitter_broad(g_init, lam_nii, flam_nii,\
-#                                   weights = np.sqrt(ivar_nii), maxiter = 1000)
-
-        
-#         rchi2_broad = mfit.calculate_red_chi2(flam_nii, gfit_broad(lam_nii), \
-#                                                        ivar_nii, n_free_params = 13)
-        
-        
-#         ## If broad-sigma < outflow-sigma -- exchange the gaussians
-#         sigma_ha_b = mfit.lamspace_to_velspace(gfit_broad['ha_b'].stddev.value, \
-#                                               gfit_broad['ha_b'].mean.value)
-        
-#         sigma_ha_out = mfit.lamspace_to_velspace(gfit_broad['ha_out'].stddev.value, \
-#                                                 gfit_broad['ha_out'].mean.value)
-        
-#         if (sigma_ha_b < sigma_ha_out):
-#             flag_bits = np.append(flag_bits, 6)
-#             g_ha_n = Gaussian1D(amplitude = gfit_broad['ha_n'].amplitude, \
-#                                mean = gfit_broad['ha_n'].mean, \
-#                                stddev = gfit_broad['ha_n'].stddev, name = 'ha_n')
-            
-#             g_ha_out = Gaussian1D(amplitude = gfit_broad['ha_b'].amplitude, \
-#                                  mean = gfit_broad['ha_b'].mean, \
-#                                  stddev = gfit_broad['ha_b'].stddev, name = 'ha_out')
-            
-#             g_ha_b = Gaussian1D(amplitude = gfit_broad['ha_out'].amplitude, \
-#                                mean = gfit_broad['ha_out'].mean, \
-#                                 stddev = gfit_broad['ha_out'].stddev, name = 'ha_b')
-            
-#             gfit_broad = g_ha_n + g_ha_out + g_ha_b
-
-#         #####################################################################################
-#         #####################################################################################
-
-#         ## Select the best-fit based on rchi2
-#         ## If the rchi2 of 2-component is better by 20%, then the 2-component fit is picked.
-#         ## Otherwise, 1-component fit is the best fit.
-#         del_rchi2 = ((rchi2_no_broad - rchi2_broad)/rchi2_no_broad)*100
-        
-#         ## Also sigma (broad Ha) > sigma (narrow Ha)
-#         sig_ha_b = mfit.lamspace_to_velspace(gfit_broad['ha_b'].stddev.value, \
-#                                              gfit_broad['ha_b'].mean.value)
-#         sig_ha_n = mfit.lamspace_to_velspace(gfit_broad['ha_n'].stddev.value, \
-#                                              gfit_broad['ha_n'].mean.value)
-        
-#         fwhm_ha_b = 2.355*sig_ha_b
-        
-#         ## Set flags
-#         flag_bits = np.append(flag_bits, 2)
-#         if (del_rchi2 >= 20):
-#             flag_bits = np.append(flag_bits, 4)
-#         if (sig_ha_b < sig_ha_n):
-#             flag_bits = np.append(flag_bits, 5)
-#         if (sig_ha_n < 40):
-#             flag_bits = np.append(flag_bits, 10)
-            
-#         flag_bits = np.sort(flag_bits.astype(int))
-
-#         if ((del_rchi2 >= 20)&(sig_ha_b > sig_ha_n)&(sig_ha_n >= 40.)&(fwhm_ha_b >= 300.)):
-#             return (gfit_broad, rchi2_broad, flag_bits, del_rchi2)
-#         else:
-#             return (gfit_no_broad, rchi2_no_broad, flag_bits, del_rchi2)
-
-# ####################################################################################################
-    
-#     def fit_fixed_one_component(lam_nii, flam_nii, ivar_nii, sii_bestfit):
-#         """
-#         Function to fit [NII]6548, 6583 emission lines.
-#         The code uses [SII] best fit as a template for both [NII] and Ha.
-#         The broad component fit needs to be >20% better to be picked.
-#         Code works only for single-component [SII] fits. No outflow components.
-        
-#         Parameters
-#         ----------
-#         lam_nii : numpy array
-#             Wavelength array of the [NII]+Ha region where the fits need to be performed.
-#         flam_nii : numpy array
-#             Flux array of the spectra in the [NII]+Ha region.
-#         ivar_nii : numpy array
-#             Inverse variance array of the spectra in the [NII]+Ha region.
-            
-#         sii_bestfit : Astropy model
-#             Best fit model for the [SII] emission-lines.
-            
-#         Returns
-#         -------
-#         gfit : Astropy model
-#             Best-fit 1 component model
-#         rchi2: float
-#             Reduced chi2 of the best-fit
-            
-#         flag_bits : numpy array
-#             Array of flag bits for free one-component fitting
-#                 2 : free two component fit
-#                 4 : chi^2 for broad-line fit improves by 20%
-#                 5 : sigma (Ha; b) < sigma (Ha; n)
-                
-#         del_rchi2 : float
-#             Percentage difference between rchi2 with and without broad-line.
-#         """
-        
-#         flag_bits = np.array([])
-        
-#         ## Initial estimate of amplitudes
-#         amp_nii6548 = np.max(flam_nii[(lam_nii > 6548)&(lam_nii < 6550)])
-#         amp_nii6583 = np.max(flam_nii[(lam_nii > 6583)&(lam_nii < 6586)])
-        
-#         ## Initial guess of amplitude for Ha
-#         amp_ha = np.max(flam_nii[(lam_nii > 6550)&(lam_nii < 6575)])
-        
-#         ## Initial estimates of standard deviation
-#         stddev_nii6548 = (6549.852/sii_bestfit['sii6716'].mean.value)*\
-#         sii_bestfit['sii6716'].stddev.value
-#         stddev_nii6583 = (6585.277/sii_bestfit['sii6716'].mean.value)*\
-#         sii_bestfit['sii6716'].stddev.value
-
-#         ## Single component fits
-#         g_nii6548 = Gaussian1D(amplitude = amp_nii6548, mean = 6549.852, \
-#                                stddev = stddev_nii6548, name = 'nii6548', \
-#                                bounds = {'amplitude' : (0.0, None)})
-#         g_nii6583 = Gaussian1D(amplitude = amp_nii6583, mean = 6585.277, \
-#                                stddev = stddev_nii6583, name = 'nii6583', \
-#                                bounds = {'amplitude' : (0.0, None)})
-
-#         ## Tie means of [NII] doublet gaussians
-#         def tie_mean_nii(model):
-#             return (model['nii6548'].mean + 35.425)
-
-#         g_nii6583.mean.tied = tie_mean_nii
-
-#         ## Tie amplitudes of two [NII] gaussians
-#         def tie_amp_nii(model):
-#             return (model['nii6548'].amplitude*2.96)
-
-#         g_nii6583.amplitude.tied = tie_amp_nii
-
-#         ## Tie standard deviations of all the narrow components
-#         def tie_std_nii6548(model):
-#             return ((model['nii6548'].mean/sii_bestfit['sii6716'].mean)*\
-#                     sii_bestfit['sii6716'].stddev)
-
-#         g_nii6548.stddev.tied = tie_std_nii6548
-#         g_nii6548.stddev.fixed = True
-
-#         def tie_std_nii6583(model):
-#             return ((model['nii6583'].mean/sii_bestfit['sii6716'].mean)*\
-#                     sii_bestfit['sii6716'].stddev)
-
-#         g_nii6583.stddev.tied = tie_std_nii6583
-#         g_nii6583.stddev.fixed = True
-
-#         g_nii = g_nii6548 + g_nii6583
-
-#         ## Ha parameters
-#         ## Model narrow Ha as narrow [SII]
-#         stddev_ha = (6564.312/sii_bestfit['sii6716'].mean.value)*\
-#         sii_bestfit['sii6716'].stddev.value
-
-#         g_ha_n = Gaussian1D(amplitude = amp_ha, mean = 6564.312, \
-#                             stddev = stddev_ha, name = 'ha_n', \
-#                             bounds = {'amplitude' : (0.0, None), 'stddev' : (0.85, None)})
-
-#         ## Tie standard deviation of Ha
-#         def tie_std_ha(model):
-#             return ((model['ha_n'].mean/sii_bestfit['sii6716'].mean)*\
-#                     sii_bestfit['sii6716'].stddev)
-
-#         g_ha_n.stddev.tied = tie_std_ha
-#         g_ha_n.stddev.fixed = True
-
-#         g_ha = g_ha_n
-        
-#         #####################################################################################
-#         ########################## Fit without broad component ##############################
-
-#         ## Initial gaussian fit
-#         g_init = g_nii + g_ha
-
-#         fitter_no_broad = fitting.LevMarLSQFitter()
-
-#         gfit_no_broad = fitter_no_broad(g_init, lam_nii, flam_nii,\
-#                                      weights = np.sqrt(ivar_nii), maxiter = 1000)
-
-        
-#         rchi2_no_broad = mfit.calculate_red_chi2(flam_nii, gfit_no_broad(lam_nii),\
-#                                                           ivar_nii, n_free_params = 4)
-        
-
-#         #####################################################################################
-#         ########################## Fit with broad component #################################
-
-#         ## Broad Ha parameters
-#         g_ha_b = Gaussian1D(amplitude = amp_ha/4, mean = 6564.312, \
-#                             stddev = 5.0, name = 'ha_b', \
-#                             bounds = {'amplitude' : (0.0, None), 'stddev' : (1.5, None)})
-
-#         ## Initial gaussian fit
-#         g_init = g_nii + g_ha + g_ha_b
-#         fitter_broad = fitting.LevMarLSQFitter()
-
-#         gfit_broad = fitter_broad(g_init, lam_nii, flam_nii,\
-#                                   weights = np.sqrt(ivar_nii), maxiter = 1000)
-
-        
-#         rchi2_broad = mfit.calculate_red_chi2(flam_nii, gfit_broad(lam_nii), \
-#                                                        ivar_nii, n_free_params = 7)
-
-#         #####################################################################################
-#         #####################################################################################
-
-#         ## Select the best-fit based on rchi2
-#         ## If the rchi2 of 2-component is better by 20%, then the 2-component fit is picked.
-#         ## Otherwise, 1-component fit is the best fit.
-#         del_rchi2 = ((rchi2_no_broad - rchi2_broad)/rchi2_no_broad)*100
-        
-#         ## Also sigma (broad Ha) > sigma (narrow Ha)
-#         sig_ha_b = mfit.lamspace_to_velspace(gfit_broad['ha_b'].stddev.value, \
-#                                              gfit_broad['ha_b'].mean.value)
-#         sig_ha_n = mfit.lamspace_to_velspace(gfit_broad['ha_n'].stddev.value, \
-#                                              gfit_broad['ha_n'].mean.value)
-        
-#         fwhm_ha_b = 2.355*sig_ha_b
-        
-#         ## Set flags
-#         flag_bits = np.append(flag_bits, 1)
-#         if (del_rchi2 >= 20):
-#             flag_bits = np.append(flag_bits, 4)
-#         if (sig_ha_b < sig_ha_n):
-#             flag_bits = np.append(flag_bits, 5)
-#         if (sig_ha_n < 40):
-#             flag_bits = np.append(flag_bits, 10)
-            
-#         flag_bits = np.sort(flag_bits.astype(int))
-
-#         if ((del_rchi2 >= 20)&(sig_ha_b > sig_ha_n)&(fwhm_ha_b >= 300.)):
-#             return (gfit_broad, rchi2_broad, flag_bits, del_rchi2)
-#         else:
-#             return (gfit_no_broad, rchi2_no_broad, flag_bits, del_rchi2)
-        
-# ####################################################################################################
-
-#     def fit_fixed_two_components(lam_nii, flam_nii, ivar_nii, sii_bestfit):
-#         """
-#         Function to fit [NII]6548, 6583 emission lines.
-#         The code uses [SII] best fit as a template for both [NII] and Ha.
-#         The broad component fit needs to be >20% better to be picked.
-#         Code works only for two-component [SII] fits, including outflow components.
-        
-#         Parameters
-#         ----------
-#         lam_nii : numpy array
-#             Wavelength array of the [NII]+Ha region where the fits need to be performed.
-#         flam_nii : numpy array
-#             Flux array of the spectra in the [NII]+Ha region.
-#         ivar_nii : numpy array
-#             Inverse variance array of the spectra in the [NII]+Ha region.
-            
-#         sii_bestfit : Astropy model
-#             Best fit model for the [SII] emission-lines.
-            
-#          Returns
-#         -------
-#         gfit : Astropy model
-#             Best-fit 1 component model
-#         rchi2: float
-#             Reduced chi2 of the best-fit
-            
-#         flag_bits : numpy array
-#             Array of flag bits for fixed two-component fitting
-#                 3 : fixed one component fit
-#                 4 : chi^2 for broad-line fit improves by 20%
-#                 5 : sigma (Ha; b) < sigma (Ha; n)
-                
-#         del_rchi2 : float
-#             Percentage difference between rchi2 with and without broad-line.
-#         """
-        
-#         flag_bits = np.array([])
-        
-#         ## Initial estimate of amplitudes
-#         amp_nii6548 = np.max(flam_nii[(lam_nii > 6548)&(lam_nii < 6550)])
-#         amp_nii6583 = np.max(flam_nii[(lam_nii > 6583)&(lam_nii < 6586)])
-        
-#         ## Initial guess of amplitude for Ha
-#         amp_ha = np.max(flam_nii[(lam_nii > 6550)&(lam_nii < 6575)])
-        
-#         ## Initial estimates of standard deviation
-#         stddev_nii6548 = (6549.852/sii_bestfit['sii6716'].mean.value)*\
-#         sii_bestfit['sii6716'].stddev.value
-#         stddev_nii6583 = (6585.277/sii_bestfit['sii6716'].mean.value)*\
-#         sii_bestfit['sii6716'].stddev.value
-        
-#         stddev_nii6548_out = (6549.852/sii_bestfit['sii6716_out'].mean.value)*\
-#         sii_bestfit['sii6716_out'].stddev.value
-#         stddev_nii6583_out = (6585.277/sii_bestfit['sii6716_out'].mean.value)*\
-#         sii_bestfit['sii6716_out'].stddev.value
-
-#         ## Two component fits
-#         g_nii6548 = Gaussian1D(amplitude = amp_nii6548/2, mean = 6549.852, \
-#                                stddev = stddev_nii6548, name = 'nii6548', \
-#                                bounds = {'amplitude' : (0.0, None)})
-#         g_nii6583 = Gaussian1D(amplitude = amp_nii6583/2, mean = 6585.277, \
-#                                stddev = stddev_nii6583, name = 'nii6583', \
-#                                bounds = {'amplitude' : (0.0, None)})
-
-#         g_nii6548_out = Gaussian1D(amplitude = amp_nii6548/4, mean = 6549.852, \
-#                                    stddev = stddev_nii6548_out, name = 'nii6548_out', \
-#                                    bounds = {'amplitude' : (0.0, None)})
-#         g_nii6583_out = Gaussian1D(amplitude = amp_nii6583/4, mean = 6585.277, \
-#                                    stddev = stddev_nii6583_out, name = 'nii6583_out', \
-#                                    bounds = {'amplitude' : (0.0, None)})
-
-#         ## Tie means of [NII] doublet gaussians
-#         def tie_mean_nii(model):
-#             return (model['nii6548'].mean + 35.425)
-
-#         g_nii6583.mean.tied = tie_mean_nii
-
-#         ## Tie amplitudes of two [NII] gaussians
-#         def tie_amp_nii(model):
-#             return (model['nii6548'].amplitude*2.96)
-
-#         g_nii6583.amplitude.tied = tie_amp_nii
-
-#         ## Tie standard deviations of all the narrow components
-#         def tie_std_nii6548(model):
-#             return ((model['nii6548'].mean/sii_bestfit['sii6716'].mean)*\
-#                     sii_bestfit['sii6716'].stddev)
-
-#         g_nii6548.stddev.tied = tie_std_nii6548
-#         g_nii6548.stddev.fixed = True
-
-#         def tie_std_nii6583(model):
-#             return ((model['nii6583'].mean/sii_bestfit['sii6716'].mean)*\
-#                     sii_bestfit['sii6716'].stddev)
-
-#         g_nii6583.stddev.tied = tie_std_nii6583
-#         g_nii6583.stddev.fixed = True
-
-#         ## Tie means of [NII] outflow components
-#         def tie_mean_nii_out(model):
-#             return (model['nii6548_out'].mean + 35.425)
-
-#         g_nii6583_out.mean.tied = tie_mean_nii_out
-
-#         ## Tie amplitudes of two [NII] gaussians
-#         def tie_amp_nii_out(model):
-#             return (model['nii6548_out'].amplitude*2.96)
-
-#         g_nii6583_out.amplitude.tied = tie_amp_nii_out
-
-#         ## Tie standard deviations of all the outflow components
-#         def tie_std_nii6548_out(model):
-#             return ((model['nii6548_out'].mean/sii_bestfit['sii6716_out'].mean)*\
-#                     sii_bestfit['sii6716_out'].stddev)
-
-#         g_nii6548_out.stddev.tied = tie_std_nii6548_out
-#         g_nii6548_out.stddev.fixed = True
-
-#         def tie_std_nii6583_out(model):
-#             return ((model['nii6583_out'].mean/sii_bestfit['sii6716_out'].mean)*\
-#                     sii_bestfit['sii6716_out'].stddev)
-
-#         g_nii6583_out.stddev.tied = tie_std_nii6583_out
-#         g_nii6583_out.stddev.fixed = True
-
-#         g_nii = g_nii6548 + g_nii6583 + g_nii6548_out + g_nii6583_out
-
-#         ### Halpha Parameters ##
-
-#         ## Ha parameters
-#         ## Model narrow Ha as narrow [SII]
-#         stddev_ha = (6564.312/sii_bestfit['sii6716'].mean.value)*\
-#         sii_bestfit['sii6716'].stddev.value
-#         ## Model outflow Ha as outflow [SII]
-#         stddev_ha_out = (6564.312/sii_bestfit['sii6716_out'].mean.value)*\
-#         sii_bestfit['sii6716_out'].stddev.value
-
-#         g_ha_n = Gaussian1D(amplitude = amp_ha/2, mean = 6564.312, \
-#                             stddev = stddev_ha, name = 'ha_n', \
-#                             bounds = {'amplitude' : (0.0, None), 'stddev' : (0.85, None)})
-
-#         g_ha_out = Gaussian1D(amplitude = amp_ha/3, mean = 6564.312, \
-#                               stddev = stddev_ha_out, name = 'ha_out', \
-#                               bounds = {'amplitude' : (0.0, None), 'stddev' : (0.85, None)})
-
-#         ## Tie standard deviation of Ha
-#         def tie_std_ha(model):
-#             return ((model['ha_n'].mean/sii_bestfit['sii6716'].mean)*\
-#                     sii_bestfit['sii6716'].stddev)
-
-#         g_ha_n.stddev.tied = tie_std_ha
-#         g_ha_n.stddev.fixed = True
-
-#         ## Tie standard deviation of Ha outflow
-#         def tie_std_ha_out(model):
-#             return ((model['ha_out'].mean/sii_bestfit['sii6716_out'].mean)*\
-#                     sii_bestfit['sii6716_out'].stddev)
-
-#         g_ha_out.stddev.tied = tie_std_ha_out
-#         g_ha_out.stddev.fixed = True
-
-#         g_ha = g_ha_n + g_ha_out
-        
-#         #####################################################################################
-#         ########################## Fit without broad component ##############################
-
-#         ## Initial gaussian fit
-#         g_init = g_nii + g_ha
-
-#         fitter_no_broad = fitting.LevMarLSQFitter()
-
-#         gfit_no_broad = fitter_no_broad(g_init, lam_nii, flam_nii,\
-#                                      weights = np.sqrt(ivar_nii), maxiter = 1000)
-
-        
-#         rchi2_no_broad = mfit.calculate_red_chi2(flam_nii, gfit_no_broad(lam_nii),\
-#                                                           ivar_nii, n_free_params = 8)
-
-#         #####################################################################################
-#         ########################## Fit with broad component #################################
-
-#         ## Broad Ha parameters
-#         g_ha_b = Gaussian1D(amplitude = amp_ha/2, mean = 6564.312, \
-#                             stddev = 4.0, name = 'ha_b', \
-#                             bounds = {'amplitude' : (0.0, None), 'stddev' : (1.5, None)})
-
-#         ## Initial gaussian fit
-#         g_init = g_nii + g_ha + g_ha_b
-#         fitter_broad = fitting.LevMarLSQFitter()
-
-#         gfit_broad = fitter_broad(g_init, lam_nii, flam_nii,\
-#                                   weights = np.sqrt(ivar_nii), maxiter = 1000)
-
-        
-#         rchi2_broad = mfit.calculate_red_chi2(flam_nii, gfit_broad(lam_nii), \
-#                                                        ivar_nii, n_free_params = 11)
-
-#         #####################################################################################
-#         #####################################################################################
-
-#         ## Select the best-fit based on rchi2
-#         ## If the rchi2 of 2-component is better by 20%, then the 2-component fit is picked.
-#         ## Otherwise, 1-component fit is the best fit.
-#         del_rchi2 = ((rchi2_no_broad - rchi2_broad)/rchi2_no_broad)*100
-        
-#         ## Also sigma (broad Ha) > sigma (narrow Ha)
-#         sig_ha_b = mfit.lamspace_to_velspace(gfit_broad['ha_b'].stddev.value, \
-#                                              gfit_broad['ha_b'].mean.value)
-#         sig_ha_n = mfit.lamspace_to_velspace(gfit_broad['ha_n'].stddev.value, \
-#                                              gfit_broad['ha_n'].mean.value)
-        
-#         fwhm_ha_b = 2.355*sig_ha_b
-        
-#         ## Set flags
-#         flag_bits = np.append(flag_bits, 3)
-#         if (del_rchi2 >= 20):
-#             flag_bits = np.append(flag_bits, 4)
-#         if (sig_ha_b < sig_ha_n):
-#             flag_bits = np.append(flag_bits, 5)
-#         if (sig_ha_n < 40):
-#             flag_bits = np.append(flag_bits, 10)
-            
-#         flag_bits = np.sort(flag_bits.astype(int))
-
-#         if ((del_rchi2 >= 20)&(sig_ha_b > sig_ha_n)&(fwhm_ha_b >= 300.)):
-#             return (gfit_broad, rchi2_broad, flag_bits, del_rchi2)
-#         else:
-#             return (gfit_no_broad, rchi2_no_broad, flag_bits, del_rchi2)
-        
-####################################################################################################
-####################################################################################################
-
-class fit_nii_ha_lines:
+class fit_nii_ha_lines_v1:
     """
     Different functions associated with fitting [NII]+Ha emission-lines:
         1) fit_free_ha_one_component(lam_nii, flam_nii, ivar_nii, sii_bestfit, frac_temp)
@@ -2637,6 +1775,868 @@ class fit_nii_ha_lines:
 
         ## Broad Ha parameters
         g_ha_b = Gaussian1D(amplitude = amp_ha/3, mean = 6564.312, \
+                            stddev = 4.0, name = 'ha_b', \
+                            bounds = {'amplitude' : (0.0, None), 'stddev' : (1.5, None)})
+
+        ## Initial gaussian fit
+        g_init = g_nii + g_ha + g_ha_b
+        fitter_broad = fitting.LevMarLSQFitter()
+
+        gfit_broad = fitter_broad(g_init, lam_nii, flam_nii,\
+                                  weights = np.sqrt(ivar_nii), maxiter = 1000)
+
+        
+        rchi2_broad = mfit.calculate_red_chi2(flam_nii, gfit_broad(lam_nii), \
+                                                       ivar_nii, n_free_params = 11)
+
+        #####################################################################################
+        #####################################################################################
+
+        ## Select the best-fit based on rchi2
+        ## If the rchi2 of 2-component is better by 20%, then the 2-component fit is picked.
+        ## Otherwise, 1-component fit is the best fit.
+        del_rchi2 = ((rchi2_no_broad - rchi2_broad)/rchi2_no_broad)*100
+        
+        ## Also sigma (broad Ha) > sigma (narrow Ha)
+        sig_ha_b = mfit.lamspace_to_velspace(gfit_broad['ha_b'].stddev.value, \
+                                             gfit_broad['ha_b'].mean.value)
+        sig_ha_n = mfit.lamspace_to_velspace(gfit_broad['ha_n'].stddev.value, \
+                                             gfit_broad['ha_n'].mean.value)
+        
+        fwhm_ha_b = 2.355*sig_ha_b
+        
+        ## Set flags
+        flag_bits = np.append(flag_bits, 3)
+        if (del_rchi2 >= 20):
+            flag_bits = np.append(flag_bits, 4)
+        if (sig_ha_b < sig_ha_n):
+            flag_bits = np.append(flag_bits, 5)
+        if (sig_ha_n < 40):
+            flag_bits = np.append(flag_bits, 10)
+            
+        flag_bits = np.sort(flag_bits.astype(int))
+
+        if ((del_rchi2 >= 20)&(sig_ha_b > sig_ha_n)&(fwhm_ha_b >= 300.)):
+            return (gfit_broad, rchi2_broad, flag_bits, del_rchi2)
+        else:
+            return (gfit_no_broad, rchi2_no_broad, flag_bits, del_rchi2)
+        
+####################################################################################################
+####################################################################################################
+
+class fit_nii_ha_lines_v2:
+    """
+    Different functions associated with fitting [NII]+Ha emission-lines:
+        1) fit_free_ha_one_component(lam_nii, flam_nii, ivar_nii, sii_bestfit, frac_temp)
+        2) fit_free_ha_two_components(lam_nii, flam_nii, ivar_nii, sii_bestfit, frac_temp)
+        3) fit_fixed_one_component(lam_nii, flam_nii, ivar_nii, sii_bestfit)
+        4) fit_fixed_two_components(lam_nii, flam_nii, ivar_nii, sii_bestfit)
+    """
+    
+    def fit_free_ha_one_component(lam_nii, flam_nii, ivar_nii, sii_bestfit, frac_temp = 60.):
+        """
+        Function to fit [NII]6548, 6583 emission lines.
+        Sigma of [NII] is kept fixed to [SII] and
+        Ha is allowed to vary within some percent (default = 60%) of [SII].
+        The broad component fit needs to be >20% better to be picked.
+        Code works only for one-component [SII] fits -- no outflow components.
+        
+        Parameters
+        ----------
+        lam_nii : numpy array
+            Wavelength array of the [NII]+Ha region where the fits need to be performed.
+        flam_nii : numpy array
+            Flux array of the spectra in the [NII]+Ha region.
+        ivar_nii : numpy array
+            Inverse variance array of the spectra in the [NII]+Ha region.
+            
+        sii_bestfit : Astropy model
+            Best fit model for the [SII] emission-lines.
+            
+        frac_temp : float
+            The %age of [SII] width within which narrow Halpha width can vary
+            
+        Returns
+        -------
+        gfit : Astropy model
+            Best-fit 1 component model
+        rchi2: float
+            Reduced chi2 of the best-fit
+            
+        flag_bits : numpy array
+            Array of flag bits for free one-component fitting
+                0 : free one component fit
+                4 : chi^2 for broad-line fit improves by 20%
+                5 : sigma (Ha; b) < sigma (Ha; n)
+                
+        del_rchi2 : float
+            Percentage difference between rchi2 with and without broad-line.
+        """
+        
+        flag_bits = np.array([])
+                        
+        ## Initial estimate of amplitudes
+        amp_nii6548 = np.max(flam_nii[(lam_nii > 6548)&(lam_nii < 6550)])
+        amp_nii6583 = np.max(flam_nii[(lam_nii > 6583)&(lam_nii < 6586)])
+        
+        ## Initial guess of amplitude for Ha
+        amp_ha = np.max(flam_nii[(lam_nii > 6550)&(lam_nii < 6575)])
+        
+        ## Initial estimates of standard deviation
+        stddev_nii6548 = (6549.852/sii_bestfit['sii6716'].mean.value)*\
+        sii_bestfit['sii6716'].stddev.value
+        stddev_nii6583 = (6585.277/sii_bestfit['sii6716'].mean.value)*\
+        sii_bestfit['sii6716'].stddev.value
+        
+        ## Two component fits
+        g_nii6548 = Gaussian1D(amplitude = amp_nii6548/2, mean = 6549.852, \
+                               stddev = stddev_nii6548, name = 'nii6548', \
+                               bounds = {'amplitude' : (0.0, None)})
+        g_nii6583 = Gaussian1D(amplitude = amp_nii6583/2, mean = 6585.277, \
+                               stddev = stddev_nii6583, name = 'nii6583', \
+                               bounds = {'amplitude' : (0.0, None)})
+
+        ## Tie means of [NII] doublet gaussians
+        def tie_mean_nii(model):
+            return (model['nii6548'].mean + 35.425)
+
+        g_nii6583.mean.tied = tie_mean_nii
+
+        ## Tie amplitudes of two [NII] gaussians
+        def tie_amp_nii(model):
+            return (model['nii6548'].amplitude*2.96)
+
+        g_nii6583.amplitude.tied = tie_amp_nii
+
+        ## Tie standard deviations of all the narrow components
+        def tie_std_nii6548(model):
+            return ((model['nii6548'].mean/sii_bestfit['sii6716'].mean)*\
+                    sii_bestfit['sii6716'].stddev)
+
+        g_nii6548.stddev.tied = tie_std_nii6548
+        g_nii6548.stddev.fixed = True
+
+        def tie_std_nii6583(model):
+            return ((model['nii6583'].mean/sii_bestfit['sii6716'].mean)*\
+                    sii_bestfit['sii6716'].stddev)
+
+        g_nii6583.stddev.tied = tie_std_nii6583
+        g_nii6583.stddev.fixed = True
+
+        g_nii = g_nii6548 + g_nii6583 
+        
+        ## Template fit
+        temp_std = sii_bestfit['sii6716'].stddev.value
+        temp_std_kms = mfit.lamspace_to_velspace(temp_std, \
+                                                 sii_bestfit['sii6716'].mean.value)
+        min_std_kms = temp_std_kms - ((frac_temp/100)*temp_std_kms)
+        max_std_kms = temp_std_kms + ((frac_temp/100)*temp_std_kms)
+
+        min_std_ha = mfit.velspace_to_lamspace(min_std_kms, 6564.312)
+        max_std_ha = mfit.velspace_to_lamspace(max_std_kms, 6564.312)
+        
+        g_ha_n = Gaussian1D(amplitude = amp_ha, mean = 6564.312, \
+                            stddev = temp_std, name = 'ha_n', \
+                            bounds = {'amplitude' : (0.0, None), 'stddev' : (0.85, None)})
+
+        ## Set narrow Ha within 60% of the template fit
+        g_ha_n.stddev.bounds = (min_std_ha, max_std_ha)
+        
+        # Total Halpha components
+        g_ha = g_ha_n
+        
+        #####################################################################################
+        ########################## Fit without broad component ##############################
+
+        ## Initial gaussian fit
+        g_init = g_nii + g_ha
+
+        fitter_no_broad = fitting.LevMarLSQFitter()
+
+        gfit_no_broad = fitter_no_broad(g_init, lam_nii, flam_nii,\
+                                     weights = np.sqrt(ivar_nii), maxiter = 1000)
+
+        
+        rchi2_no_broad = mfit.calculate_red_chi2(flam_nii, gfit_no_broad(lam_nii),\
+                                                          ivar_nii, n_free_params = 5)
+        
+
+        #####################################################################################
+        ########################## Fit with broad component #################################
+
+        ## Broad Ha parameters
+        g_ha_b = Gaussian1D(amplitude = amp_ha/3, mean = 6564.312, \
+                            stddev = 4.0, name = 'ha_b', \
+                            bounds = {'amplitude' : (0.0, None), 'stddev' : (1.5, None)})
+
+        ## Initial gaussian fit
+        g_init = g_nii + g_ha + g_ha_b
+        fitter_broad = fitting.LevMarLSQFitter()
+
+        gfit_broad = fitter_broad(g_init, lam_nii, flam_nii,\
+                                  weights = np.sqrt(ivar_nii), maxiter = 1000)
+
+        
+        rchi2_broad = mfit.calculate_red_chi2(flam_nii, gfit_broad(lam_nii), \
+                                                       ivar_nii, n_free_params = 8)
+
+        #####################################################################################
+        #####################################################################################
+
+        ## Select the best-fit based on rchi2
+        ## If the rchi2 of 2-component is better by 20%, then the 2-component fit is picked.
+        ## Otherwise, 1-component fit is the best fit.
+        del_rchi2 = ((rchi2_no_broad - rchi2_broad)/rchi2_no_broad)*100
+        
+        ## Also sigma (broad Ha) > sigma (narrow Ha)
+        sig_ha_b = mfit.lamspace_to_velspace(gfit_broad['ha_b'].stddev.value, \
+                                             gfit_broad['ha_b'].mean.value)
+        sig_ha_n = mfit.lamspace_to_velspace(gfit_broad['ha_n'].stddev.value, \
+                                             gfit_broad['ha_n'].mean.value)
+        
+        fwhm_ha_b = 2.355*sig_ha_b
+        
+        ## Set flags
+        flag_bits = np.append(flag_bits, 0)
+        if (del_rchi2 >= 20):
+            flag_bits = np.append(flag_bits, 4)
+        if (sig_ha_b < sig_ha_n):
+            flag_bits = np.append(flag_bits, 5)
+        if (sig_ha_n < 40):
+            flag_bits = np.append(flag_bits, 10)
+            
+        flag_bits = np.sort(flag_bits.astype(int))
+
+        if ((del_rchi2 >= 20)&(sig_ha_b > sig_ha_n)&(sig_ha_n >= 40.)&(fwhm_ha_b >= 300.)):
+            return (gfit_broad, rchi2_broad, flag_bits, del_rchi2)
+        else:
+            return (gfit_no_broad, rchi2_no_broad, flag_bits, del_rchi2)
+        
+####################################################################################################
+
+    def fit_free_ha_two_components(lam_nii, flam_nii, ivar_nii, \
+                                             sii_bestfit, frac_temp = 60.):
+        
+        """
+        Function to fit [NII]6548, 6583 emission lines.
+        Sigma of [NII] is kept fixed to [SII] and
+        Ha, including outflow component is allowed to 
+        vary within some percent (default = 60%) of [SII].
+        
+        The broad component fit needs to be >20% better to be picked.
+        Code works only for two-component [SII] fits, including outflow components.
+        
+        Parameters
+        ----------
+        lam_nii : numpy array
+            Wavelength array of the [NII]+Ha region where the fits need to be performed.
+        flam_nii : numpy array
+            Flux array of the spectra in the [NII]+Ha region.
+        ivar_nii : numpy array
+            Inverse variance array of the spectra in the [NII]+Ha region.
+            
+        sii_bestfit : Astropy model
+            Best fit model for the [SII] emission-lines.
+            
+        frac_temp : float
+            The %age of [SII] width within which narrow Halpha width can vary
+            
+         Returns
+        -------
+        gfit : Astropy model
+            Best-fit 2 component model
+        rchi2: float
+            Reduced chi2 of the best-fit
+            
+        flag_bits : numpy array
+            Array of flag bits for fixed one-component fitting
+                1 : fixed one component fit
+                4 : chi^2 for broad-line fit improves by 20%
+                5 : sigma (Ha; b) < sigma (Ha; n)
+                6 : sigma (Ha; out) > sigma (Ha; b)
+                
+        del_rchi2 : float
+            Percentage difference between rchi2 with and without broad-line.
+        """
+        
+        flag_bits = np.array([])
+        
+        ## Initial estimate of amplitudes
+        amp_nii6548 = np.max(flam_nii[(lam_nii > 6548)&(lam_nii < 6550)])
+        amp_nii6583 = np.max(flam_nii[(lam_nii > 6583)&(lam_nii < 6586)])
+        
+        ## Initial guess of amplitude for Ha
+        amp_ha = np.max(flam_nii[(lam_nii > 6550)&(lam_nii < 6575)])
+        
+        ## Initial estimates of standard deviation
+        stddev_nii6548 = (6549.852/sii_bestfit['sii6716'].mean.value)*\
+        sii_bestfit['sii6716'].stddev.value
+        stddev_nii6583 = (6585.277/sii_bestfit['sii6716'].mean.value)*\
+        sii_bestfit['sii6716'].stddev.value
+
+        stddev_nii6548_out = (6549.852/sii_bestfit['sii6716_out'].mean.value)*\
+        sii_bestfit['sii6716_out'].stddev.value
+        stddev_nii6583_out = (6585.277/sii_bestfit['sii6716_out'].mean.value)*\
+        sii_bestfit['sii6716_out'].stddev.value
+
+        ## Two component fits
+        g_nii6548 = Gaussian1D(amplitude = amp_nii6548/2, mean = 6549.852, \
+                               stddev = stddev_nii6548, name = 'nii6548', \
+                               bounds = {'amplitude' : (0.0, None)})
+        g_nii6583 = Gaussian1D(amplitude = amp_nii6583/2, mean = 6585.277, \
+                               stddev = stddev_nii6583, name = 'nii6583', \
+                               bounds = {'amplitude' : (0.0, None)})
+
+        g_nii6548_out = Gaussian1D(amplitude = amp_nii6548/4, mean = 6549.852, \
+                                   stddev = stddev_nii6548_out, name = 'nii6548_out', \
+                                   bounds = {'amplitude' : (0.0, None)})
+        g_nii6583_out = Gaussian1D(amplitude = amp_nii6583/4, mean = 6585.277, \
+                                   stddev = stddev_nii6583_out, name = 'nii6583_out', \
+                                   bounds = {'amplitude' : (0.0, None)})
+
+        ## Tie means of [NII] doublet gaussians
+        def tie_mean_nii(model):
+            return (model['nii6548'].mean + 35.425)
+
+        g_nii6583.mean.tied = tie_mean_nii
+
+        ## Tie amplitudes of two [NII] gaussians
+        def tie_amp_nii(model):
+            return (model['nii6548'].amplitude*2.96)
+
+        g_nii6583.amplitude.tied = tie_amp_nii
+
+        ## Tie standard deviations of all the narrow components
+        def tie_std_nii6548(model):
+            return ((model['nii6548'].mean/sii_bestfit['sii6716'].mean)*\
+                    sii_bestfit['sii6716'].stddev)
+
+        g_nii6548.stddev.tied = tie_std_nii6548
+        g_nii6548.stddev.fixed = True
+
+        def tie_std_nii6583(model):
+            return ((model['nii6583'].mean/sii_bestfit['sii6716'].mean)*\
+                    sii_bestfit['sii6716'].stddev)
+
+        g_nii6583.stddev.tied = tie_std_nii6583
+        g_nii6583.stddev.fixed = True
+
+        ## Tie means of [NII] outflow components
+        def tie_mean_nii_out(model):
+            return (model['nii6548_out'].mean + 35.425)
+
+        g_nii6583_out.mean.tied = tie_mean_nii_out
+
+        ## Tie amplitudes of two [NII] gaussians
+        def tie_amp_nii_out(model):
+            return (model['nii6548_out'].amplitude*2.96)
+
+        g_nii6583_out.amplitude.tied = tie_amp_nii_out
+
+        ## Tie standard deviations of all the outflow components
+        def tie_std_nii6548_out(model):
+            return ((model['nii6548_out'].mean/sii_bestfit['sii6716_out'].mean)*\
+                    sii_bestfit['sii6716_out'].stddev)
+
+        g_nii6548_out.stddev.tied = tie_std_nii6548_out
+        g_nii6548_out.stddev.fixed = True
+
+        def tie_std_nii6583_out(model):
+            return ((model['nii6583_out'].mean/sii_bestfit['sii6716_out'].mean)*\
+                    sii_bestfit['sii6716_out'].stddev)
+
+        g_nii6583_out.stddev.tied = tie_std_nii6583_out
+        g_nii6583_out.stddev.fixed = True
+
+        g_nii = g_nii6548 + g_nii6583 + g_nii6548_out + g_nii6583_out
+        
+        ## Template fit
+        temp_std = sii_bestfit['sii6716'].stddev.value
+        temp_std_kms = mfit.lamspace_to_velspace(temp_std, \
+                                                 sii_bestfit['sii6716'].mean.value)
+        min_std_kms = temp_std_kms - ((frac_temp/100)*temp_std_kms)
+        max_std_kms = temp_std_kms + ((frac_temp/100)*temp_std_kms)
+
+        min_std_ha = mfit.velspace_to_lamspace(min_std_kms, 6564.312)
+        max_std_ha = mfit.velspace_to_lamspace(max_std_kms, 6564.312)
+        
+        g_ha_n = Gaussian1D(amplitude = amp_ha/2, mean = 6564.312, \
+                            stddev = temp_std, name = 'ha_n', \
+                            bounds = {'amplitude' : (0.0, None), 'stddev' : (0.85, None)})
+
+        ## Set narrow Ha within 60% of the template fit
+        g_ha_n.stddev.bounds = (min_std_ha, max_std_ha)
+        
+        ## Outflow components
+        temp_out_std = sii_bestfit['sii6716_out'].stddev.value
+        temp_out_std_kms = mfit.lamspace_to_velspace(temp_out_std, \
+                                                     sii_bestfit['sii6716_out'].mean.value)
+
+        min_out_kms = temp_out_std_kms - ((frac_temp/100)*temp_out_std_kms)
+        max_out_kms = temp_out_std_kms + ((frac_temp/100)*temp_out_std_kms)
+
+        min_out = mfit.velspace_to_lamspace(min_out_kms, 6564.312)
+        max_out = mfit.velspace_to_lamspace(max_out_kms, 6564.312)
+
+        g_ha_out = Gaussian1D(amplitude = amp_ha/3, mean = 6564.312, \
+                             stddev = temp_out_std, name = 'ha_out', \
+                             bounds = {'amplitude': (0.0, None), 'stddev' : (0.85, None)})
+        
+        g_ha_out.stddev.bounds = (min_out, max_out)
+        
+        g_ha = g_ha_n + g_ha_out
+        
+        #####################################################################################
+        ########################## Fit without broad component ##############################
+
+        ## Initial gaussian fit
+        g_init = g_nii + g_ha
+
+        fitter_no_broad = fitting.LevMarLSQFitter()
+
+        gfit_no_broad = fitter_no_broad(g_init, lam_nii, flam_nii,\
+                                     weights = np.sqrt(ivar_nii), maxiter = 1000)
+
+        
+        rchi2_no_broad = mfit.calculate_red_chi2(flam_nii, gfit_no_broad(lam_nii),\
+                                                          ivar_nii, n_free_params = 10)
+
+        #####################################################################################
+        ########################## Fit with broad component #################################
+
+        ## Broad Ha parameters
+        g_ha_b = Gaussian1D(amplitude = amp_ha/2, mean = 6564.312, \
+                            stddev = 4.0, name = 'ha_b', \
+                            bounds = {'amplitude' : (0.0, None), 'stddev' : (1.5, None)})
+
+        ## Initial gaussian fit
+        g_init = g_nii + g_ha + g_ha_b
+        fitter_broad = fitting.LevMarLSQFitter()
+
+        gfit_broad = fitter_broad(g_init, lam_nii, flam_nii,\
+                                  weights = np.sqrt(ivar_nii), maxiter = 1000)
+
+        
+        rchi2_broad = mfit.calculate_red_chi2(flam_nii, gfit_broad(lam_nii), \
+                                                       ivar_nii, n_free_params = 13)
+        
+        
+        ## If broad-sigma < outflow-sigma -- exchange the gaussians
+        sigma_ha_b = mfit.lamspace_to_velspace(gfit_broad['ha_b'].stddev.value, \
+                                              gfit_broad['ha_b'].mean.value)
+        
+        sigma_ha_out = mfit.lamspace_to_velspace(gfit_broad['ha_out'].stddev.value, \
+                                                gfit_broad['ha_out'].mean.value)
+        
+        if (sigma_ha_b < sigma_ha_out):
+            flag_bits = np.append(flag_bits, 6)
+            g_ha_n = Gaussian1D(amplitude = gfit_broad['ha_n'].amplitude, \
+                               mean = gfit_broad['ha_n'].mean, \
+                               stddev = gfit_broad['ha_n'].stddev, name = 'ha_n')
+            
+            g_ha_out = Gaussian1D(amplitude = gfit_broad['ha_b'].amplitude, \
+                                 mean = gfit_broad['ha_b'].mean, \
+                                 stddev = gfit_broad['ha_b'].stddev, name = 'ha_out')
+            
+            g_ha_b = Gaussian1D(amplitude = gfit_broad['ha_out'].amplitude, \
+                               mean = gfit_broad['ha_out'].mean, \
+                                stddev = gfit_broad['ha_out'].stddev, name = 'ha_b')
+            
+            gfit_broad = g_ha_n + g_ha_out + g_ha_b
+
+        #####################################################################################
+        #####################################################################################
+
+        ## Select the best-fit based on rchi2
+        ## If the rchi2 of 2-component is better by 20%, then the 2-component fit is picked.
+        ## Otherwise, 1-component fit is the best fit.
+        del_rchi2 = ((rchi2_no_broad - rchi2_broad)/rchi2_no_broad)*100
+        
+        ## Also sigma (broad Ha) > sigma (narrow Ha)
+        sig_ha_b = mfit.lamspace_to_velspace(gfit_broad['ha_b'].stddev.value, \
+                                             gfit_broad['ha_b'].mean.value)
+        sig_ha_n = mfit.lamspace_to_velspace(gfit_broad['ha_n'].stddev.value, \
+                                             gfit_broad['ha_n'].mean.value)
+        
+        fwhm_ha_b = 2.355*sig_ha_b
+        
+        ## Set flags
+        flag_bits = np.append(flag_bits, 2)
+        if (del_rchi2 >= 20):
+            flag_bits = np.append(flag_bits, 4)
+        if (sig_ha_b < sig_ha_n):
+            flag_bits = np.append(flag_bits, 5)
+        if (sig_ha_n < 40):
+            flag_bits = np.append(flag_bits, 10)
+            
+        flag_bits = np.sort(flag_bits.astype(int))
+
+        if ((del_rchi2 >= 20)&(sig_ha_b > sig_ha_n)&(sig_ha_n >= 40.)&(fwhm_ha_b >= 300.)):
+            return (gfit_broad, rchi2_broad, flag_bits, del_rchi2)
+        else:
+            return (gfit_no_broad, rchi2_no_broad, flag_bits, del_rchi2)
+
+####################################################################################################
+    
+    def fit_fixed_one_component(lam_nii, flam_nii, ivar_nii, sii_bestfit):
+        """
+        Function to fit [NII]6548, 6583 emission lines.
+        The code uses [SII] best fit as a template for both [NII] and Ha.
+        The broad component fit needs to be >20% better to be picked.
+        Code works only for single-component [SII] fits. No outflow components.
+        
+        Parameters
+        ----------
+        lam_nii : numpy array
+            Wavelength array of the [NII]+Ha region where the fits need to be performed.
+        flam_nii : numpy array
+            Flux array of the spectra in the [NII]+Ha region.
+        ivar_nii : numpy array
+            Inverse variance array of the spectra in the [NII]+Ha region.
+            
+        sii_bestfit : Astropy model
+            Best fit model for the [SII] emission-lines.
+            
+        Returns
+        -------
+        gfit : Astropy model
+            Best-fit 1 component model
+        rchi2: float
+            Reduced chi2 of the best-fit
+            
+        flag_bits : numpy array
+            Array of flag bits for free one-component fitting
+                2 : free two component fit
+                4 : chi^2 for broad-line fit improves by 20%
+                5 : sigma (Ha; b) < sigma (Ha; n)
+                
+        del_rchi2 : float
+            Percentage difference between rchi2 with and without broad-line.
+        """
+        
+        flag_bits = np.array([])
+        
+        ## Initial estimate of amplitudes
+        amp_nii6548 = np.max(flam_nii[(lam_nii > 6548)&(lam_nii < 6550)])
+        amp_nii6583 = np.max(flam_nii[(lam_nii > 6583)&(lam_nii < 6586)])
+        
+        ## Initial guess of amplitude for Ha
+        amp_ha = np.max(flam_nii[(lam_nii > 6550)&(lam_nii < 6575)])
+        
+        ## Initial estimates of standard deviation
+        stddev_nii6548 = (6549.852/sii_bestfit['sii6716'].mean.value)*\
+        sii_bestfit['sii6716'].stddev.value
+        stddev_nii6583 = (6585.277/sii_bestfit['sii6716'].mean.value)*\
+        sii_bestfit['sii6716'].stddev.value
+
+        ## Single component fits
+        g_nii6548 = Gaussian1D(amplitude = amp_nii6548, mean = 6549.852, \
+                               stddev = stddev_nii6548, name = 'nii6548', \
+                               bounds = {'amplitude' : (0.0, None)})
+        g_nii6583 = Gaussian1D(amplitude = amp_nii6583, mean = 6585.277, \
+                               stddev = stddev_nii6583, name = 'nii6583', \
+                               bounds = {'amplitude' : (0.0, None)})
+
+        ## Tie means of [NII] doublet gaussians
+        def tie_mean_nii(model):
+            return (model['nii6548'].mean + 35.425)
+
+        g_nii6583.mean.tied = tie_mean_nii
+
+        ## Tie amplitudes of two [NII] gaussians
+        def tie_amp_nii(model):
+            return (model['nii6548'].amplitude*2.96)
+
+        g_nii6583.amplitude.tied = tie_amp_nii
+
+        ## Tie standard deviations of all the narrow components
+        def tie_std_nii6548(model):
+            return ((model['nii6548'].mean/sii_bestfit['sii6716'].mean)*\
+                    sii_bestfit['sii6716'].stddev)
+
+        g_nii6548.stddev.tied = tie_std_nii6548
+        g_nii6548.stddev.fixed = True
+
+        def tie_std_nii6583(model):
+            return ((model['nii6583'].mean/sii_bestfit['sii6716'].mean)*\
+                    sii_bestfit['sii6716'].stddev)
+
+        g_nii6583.stddev.tied = tie_std_nii6583
+        g_nii6583.stddev.fixed = True
+
+        g_nii = g_nii6548 + g_nii6583
+
+        ## Ha parameters
+        ## Model narrow Ha as narrow [SII]
+        stddev_ha = (6564.312/sii_bestfit['sii6716'].mean.value)*\
+        sii_bestfit['sii6716'].stddev.value
+
+        g_ha_n = Gaussian1D(amplitude = amp_ha, mean = 6564.312, \
+                            stddev = stddev_ha, name = 'ha_n', \
+                            bounds = {'amplitude' : (0.0, None), 'stddev' : (0.85, None)})
+
+        ## Tie standard deviation of Ha
+        def tie_std_ha(model):
+            return ((model['ha_n'].mean/sii_bestfit['sii6716'].mean)*\
+                    sii_bestfit['sii6716'].stddev)
+
+        g_ha_n.stddev.tied = tie_std_ha
+        g_ha_n.stddev.fixed = True
+
+        g_ha = g_ha_n
+        
+        #####################################################################################
+        ########################## Fit without broad component ##############################
+
+        ## Initial gaussian fit
+        g_init = g_nii + g_ha
+
+        fitter_no_broad = fitting.LevMarLSQFitter()
+
+        gfit_no_broad = fitter_no_broad(g_init, lam_nii, flam_nii,\
+                                     weights = np.sqrt(ivar_nii), maxiter = 1000)
+
+        
+        rchi2_no_broad = mfit.calculate_red_chi2(flam_nii, gfit_no_broad(lam_nii),\
+                                                          ivar_nii, n_free_params = 4)
+        
+
+        #####################################################################################
+        ########################## Fit with broad component #################################
+
+        ## Broad Ha parameters
+        g_ha_b = Gaussian1D(amplitude = amp_ha/4, mean = 6564.312, \
+                            stddev = 5.0, name = 'ha_b', \
+                            bounds = {'amplitude' : (0.0, None), 'stddev' : (1.5, None)})
+
+        ## Initial gaussian fit
+        g_init = g_nii + g_ha + g_ha_b
+        fitter_broad = fitting.LevMarLSQFitter()
+
+        gfit_broad = fitter_broad(g_init, lam_nii, flam_nii,\
+                                  weights = np.sqrt(ivar_nii), maxiter = 1000)
+
+        
+        rchi2_broad = mfit.calculate_red_chi2(flam_nii, gfit_broad(lam_nii), \
+                                                       ivar_nii, n_free_params = 7)
+
+        #####################################################################################
+        #####################################################################################
+
+        ## Select the best-fit based on rchi2
+        ## If the rchi2 of 2-component is better by 20%, then the 2-component fit is picked.
+        ## Otherwise, 1-component fit is the best fit.
+        del_rchi2 = ((rchi2_no_broad - rchi2_broad)/rchi2_no_broad)*100
+        
+        ## Also sigma (broad Ha) > sigma (narrow Ha)
+        sig_ha_b = mfit.lamspace_to_velspace(gfit_broad['ha_b'].stddev.value, \
+                                             gfit_broad['ha_b'].mean.value)
+        sig_ha_n = mfit.lamspace_to_velspace(gfit_broad['ha_n'].stddev.value, \
+                                             gfit_broad['ha_n'].mean.value)
+        
+        fwhm_ha_b = 2.355*sig_ha_b
+        
+        ## Set flags
+        flag_bits = np.append(flag_bits, 1)
+        if (del_rchi2 >= 20):
+            flag_bits = np.append(flag_bits, 4)
+        if (sig_ha_b < sig_ha_n):
+            flag_bits = np.append(flag_bits, 5)
+        if (sig_ha_n < 40):
+            flag_bits = np.append(flag_bits, 10)
+            
+        flag_bits = np.sort(flag_bits.astype(int))
+
+        if ((del_rchi2 >= 20)&(sig_ha_b > sig_ha_n)&(fwhm_ha_b >= 300.)):
+            return (gfit_broad, rchi2_broad, flag_bits, del_rchi2)
+        else:
+            return (gfit_no_broad, rchi2_no_broad, flag_bits, del_rchi2)
+        
+####################################################################################################
+
+    def fit_fixed_two_components(lam_nii, flam_nii, ivar_nii, sii_bestfit):
+        """
+        Function to fit [NII]6548, 6583 emission lines.
+        The code uses [SII] best fit as a template for both [NII] and Ha.
+        The broad component fit needs to be >20% better to be picked.
+        Code works only for two-component [SII] fits, including outflow components.
+        
+        Parameters
+        ----------
+        lam_nii : numpy array
+            Wavelength array of the [NII]+Ha region where the fits need to be performed.
+        flam_nii : numpy array
+            Flux array of the spectra in the [NII]+Ha region.
+        ivar_nii : numpy array
+            Inverse variance array of the spectra in the [NII]+Ha region.
+            
+        sii_bestfit : Astropy model
+            Best fit model for the [SII] emission-lines.
+            
+         Returns
+        -------
+        gfit : Astropy model
+            Best-fit 1 component model
+        rchi2: float
+            Reduced chi2 of the best-fit
+            
+        flag_bits : numpy array
+            Array of flag bits for fixed two-component fitting
+                3 : fixed one component fit
+                4 : chi^2 for broad-line fit improves by 20%
+                5 : sigma (Ha; b) < sigma (Ha; n)
+                
+        del_rchi2 : float
+            Percentage difference between rchi2 with and without broad-line.
+        """
+        
+        flag_bits = np.array([])
+        
+        ## Initial estimate of amplitudes
+        amp_nii6548 = np.max(flam_nii[(lam_nii > 6548)&(lam_nii < 6550)])
+        amp_nii6583 = np.max(flam_nii[(lam_nii > 6583)&(lam_nii < 6586)])
+        
+        ## Initial guess of amplitude for Ha
+        amp_ha = np.max(flam_nii[(lam_nii > 6550)&(lam_nii < 6575)])
+        
+        ## Initial estimates of standard deviation
+        stddev_nii6548 = (6549.852/sii_bestfit['sii6716'].mean.value)*\
+        sii_bestfit['sii6716'].stddev.value
+        stddev_nii6583 = (6585.277/sii_bestfit['sii6716'].mean.value)*\
+        sii_bestfit['sii6716'].stddev.value
+        
+        stddev_nii6548_out = (6549.852/sii_bestfit['sii6716_out'].mean.value)*\
+        sii_bestfit['sii6716_out'].stddev.value
+        stddev_nii6583_out = (6585.277/sii_bestfit['sii6716_out'].mean.value)*\
+        sii_bestfit['sii6716_out'].stddev.value
+
+        ## Two component fits
+        g_nii6548 = Gaussian1D(amplitude = amp_nii6548/2, mean = 6549.852, \
+                               stddev = stddev_nii6548, name = 'nii6548', \
+                               bounds = {'amplitude' : (0.0, None)})
+        g_nii6583 = Gaussian1D(amplitude = amp_nii6583/2, mean = 6585.277, \
+                               stddev = stddev_nii6583, name = 'nii6583', \
+                               bounds = {'amplitude' : (0.0, None)})
+
+        g_nii6548_out = Gaussian1D(amplitude = amp_nii6548/4, mean = 6549.852, \
+                                   stddev = stddev_nii6548_out, name = 'nii6548_out', \
+                                   bounds = {'amplitude' : (0.0, None)})
+        g_nii6583_out = Gaussian1D(amplitude = amp_nii6583/4, mean = 6585.277, \
+                                   stddev = stddev_nii6583_out, name = 'nii6583_out', \
+                                   bounds = {'amplitude' : (0.0, None)})
+
+        ## Tie means of [NII] doublet gaussians
+        def tie_mean_nii(model):
+            return (model['nii6548'].mean + 35.425)
+
+        g_nii6583.mean.tied = tie_mean_nii
+
+        ## Tie amplitudes of two [NII] gaussians
+        def tie_amp_nii(model):
+            return (model['nii6548'].amplitude*2.96)
+
+        g_nii6583.amplitude.tied = tie_amp_nii
+
+        ## Tie standard deviations of all the narrow components
+        def tie_std_nii6548(model):
+            return ((model['nii6548'].mean/sii_bestfit['sii6716'].mean)*\
+                    sii_bestfit['sii6716'].stddev)
+
+        g_nii6548.stddev.tied = tie_std_nii6548
+        g_nii6548.stddev.fixed = True
+
+        def tie_std_nii6583(model):
+            return ((model['nii6583'].mean/sii_bestfit['sii6716'].mean)*\
+                    sii_bestfit['sii6716'].stddev)
+
+        g_nii6583.stddev.tied = tie_std_nii6583
+        g_nii6583.stddev.fixed = True
+
+        ## Tie means of [NII] outflow components
+        def tie_mean_nii_out(model):
+            return (model['nii6548_out'].mean + 35.425)
+
+        g_nii6583_out.mean.tied = tie_mean_nii_out
+
+        ## Tie amplitudes of two [NII] gaussians
+        def tie_amp_nii_out(model):
+            return (model['nii6548_out'].amplitude*2.96)
+
+        g_nii6583_out.amplitude.tied = tie_amp_nii_out
+
+        ## Tie standard deviations of all the outflow components
+        def tie_std_nii6548_out(model):
+            return ((model['nii6548_out'].mean/sii_bestfit['sii6716_out'].mean)*\
+                    sii_bestfit['sii6716_out'].stddev)
+
+        g_nii6548_out.stddev.tied = tie_std_nii6548_out
+        g_nii6548_out.stddev.fixed = True
+
+        def tie_std_nii6583_out(model):
+            return ((model['nii6583_out'].mean/sii_bestfit['sii6716_out'].mean)*\
+                    sii_bestfit['sii6716_out'].stddev)
+
+        g_nii6583_out.stddev.tied = tie_std_nii6583_out
+        g_nii6583_out.stddev.fixed = True
+
+        g_nii = g_nii6548 + g_nii6583 + g_nii6548_out + g_nii6583_out
+
+        ### Halpha Parameters ##
+
+        ## Ha parameters
+        ## Model narrow Ha as narrow [SII]
+        stddev_ha = (6564.312/sii_bestfit['sii6716'].mean.value)*\
+        sii_bestfit['sii6716'].stddev.value
+        ## Model outflow Ha as outflow [SII]
+        stddev_ha_out = (6564.312/sii_bestfit['sii6716_out'].mean.value)*\
+        sii_bestfit['sii6716_out'].stddev.value
+
+        g_ha_n = Gaussian1D(amplitude = amp_ha/2, mean = 6564.312, \
+                            stddev = stddev_ha, name = 'ha_n', \
+                            bounds = {'amplitude' : (0.0, None), 'stddev' : (0.85, None)})
+
+        g_ha_out = Gaussian1D(amplitude = amp_ha/3, mean = 6564.312, \
+                              stddev = stddev_ha_out, name = 'ha_out', \
+                              bounds = {'amplitude' : (0.0, None), 'stddev' : (0.85, None)})
+
+        ## Tie standard deviation of Ha
+        def tie_std_ha(model):
+            return ((model['ha_n'].mean/sii_bestfit['sii6716'].mean)*\
+                    sii_bestfit['sii6716'].stddev)
+
+        g_ha_n.stddev.tied = tie_std_ha
+        g_ha_n.stddev.fixed = True
+
+        ## Tie standard deviation of Ha outflow
+        def tie_std_ha_out(model):
+            return ((model['ha_out'].mean/sii_bestfit['sii6716_out'].mean)*\
+                    sii_bestfit['sii6716_out'].stddev)
+
+        g_ha_out.stddev.tied = tie_std_ha_out
+        g_ha_out.stddev.fixed = True
+
+        g_ha = g_ha_n + g_ha_out
+        
+        #####################################################################################
+        ########################## Fit without broad component ##############################
+
+        ## Initial gaussian fit
+        g_init = g_nii + g_ha
+
+        fitter_no_broad = fitting.LevMarLSQFitter()
+
+        gfit_no_broad = fitter_no_broad(g_init, lam_nii, flam_nii,\
+                                     weights = np.sqrt(ivar_nii), maxiter = 1000)
+
+        
+        rchi2_no_broad = mfit.calculate_red_chi2(flam_nii, gfit_no_broad(lam_nii),\
+                                                          ivar_nii, n_free_params = 8)
+
+        #####################################################################################
+        ########################## Fit with broad component #################################
+
+        ## Broad Ha parameters
+        g_ha_b = Gaussian1D(amplitude = amp_ha/2, mean = 6564.312, \
                             stddev = 4.0, name = 'ha_b', \
                             bounds = {'amplitude' : (0.0, None), 'stddev' : (1.5, None)})
 
