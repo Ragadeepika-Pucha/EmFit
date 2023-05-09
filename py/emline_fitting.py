@@ -3,7 +3,7 @@ This script consists of functions related to fitting the emission line spectra,
 and plotting the models and residuals.
 
 Author : Ragadeepika Pucha
-Version : 2023, May 5th
+Version : 2023, May 8
 """
 
 ####################################################################################################
@@ -95,7 +95,7 @@ def fit_emline_spectra(specprod, survey, program, healpix, targetid, z):
     gfit_oiii, rchi2_oiii, oiii_bits, oiii_delrchi2 = find_bestfit.find_oiii_best_fit(lam_oiii, flam_oiii, ivar_oiii)
     gfit_hb, rchi2_hb, hb_bits, hb_delrchi2 = find_bestfit.find_hb_best_fit(lam_hb, flam_hb, ivar_hb, gfit_sii)
     gfit_nii_ha, rchi2_nii_ha, nii_ha_bits, nii_ha_delrchi2 = find_bestfit.find_nii_ha_best_fit(lam_nii_ha, flam_nii_ha, \
-                                                                               ivar_nii_ha, gfit_sii)
+                                                                               ivar_nii_ha, gfit_sii, ver = 'v1')
         
     hb_models = ['hb_n', 'hb_out', 'hb_b']
     oiii_models = ['oiii4959', 'oiii4959_out', 'oiii5007', 'oiii5007_out']
@@ -188,6 +188,17 @@ def check_fits(table, index):
     z = table['Z'].data[index]
     logmass = table['logM'].data[index]
     
+    if ('Version_NII_Ha' in table.colnames):
+        version = table['Version_NII_Ha'].astype(str).data[index]
+
+        if (version == 'both'):
+            ver = 'v1'
+        else:
+            ver = version
+    else:
+        ver = 'v2'
+    
+    
     lam_rest, flam_rest, ivar_rest = spec_utils.get_emline_spectra(specprod, survey, program, \
                                                                    healpix, targetid, z, \
                                                                    rest_frame = True, \
@@ -207,7 +218,7 @@ def check_fits(table, index):
     gfit_oiii, rchi2_oiii, oiii_bits, _ = find_bestfit.find_oiii_best_fit(lam_oiii, flam_oiii, ivar_oiii)
     gfit_hb, rchi2_hb, hb_bits, _ = find_bestfit.find_hb_best_fit(lam_hb, flam_hb, ivar_hb, gfit_sii)
     gfit_nii_ha, rchi2_nii_ha, nii_ha_bits, _ = find_bestfit.find_nii_ha_best_fit(lam_nii_ha, flam_nii_ha, \
-                                                                               ivar_nii_ha, gfit_sii)
+                                                                               ivar_nii_ha, gfit_sii, ver = ver)
     
     fits = [gfit_hb, gfit_oiii, gfit_nii_ha, gfit_sii]
     rchi2s = [rchi2_hb, rchi2_oiii, rchi2_nii_ha, rchi2_sii]

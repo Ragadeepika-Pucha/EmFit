@@ -3,7 +3,7 @@ This script consists of functions for fitting emission-lines.
 The different functions are divided into different classes for different emission lines.
 
 Author : Ragadeepika Pucha
-Version : 2023, May 5
+Version : 2023, May 8
 """
 
 ###################################################################################################
@@ -252,7 +252,7 @@ def find_hb_best_fit(lam_hb, flam_hb, ivar_hb, sii_bestfit):
             
         per_diff = (sig_sii - sig_hb)*100/sig_sii
                 
-        if ((per_diff <= -30)|(per_diff >= 30)):
+        if ((per_diff <= -30)|(per_diff >= 0)):
             gfit_hb, rchi2_hb, flag_bits, del_rchi2 = fl.fit_hb_line.fit_fixed_one_component(lam_hb, flam_hb, \
                                                                       ivar_hb, sii_bestfit)
             flag_bits = np.append(flag_bits, 7)
@@ -260,32 +260,8 @@ def find_hb_best_fit(lam_hb, flam_hb, ivar_hb, sii_bestfit):
             gfit_hb, rchi2_hb, flag_bits, del_rchi2 = gfit_free, rchi2_free, flag_bits, del_rchi2
             
     else:
-        gfit_free, rchi2_free, flag_bits, del_rchi2 = fl.fit_hb_line.fit_free_two_components(lam_hb, flam_hb, \
-                                                                      ivar_hb, sii_bestfit, \
-                                                                      frac_temp = 100.)
-        
-        sig_sii = mfit.lamspace_to_velspace(sii_bestfit['sii6716'].stddev.value, \
-                                           sii_bestfit['sii6716'].mean.value)
-        sig_sii_out = mfit.lamspace_to_velspace(sii_bestfit['sii6716_out'].stddev.value, \
-                                               sii_bestfit['sii6716_out'].mean.value)
-        
-        sig_hb = mfit.lamspace_to_velspace(gfit_free['hb_n'].stddev.value, \
-                                          gfit_free['hb_n'].mean.value)
-        sig_hb_out = mfit.lamspace_to_velspace(gfit_free['hb_out'].stddev.value, \
-                                              gfit_free['hb_out'].mean.value)
-        
-        per_diff_n = (sig_sii - sig_hb)*100/sig_sii
-        per_diff_out = (sig_sii_out - sig_hb_out)*100/sig_sii_out
-        
-        if (((per_diff_n <= -30)|(per_diff_n >= 30))|((per_diff_out <= -30)|(per_diff_out >= 30))):
-            gfit_hb, rchi2_hb, flag_bits, del_rchi2 = fl.fit_hb_line.fit_fixed_two_components(lam_hb, flam_hb, \
-                                                                       ivar_hb, sii_bestfit)
-            if ((per_diff_n <= -30)|(per_diff_n >= 30)):
-                flag_bits = np.append(flag_bits, 7)
-            if ((per_diff_out <= -30)|(per_diff_out >= 30)):
-                flag_bits = np.append(flag_bits, 8)
-        else:
-            gfit_hb, rchi2_hb, flag_bits, del_rchi2 = gfit_free, rchi2_free, flag_bits, del_rchi2
+        gfit_hb, rchi2_hb, flag_bits, del_rchi2 = fl.fit_hb_line.fit_fixed_two_components(lam_hb, flam_hb, \
+                                                                                             ivar_hb, sii_bestfit)
             
     flag_bits = np.sort(flag_bits.astype(int))
         
@@ -341,10 +317,10 @@ def find_nii_ha_best_fit(lam_nii, flam_nii, ivar_nii, sii_bestfit, ver = 'v1'):
 
             per_diff = (sig_sii - sig_ha)*100/sig_sii
 
-            if (((per_diff <= -30)|(per_diff >= 30))|(gfit_free['ha_n'].amplitude.value == 0)):
+            if (((per_diff <= -30)|(per_diff >= 0))|(gfit_free['ha_n'].amplitude.value == 0)):
                 gfit_nii_ha, rchi2_nii_ha, flag_bits, del_rchi2 = fl.fit_nii_ha_lines_v1.fit_fixed_one_component(lam_nii, flam_nii, \
                                                                                         ivar_nii, sii_bestfit)
-                if ((per_diff <= -30)|(per_diff >= 30)):
+                if ((per_diff <= -30)|(per_diff >= 0)):
                     flag_bits = np.append(flag_bits, 7)
                 if (gfit_free['ha_n'].amplitude.value == 0):
                     flag_bits = np.append(flag_bits, 9)
@@ -352,37 +328,10 @@ def find_nii_ha_best_fit(lam_nii, flam_nii, ivar_nii, sii_bestfit, ver = 'v1'):
                 gfit_nii_ha, rchi2_nii_ha, flag_bits, del_rchi2 = gfit_free, rchi2_free, flag_bits, del_rchi2
 
         else:
-            gfit_free, rchi2_free, flag_bits, del_rchi2 = fl.fit_nii_ha_lines_v1.fit_free_ha_two_components(lam_nii, flam_nii, ivar_nii, \
-                                                                                   sii_bestfit, frac_temp = 100.)
-
-            sig_sii = mfit.lamspace_to_velspace(sii_bestfit['sii6716'].stddev.value, \
-                                               sii_bestfit['sii6716'].mean.value)
-            sig_sii_out = mfit.lamspace_to_velspace(sii_bestfit['sii6716_out'].stddev.value, \
-                                                   sii_bestfit['sii6716_out'].mean.value)
-
-            sig_ha = mfit.lamspace_to_velspace(gfit_free['ha_n'].stddev.value, \
-                                              gfit_free['ha_n'].mean.value)
-            sig_ha_out = mfit.lamspace_to_velspace(gfit_free['ha_out'].stddev.value, \
-                                                  gfit_free['ha_out'].mean.value)
-
-            per_diff_n = (sig_sii - sig_ha)*100/sig_sii
-            per_diff_out = (sig_sii_out - sig_ha_out)*100/sig_sii_out
-
-            if (((per_diff_n <= -30)|(per_diff_n >= 30))|((per_diff_out <= -30)|(per_diff_out >= 30))|((gfit_free['ha_n'].amplitude.value == 0))):
-                gfit_nii_ha, rchi2_nii_ha, flag_bits, del_rchi2 = fl.fit_nii_ha_lines_v1.fit_fixed_two_components(lam_nii, flam_nii, \
-                                                                                    ivar_nii, sii_bestfit)
-
-                if ((per_diff_n <= -30)|(per_diff_n >= 30)):
-                    flag_bits = np.append(flag_bits, 7)
-                if ((per_diff_out <= -30)|(per_diff_out >= 30)):
-                    flag_bits = np.append(flag_bits, 8)
-                if (gfit_free['ha_n'].amplitude.value == 0):
-                    flag_bits = np.append(flag_bits, 9)
-            else:
-                gfit_nii_ha, rchi2_nii_ha, flag_bits, del_rchi2 = gfit_free, rchi2_free, flag_bits, del_rchi2
+            gfit_nii_ha, rchi2_nii_ha, flag_bits, del_rchi2 = fl.fit_nii_ha_lines_v1.fit_fixed_two_components(lam_nii, flam_nii, \
+                                                                                                             ivar_nii, sii_bestfit)
                 
     elif (ver == 'v2'):
-        
         if (n_sii == 2):
             gfit_free, rchi2_free, flag_bits, del_rchi2 = fl.fit_nii_ha_lines_v2.fit_free_ha_one_component(lam_nii, flam_nii, ivar_nii, \
                                                                                   sii_bestfit, frac_temp = 100.)
@@ -395,10 +344,10 @@ def find_nii_ha_best_fit(lam_nii, flam_nii, ivar_nii, sii_bestfit, ver = 'v1'):
 
             per_diff = (sig_sii - sig_ha)*100/sig_sii
 
-            if (((per_diff <= -30)|(per_diff >= 30))|(gfit_free['ha_n'].amplitude.value == 0)):
+            if (((per_diff <= -30)|(per_diff >= 0))|(gfit_free['ha_n'].amplitude.value == 0)):
                 gfit_nii_ha, rchi2_nii_ha, flag_bits, del_rchi2 = fl.fit_nii_ha_lines_v2.fit_fixed_one_component(lam_nii, flam_nii, \
                                                                                         ivar_nii, sii_bestfit)
-                if ((per_diff <= -30)|(per_diff >= 30)):
+                if ((per_diff <= -30)|(per_diff >= 0)):
                     flag_bits = np.append(flag_bits, 7)
                 if (gfit_free['ha_n'].amplitude.value == 0):
                     flag_bits = np.append(flag_bits, 9)
@@ -406,34 +355,8 @@ def find_nii_ha_best_fit(lam_nii, flam_nii, ivar_nii, sii_bestfit, ver = 'v1'):
                 gfit_nii_ha, rchi2_nii_ha, flag_bits, del_rchi2 = gfit_free, rchi2_free, flag_bits, del_rchi2
 
         else:
-            gfit_free, rchi2_free, flag_bits, del_rchi2 = fl.fit_nii_ha_lines_v2.fit_free_ha_two_components(lam_nii, flam_nii, ivar_nii, \
-                                                                                   sii_bestfit, frac_temp = 100.)
-
-            sig_sii = mfit.lamspace_to_velspace(sii_bestfit['sii6716'].stddev.value, \
-                                               sii_bestfit['sii6716'].mean.value)
-            sig_sii_out = mfit.lamspace_to_velspace(sii_bestfit['sii6716_out'].stddev.value, \
-                                                   sii_bestfit['sii6716_out'].mean.value)
-
-            sig_ha = mfit.lamspace_to_velspace(gfit_free['ha_n'].stddev.value, \
-                                              gfit_free['ha_n'].mean.value)
-            sig_ha_out = mfit.lamspace_to_velspace(gfit_free['ha_out'].stddev.value, \
-                                                  gfit_free['ha_out'].mean.value)
-
-            per_diff_n = (sig_sii - sig_ha)*100/sig_sii
-            per_diff_out = (sig_sii_out - sig_ha_out)*100/sig_sii_out
-
-            if (((per_diff_n <= -30)|(per_diff_n >= 30))|((per_diff_out <= -30)|(per_diff_out >= 30))|((gfit_free['ha_n'].amplitude.value == 0))):
-                gfit_nii_ha, rchi2_nii_ha, flag_bits, del_rchi2 = fl.fit_nii_ha_lines_v2.fit_fixed_two_components(lam_nii, flam_nii, \
-                                                                                    ivar_nii, sii_bestfit)
-
-                if ((per_diff_n <= -30)|(per_diff_n >= 30)):
-                    flag_bits = np.append(flag_bits, 7)
-                if ((per_diff_out <= -30)|(per_diff_out >= 30)):
-                    flag_bits = np.append(flag_bits, 8)
-                if (gfit_free['ha_n'].amplitude.value == 0):
-                    flag_bits = np.append(flag_bits, 9)
-            else:
-                gfit_nii_ha, rchi2_nii_ha, flag_bits, del_rchi2 = gfit_free, rchi2_free, flag_bits, del_rchi2
+            gfit_nii_ha, rchi2_nii_ha, flag_bits, del_rchi2 = fl.fit_nii_ha_lines_v2.fit_fixed_two_components(lam_nii, flam_nii, \
+                                                                                                             ivar_nii, sii_bestfit)
         
     flag_bits = np.sort(flag_bits.astype(int))
     
@@ -441,7 +364,3 @@ def find_nii_ha_best_fit(lam_nii, flam_nii, ivar_nii, sii_bestfit, ver = 'v1'):
 
 ####################################################################################################
 ####################################################################################################
-    
-        
-    
-    

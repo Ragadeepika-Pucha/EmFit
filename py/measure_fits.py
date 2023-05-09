@@ -8,7 +8,7 @@ The script consists of following functions:
     5) compute_emline_flux(amplitude, stddev, amplitude_err, stddev_err)
     
 Author : Ragadeepika Pucha
-Version : 2023, March 27
+Version : 2023, May 8
 """
 
 ###################################################################################################
@@ -116,7 +116,7 @@ def velspace_to_lamspace(vel, lam_ref):
 
 ####################################################################################################
 
-def compute_noise_emline(lam_rest, flam_rest, model, em_line):
+def compute_noise_emline(lam_rest, flam_rest, em_line):
     """
     Function to compute noise near a given emission-line.
     
@@ -127,9 +127,6 @@ def compute_noise_emline(lam_rest, flam_rest, model, em_line):
         
     flam_rest : numpy array
         Rest-frame flux array of the spectrum
-        
-    model : Astropy model
-        Astropy model that is fit to the emission-line
         
     em_line : str
         Emission-line region where the noise needs to be computed
@@ -154,10 +151,12 @@ def compute_noise_emline(lam_rest, flam_rest, model, em_line):
     
     lam_region = lam_rest[lam_ii]
     flam_region = flam_rest[lam_ii]
-    model_region = model(lam_region)
+#     model_region = model(lam_region)
 
-    res = flam_region - model_region
-    noise = np.std(res)
+#     res = flam_region - model_region
+#     noise = np.std(res)
+
+    noise = np.sqrt(sum(flam_region**2)/len(flam_region))
     
     return (noise)
 

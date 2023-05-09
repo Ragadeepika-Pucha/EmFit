@@ -2639,7 +2639,8 @@ class fit_nii_ha_lines_v2:
         g_ha_b = Gaussian1D(amplitude = amp_ha/2, mean = 6564.312, \
                             stddev = 4.0, name = 'ha_b', \
                             bounds = {'amplitude' : (0.0, None), 'stddev' : (1.5, None)})
-
+        
+        
         ## Initial gaussian fit
         g_init = g_nii + g_ha + g_ha_b
         fitter_broad = fitting.LevMarLSQFitter()
