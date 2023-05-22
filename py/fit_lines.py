@@ -84,7 +84,7 @@ class fit_sii_lines:
                             weights = np.sqrt(ivar_sii), maxiter = 1000)
         rchi2_1comp = mfit.calculate_red_chi2(flam_sii, gfit_1comp(lam_sii),\
                                                    ivar_sii, n_free_params = 4)
-        
+                
         return (gfit_1comp, rchi2_1comp)
     
 ####################################################################################################
@@ -1084,7 +1084,6 @@ class fit_nii_ha_lines_v1:
 
         gfit_no_broad = fitter_no_broad(g_init, lam_nii, flam_nii,\
                                      weights = np.sqrt(ivar_nii), maxiter = 1000)
-
         
         rchi2_no_broad = mfit.calculate_red_chi2(flam_nii, gfit_no_broad(lam_nii),\
                                                           ivar_nii, n_free_params = 5)

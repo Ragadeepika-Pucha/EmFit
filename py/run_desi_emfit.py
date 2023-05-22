@@ -15,6 +15,9 @@ import emline_fitting as emfit
 from astropy.table import Table, vstack
 from matplotlib.backends import backend_pdf as pdf
 
+import warnings
+warnings.filterwarnings('ignore')
+
 from multiprocessing import Pool, cpu_count
 import time
 

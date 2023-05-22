@@ -11,6 +11,7 @@ Version : 2023, April 7
 import numpy as np
 
 import measure_fits as mfit
+from astropy.stats import sigma_clipped_stats
 ###################################################################################################
 
 def get_parameters(gfit, models):
@@ -64,7 +65,108 @@ def get_parameters(gfit, models):
     return (params)
     
 ###################################################################################################
+
+def get_bestfit_parameters(table, models):
+    """
+    Get the bestfit parameters from iterations of fits
     
+    Parameters
+    ----------
+    table : Astropy Table
+        Table of gaussian fits are different iterations
+    
+    models : list
+        List of total submodels expected from a given emission-line fitting.
+        
+    Returns
+    -------
+    params : dict
+        Dictionary with the parameter values
+    """
+    
+    params = {}
+    
+    for model in models:
+    
+        amplitude_arr = table[f'{model}_amplitude'].data
+        mean_arr = table[f'{model}_mean'].data
+        std_arr = table[f'{model}_std'].data
+        flux_arr = table[f'{model}_flux'].data
+        sigma_arr = table[f'{model}_sigma'].data
+
+        allzero = (np.all(np.isclose(amplitude_arr, 0.0)))&\
+        (np.all(np.isclose(mean_arr, 0.0)))&\
+        (np.all(np.isclose(std_arr, 0.0)))
+
+        if (allzero):
+            amp = 0.0
+            amp_err = 0.0
+            mean = 0.0
+            mean_err = 0.0
+            std = 0.0
+            std_err = 0.0
+            flux = 0.0
+            flux_err = 0.0
+            sigma = 0.0
+            sigma_err = 0.0
+            flux_fits = 0.0
+            flux_err_fits = 0.0
+            sigma_fits = 0.0
+            sigma_err_fits = 0.0
+        else:
+            # amp, _, amp_err = sigma_clipped_stats(amplitude_arr)
+            # mean, _, mean_err = sigma_clipped_stats(mean_arr)
+            # var = std_arr**2
+            # std, _, std_err = np.sqrt(sigma_clipped_stats(var))
+            # flux, _, flux_err = sigma_clipped_stats(flux_arr)
+            # sigma, _, sigma_err = sigma_clipped_stats(sigma_arr)
+            # flux, flux_err = mfit.compute_emline_flux(amp, std, amp_err, std_err)
+            # sigma, sigma_err = mfit.lamspace_to_velspace(std, mean, std_err, mean_err)
+            
+            cond = (amplitude_arr > 0)&(mean_arr > 0)&(std_arr > 0)
+            
+            amp, _, amp_err = sigma_clipped_stats(np.where(~cond, np.nan, amplitude_arr))
+            mean, _, mean_err = sigma_clipped_stats(np.where(~cond, np.nan, mean_arr))
+            var = np.where(~cond, np.nan, std_arr)**2
+            std, _, std_err = np.sqrt(sigma_clipped_stats(var))
+            flux_fits, _, flux_err_fits = sigma_clipped_stats(np.where(~cond, np.nan, flux_arr))
+            sigma_fits, _, sigma_err_fits = sigma_clipped_stats(np.where(~cond, np.nan, sigma_arr))
+            flux, flux_err = mfit.compute_emline_flux(amp, std, amp_err, std_err)
+            sigma, sigma_err = mfit.lamspace_to_velspace(std, mean, std_err, mean_err)
+            
+            # amp = np.nanmean(np.where(~cond, np.nan, amplitude_arr))
+            # amp_err = np.nanstd(np.where(~cond, np.nan, amplitude_arr))
+            # mean = np.nanmean(np.where(~cond, np.nan, mean_arr))
+            # mean_err = np.nanstd(np.where(~cond, np.nan, mean_arr))
+            # var = np.where(~cond, np.nan, std_arr)**2
+            # std = np.sqrt(np.nanmean(var))
+            # std_err = np.sqrt(np.nanstd(var))
+            # flux, flux_err = mfit.compute_emline_flux(amp, std, amp_err, std_err)
+            # sigma, sigma_err = mfit.lamspace_to_velspace(std, mean, std_err, mean_err)
+            # flux_fits = np.nanmean(np.where(~cond, np.nan, flux_arr))
+            # flux_err_fits = np.nanstd(np.where(~cond, np.nan, flux_arr))
+            # sigma_fits = np.nanmean(np.where(~cond, np.nan, sigma_arr))
+            # sigma_err_fits = np.nanstd(np.where(~cond, np.nan, sigma_arr))
+            
+        params[f'{model}_amplitude'] = [amp]
+        params[f'{model}_amplitude_err'] = [amp_err]
+        params[f'{model}_mean'] = [mean]
+        params[f'{model}_mean_err'] = [mean_err]
+        params[f'{model}_std'] = [std]
+        params[f'{model}_std_err'] = [std_err]
+        params[f'{model}_sigma'] = [sigma]
+        params[f'{model}_sigma_err'] = [sigma_err]
+        params[f'{model}_flux'] = [flux]
+        params[f'{model}_flux_err'] = [flux_err]
+        params[f'{model}_flux_fits'] = [flux_fits]
+        params[f'{model}_flux_err_fits'] = [flux_err_fits]
+        params[f'{model}_sigma_fits'] = [sigma_fits]
+        params[f'{model}_sigma_err_fits'] = [sigma_err_fits]
+
+    return (params)
+
+####################################################################################################
+
 # def get_sii_params(fitter_sii, gfit_sii):
     
 #     ## Number of sub-models in the [SII] fit
