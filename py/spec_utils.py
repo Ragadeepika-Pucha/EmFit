@@ -8,7 +8,7 @@ The following functions are available:
     4) get_fit_window(lam_rest, flam_rest, ivar_rest, em_line)
 
 Author : Ragadeepika Pucha
-Version : 2023, March 27
+Version : 2023, May 22
 """
 ###################################################################################################
 
@@ -48,14 +48,8 @@ def find_coadded_spectra(specprod, survey, program, healpix, targetid):
         
     Returns
     -------
-    lam : numpy array
-        Wavelength array of the spectra
-        
-    flam : numpy array
-        MW transmission corrected flux array of the spectra
-        
-    ivar : numpy array
-        Inverse variance array of the spectra
+    coadd_spec : obj
+        Coadded Spectra object associated with the target
     """
     
     ## Targets healpix directory
@@ -71,21 +65,8 @@ def find_coadded_spectra(specprod, survey, program, healpix, targetid):
     spec = read_spectra(coadd_file).select(targets = targetid)
     ## Coadd the spectra across cameras
     coadd_spec = coadd_cameras(spec)
-    bands = coadd_spec.bands[0]
     
-    ## EBV
-    ## Correc for MW Transmission
-    ebv = coadd_spec.fibermap['EBV'].data
-    
-    ## MW Transmission
-    mw_trans_spec = dust_transmission(coadd_spec.wave[bands], ebv)
-    
-    ## Wavelength, flux and inverse variance arrays
-    lam = coadd_spec.wave[bands]
-    flam = coadd_spec.flux[bands].flatten()/mw_trans_spec
-    ivar = coadd_spec.ivar[bands].flatten()
-    
-    return (lam, flam, ivar)
+    return (coadd_spec)
 
 ###################################################################################################
 
@@ -199,10 +180,28 @@ def get_emline_spectra(specprod, survey, program, healpix, targetid,\
         
     ivar : numpy array
         Inverse variance array of the spectra. Rest-frame values if rest_frame = True.
+        
+    res_matrix : obj
+        Resolution Matrix Object
     """
     
     ## Coadded Spectra
-    lam, flam, ivar = find_coadded_spectra(specprod, survey, program, healpix, targetid)
+    coadd_spec = find_coadded_spectra(specprod, survey, program, healpix, targetid)
+    
+    bands = coadd_spec.bands[0]
+    
+    ## EBV
+    ## Correc for MW Transmission
+    ebv = coadd_spec.fibermap['EBV'].data
+    
+    ## MW Transmission
+    mw_trans_spec = dust_transmission(coadd_spec.wave[bands], ebv)
+    
+    ## Wavelength, flux and inverse variance arrays
+    lam = coadd_spec.wave[bands]
+    flam = coadd_spec.flux[bands].flatten()/mw_trans_spec
+    ivar = coadd_spec.ivar[bands].flatten()
+    res_matrix = coadd_spec.R[bands][0]
     
     ## Stellar continuum model
     modelwave, total_cont = find_stellar_continuum(specprod, survey, program, healpix, targetid)
@@ -218,7 +217,7 @@ def get_emline_spectra(specprod, survey, program, healpix, targetid,\
     if (plot_continuum == True):
         plot_utils.plot_spectra_continuum(lam, flam, total_cont)
         
-    return (lam, emline_spec, ivar)
+    return (lam, emline_spec, ivar, res_matrix)
 
 ###################################################################################################
 

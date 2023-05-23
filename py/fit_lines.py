@@ -3,7 +3,7 @@ This script consists of funcitons for fitting emission-lines.
 The different functions are divided into different classes for different emission lines.
 
 Author : Ragadeepika Pucha
-Version : 2023, May 5
+Version : 2023, May 22
 """
 
 ###################################################################################################
@@ -11,7 +11,7 @@ Version : 2023, May 5
 import numpy as np
 
 from astropy.modeling import fitting
-from astropy.modeling.models import Gaussian1D, Polynomial1D
+from astropy.modeling.models import Gaussian1D, Polynomial1D, Const1D
 
 import fit_utils
 import measure_fits as mfit
@@ -74,16 +74,19 @@ class fit_sii_lines:
             return ((model['sii6716'].stddev)*(model['sii6731'].mean/model['sii6716'].mean))
 
         g_sii6731.stddev.tied = tie_std_sii
+        
+        ## Continuum as a constant
+        cont = Const1D(amplitude = 0.0, name = 'sii_cont')
 
         ## Initial Gaussian fit
-        g_init = g_sii6716 + g_sii6731
+        g_init = cont + g_sii6716 + g_sii6731
         fitter_1comp = fitting.LevMarLSQFitter()
 
         ## Fit
         gfit_1comp = fitter_1comp(g_init, lam_sii, flam_sii, \
                             weights = np.sqrt(ivar_sii), maxiter = 1000)
         rchi2_1comp = mfit.calculate_red_chi2(flam_sii, gfit_1comp(lam_sii),\
-                                                   ivar_sii, n_free_params = 4)
+                                                   ivar_sii, n_free_params = 5)
                 
         return (gfit_1comp, rchi2_1comp)
     
@@ -166,15 +169,18 @@ class fit_sii_lines:
                     model['sii6716_out'].amplitude)
 
         g_sii6731_out.amplitude.tied = tie_amp_sii
+        
+        ## Continuum
+        cont = Const1D(amplitude = 0.0, name = 'sii_cont')
 
         ## Initial gaussian
-        g_init = g_sii6716 + g_sii6731 + g_sii6716_out + g_sii6731_out
+        g_init = cont + g_sii6716 + g_sii6731 + g_sii6716_out + g_sii6731_out
         fitter_2comp = fitting.LevMarLSQFitter()
 
         gfit_2comp = fitter_2comp(g_init, lam_sii, flam_sii, \
                             weights = np.sqrt(ivar_sii), maxiter = 1000)
         rchi2_2comp = mfit.calculate_red_chi2(flam_sii, gfit_2comp(lam_sii), \
-                                                   ivar_sii, n_free_params = 7)
+                                                   ivar_sii, n_free_params = 8)
         
         return (gfit_2comp, rchi2_2comp)    
     
@@ -244,9 +250,12 @@ class fit_oiii_lines:
                     (model['oiii5007'].mean/model['oiii4959'].mean))
 
         g_oiii5007.stddev.tied = tie_std_oiii
+        
+        ## Continuum
+        cont = Const1D(amplitude = 0.0, name = 'oiii_cont')
 
         ## Initial Gaussian fit
-        g_init = g_oiii4959 + g_oiii5007
+        g_init = cont + g_oiii4959 + g_oiii5007
 
         ## Fitter
         fitter_1comp = fitting.LevMarLSQFitter()
@@ -254,7 +263,7 @@ class fit_oiii_lines:
         gfit_1comp = fitter_1comp(g_init, lam_oiii, flam_oiii, \
                             weights = np.sqrt(ivar_oiii), maxiter = 1000)
         rchi2_1comp = mfit.calculate_red_chi2(flam_oiii, gfit_1comp(lam_oiii), \
-                                                   ivar_oiii, n_free_params = 3) 
+                                                   ivar_oiii, n_free_params = 4) 
         
         
         return (gfit_1comp, rchi2_1comp)
@@ -343,9 +352,12 @@ class fit_oiii_lines:
         (model['oiii5007_out'].mean/model['oiii4959_out'].mean))
 
         g_oiii5007_out.stddev.tied = tie_std_oiii_out
+        
+        ## Continuum
+        cont = Const1D(amplitude = 0.0, name = 'oiii_cont')
 
         ## Initial Gaussian fit
-        g_init = g_oiii4959 + g_oiii5007 + g_oiii4959_out + g_oiii5007_out
+        g_init = cont + g_oiii4959 + g_oiii5007 + g_oiii4959_out + g_oiii5007_out
 
         ## Fitter
         fitter_2comp = fitting.LevMarLSQFitter()
@@ -353,7 +365,7 @@ class fit_oiii_lines:
         gfit_2comp = fitter_2comp(g_init, lam_oiii, flam_oiii, \
                             weights = np.sqrt(ivar_oiii), maxiter = 1000)
         rchi2_2comp = mfit.calculate_red_chi2(flam_oiii, gfit_2comp(lam_oiii), \
-                                                   ivar_oiii, n_free_params = 6)
+                                                   ivar_oiii, n_free_params = 7)
         
         return (gfit_2comp, rchi2_2comp)
 
@@ -437,8 +449,11 @@ class fit_hb_line:
                           bounds = {'amplitude' : (0.0, None), 'stddev' : (0.5, None)})
 
         g_hb_n.stddev.bounds = (min_std, max_std)
+        
+        ## Continuum
+        cont = Const1D(amplitude = 0.0, name = 'hb_cont')
 
-        g_hb = g_hb_n
+        g_hb = cont + g_hb_n
         
         #####################################################################################
         ########################### Fit without broad component #############################
@@ -452,7 +467,7 @@ class fit_hb_line:
 
         
         rchi2_no_broad = mfit.calculate_red_chi2(flam_hb, gfit_no_broad(lam_hb), \
-                                                     ivar_hb, n_free_params = 3)
+                                                     ivar_hb, n_free_params = 4)
 
         #####################################################################################
         ########################### Fit with broad component ################################
@@ -470,7 +485,7 @@ class fit_hb_line:
                                   weights = np.sqrt(ivar_hb), maxiter = 1000)
 
         rchi2_broad = mfit.calculate_red_chi2(flam_hb, gfit_broad(lam_hb), \
-                                              ivar_hb, n_free_params = 6)
+                                              ivar_hb, n_free_params = 7)
     
         #####################################################################################
         #####################################################################################
@@ -480,7 +495,6 @@ class fit_hb_line:
         ## Otherwise, 1-component fit is the best fit.
         del_rchi2 = ((rchi2_no_broad - rchi2_broad)/rchi2_no_broad)*100
         
-        ## If sigma_hb_b < narrow sigma -- exchage the gaussians
         sig_hb_n = mfit.lamspace_to_velspace(gfit_broad['hb_n'].stddev.value, \
                                              gfit_broad['hb_n'].mean.value)
         sig_hb_b = mfit.lamspace_to_velspace(gfit_broad['hb_b'].stddev.value, \
@@ -586,8 +600,11 @@ class fit_hb_line:
 
         g_hb_n.stddev.bounds = (min_std, max_std)
         g_hb_out.stddev.bounds = (min_out, max_out)
+        
+        ## Continuum
+        cont = Const1D(amplitude = 0.0, name = 'hb_cont')
 
-        g_hb = g_hb_n + g_hb_out
+        g_hb = cont + g_hb_n + g_hb_out
         
         #####################################################################################
         ########################### Fit without broad component #############################
@@ -601,7 +618,7 @@ class fit_hb_line:
 
         
         rchi2_no_broad = mfit.calculate_red_chi2(flam_hb, gfit_no_broad(lam_hb), \
-                                                     ivar_hb, n_free_params = 6)
+                                                     ivar_hb, n_free_params = 7)
 
         #####################################################################################
         ########################### Fit with broad component ################################
@@ -619,7 +636,7 @@ class fit_hb_line:
                                   weights = np.sqrt(ivar_hb), maxiter = 1000)
 
         rchi2_broad = mfit.calculate_red_chi2(flam_hb, gfit_broad(lam_hb), \
-                                              ivar_hb, n_free_params = 9)
+                                              ivar_hb, n_free_params = 10)
         
         ## If broad-sigma < outflow-sigma -- exchange the gaussians.
         sigma_hb_b = mfit.lamspace_to_velspace(gfit_broad['hb_b'].stddev.value, \
@@ -740,8 +757,11 @@ class fit_hb_line:
 
         g_hb_n.stddev.tied = tie_std_hb
         g_hb_n.stddev.fixed = True
+        
+        ## Continuum
+        cont = Const1D(amplitude = 0.0, name = 'hb_cont')
 
-        g_hb = g_hb_n
+        g_hb = cont + g_hb_n
         
         #####################################################################################
         ########################### Fit without broad component #############################
@@ -755,7 +775,7 @@ class fit_hb_line:
 
 
         rchi2_no_broad = mfit.calculate_red_chi2(flam_hb, gfit_no_broad(lam_hb), \
-                                                 ivar_hb, n_free_params = 2)
+                                                 ivar_hb, n_free_params = 3)
         
         #####################################################################################
         ########################### Fit with broad component ################################
@@ -774,7 +794,7 @@ class fit_hb_line:
 
         
         rchi2_broad = mfit.calculate_red_chi2(flam_hb, gfit_broad(lam_hb), \
-                                              ivar_hb, n_free_params = 5)
+                                              ivar_hb, n_free_params = 6)
         
         #####################################################################################
         #####################################################################################
@@ -881,8 +901,11 @@ class fit_hb_line:
 
         g_hb_out.stddev.tied = tie_std_hb_out
         g_hb_out.stddev.fixed = True
+        
+        ## Continuum
+        cont = Const1D(amplitude = 0.0, name = 'hb_cont')
 
-        g_hb = g_hb_n + g_hb_out
+        g_hb = cont + g_hb_n + g_hb_out
         
         #####################################################################################
         ########################### Fit without broad component #############################
@@ -895,7 +918,7 @@ class fit_hb_line:
                                         weights = np.sqrt(ivar_hb), maxiter = 1000)
 
         rchi2_no_broad = mfit.calculate_red_chi2(flam_hb, gfit_no_broad(lam_hb), \
-                                                     ivar_hb, n_free_params = 4)
+                                                     ivar_hb, n_free_params = 5)
 
         #####################################################################################
         ########################### Fit with broad component ################################
@@ -914,7 +937,7 @@ class fit_hb_line:
 
 
         rchi2_broad = mfit.calculate_red_chi2(flam_hb, gfit_broad(lam_hb), \
-                                              ivar_hb, n_free_params = 7)
+                                              ivar_hb, n_free_params = 8)
 
         #####################################################################################
         #####################################################################################
@@ -1074,11 +1097,14 @@ class fit_nii_ha_lines_v1:
         # Total Halpha components
         g_ha = g_ha_n
         
+        ## Continuum
+        cont = Const1D(amplitude = 0.0, name = 'nii_ha_cont')
+        
         #####################################################################################
         ########################## Fit without broad component ##############################
 
         ## Initial gaussian fit
-        g_init = g_nii + g_ha
+        g_init = cont + g_nii + g_ha
 
         fitter_no_broad = fitting.LevMarLSQFitter()
 
@@ -1086,7 +1112,7 @@ class fit_nii_ha_lines_v1:
                                      weights = np.sqrt(ivar_nii), maxiter = 1000)
         
         rchi2_no_broad = mfit.calculate_red_chi2(flam_nii, gfit_no_broad(lam_nii),\
-                                                          ivar_nii, n_free_params = 5)
+                                                          ivar_nii, n_free_params = 6)
         
 
         #####################################################################################
@@ -1098,7 +1124,7 @@ class fit_nii_ha_lines_v1:
                             bounds = {'amplitude' : (0.0, None), 'stddev' : (1.5, None)})
 
         ## Initial gaussian fit
-        g_init = g_nii + g_ha + g_ha_b
+        g_init = cont + g_nii + g_ha + g_ha_b
         fitter_broad = fitting.LevMarLSQFitter()
 
         gfit_broad = fitter_broad(g_init, lam_nii, flam_nii,\
@@ -1106,7 +1132,7 @@ class fit_nii_ha_lines_v1:
 
         
         rchi2_broad = mfit.calculate_red_chi2(flam_nii, gfit_broad(lam_nii), \
-                                                       ivar_nii, n_free_params = 8)
+                                                       ivar_nii, n_free_params = 9)
 
         #####################################################################################
         #####################################################################################
@@ -1317,11 +1343,14 @@ class fit_nii_ha_lines_v1:
         
         g_ha = g_ha_n + g_ha_out
         
+        ## Continuum
+        cont = Const1D(amplitude = 0.0, name = 'nii_ha_cont')
+        
         #####################################################################################
         ########################## Fit without broad component ##############################
 
         ## Initial gaussian fit
-        g_init = g_nii + g_ha
+        g_init = cont + g_nii + g_ha
 
         fitter_no_broad = fitting.LevMarLSQFitter()
 
@@ -1330,7 +1359,7 @@ class fit_nii_ha_lines_v1:
 
         
         rchi2_no_broad = mfit.calculate_red_chi2(flam_nii, gfit_no_broad(lam_nii),\
-                                                          ivar_nii, n_free_params = 10)
+                                                          ivar_nii, n_free_params = 11)
 
         #####################################################################################
         ########################## Fit with broad component #################################
@@ -1341,7 +1370,7 @@ class fit_nii_ha_lines_v1:
                             bounds = {'amplitude' : (0.0, None), 'stddev' : (1.5, None)})
 
         ## Initial gaussian fit
-        g_init = g_nii + g_ha + g_ha_b
+        g_init = cont + g_nii + g_ha + g_ha_b
         fitter_broad = fitting.LevMarLSQFitter()
 
         gfit_broad = fitter_broad(g_init, lam_nii, flam_nii,\
@@ -1349,7 +1378,7 @@ class fit_nii_ha_lines_v1:
 
         
         rchi2_broad = mfit.calculate_red_chi2(flam_nii, gfit_broad(lam_nii), \
-                                                       ivar_nii, n_free_params = 13)
+                                                       ivar_nii, n_free_params = 14)
         
         
         ## If broad-sigma < outflow-sigma -- exchange the gaussians
@@ -1519,11 +1548,14 @@ class fit_nii_ha_lines_v1:
 
         g_ha = g_ha_n
         
+        ## Continuum
+        cont = Const1D(amplitude = 0.0, name = 'nii_ha_cont')
+        
         #####################################################################################
         ########################## Fit without broad component ##############################
 
         ## Initial gaussian fit
-        g_init = g_nii + g_ha
+        g_init = cont + g_nii + g_ha
 
         fitter_no_broad = fitting.LevMarLSQFitter()
 
@@ -1532,7 +1564,7 @@ class fit_nii_ha_lines_v1:
 
         
         rchi2_no_broad = mfit.calculate_red_chi2(flam_nii, gfit_no_broad(lam_nii),\
-                                                          ivar_nii, n_free_params = 4)
+                                                          ivar_nii, n_free_params = 5)
         
 
         #####################################################################################
@@ -1544,7 +1576,7 @@ class fit_nii_ha_lines_v1:
                             bounds = {'amplitude' : (0.0, None), 'stddev' : (1.5, None)})
 
         ## Initial gaussian fit
-        g_init = g_nii + g_ha + g_ha_b
+        g_init = cont + g_nii + g_ha + g_ha_b
         fitter_broad = fitting.LevMarLSQFitter()
 
         gfit_broad = fitter_broad(g_init, lam_nii, flam_nii,\
@@ -1552,7 +1584,7 @@ class fit_nii_ha_lines_v1:
 
         
         rchi2_broad = mfit.calculate_red_chi2(flam_nii, gfit_broad(lam_nii), \
-                                                       ivar_nii, n_free_params = 7)
+                                                       ivar_nii, n_free_params = 8)
 
         #####################################################################################
         #####################################################################################
@@ -1754,11 +1786,14 @@ class fit_nii_ha_lines_v1:
 
         g_ha = g_ha_n + g_ha_out
         
+        ## Continuum
+        cont = Const1D(amplitude = 0.0, name = 'nii_ha_cont')
+        
         #####################################################################################
         ########################## Fit without broad component ##############################
 
         ## Initial gaussian fit
-        g_init = g_nii + g_ha
+        g_init = cont + g_nii + g_ha
 
         fitter_no_broad = fitting.LevMarLSQFitter()
 
@@ -1767,7 +1802,7 @@ class fit_nii_ha_lines_v1:
 
         
         rchi2_no_broad = mfit.calculate_red_chi2(flam_nii, gfit_no_broad(lam_nii),\
-                                                          ivar_nii, n_free_params = 8)
+                                                          ivar_nii, n_free_params = 9)
 
         #####################################################################################
         ########################## Fit with broad component #################################
@@ -1778,7 +1813,7 @@ class fit_nii_ha_lines_v1:
                             bounds = {'amplitude' : (0.0, None), 'stddev' : (1.5, None)})
 
         ## Initial gaussian fit
-        g_init = g_nii + g_ha + g_ha_b
+        g_init = cont + g_nii + g_ha + g_ha_b
         fitter_broad = fitting.LevMarLSQFitter()
 
         gfit_broad = fitter_broad(g_init, lam_nii, flam_nii,\
@@ -1786,7 +1821,7 @@ class fit_nii_ha_lines_v1:
 
         
         rchi2_broad = mfit.calculate_red_chi2(flam_nii, gfit_broad(lam_nii), \
-                                                       ivar_nii, n_free_params = 11)
+                                                       ivar_nii, n_free_params = 12)
 
         #####################################################################################
         #####################################################################################
@@ -1944,11 +1979,14 @@ class fit_nii_ha_lines_v2:
         # Total Halpha components
         g_ha = g_ha_n
         
+        ## Continuum
+        cont = Const1D(amplitude = 0.0, name = 'nii_ha_cont')
+        
         #####################################################################################
         ########################## Fit without broad component ##############################
 
         ## Initial gaussian fit
-        g_init = g_nii + g_ha
+        g_init = cont + g_nii + g_ha
 
         fitter_no_broad = fitting.LevMarLSQFitter()
 
@@ -1957,7 +1995,7 @@ class fit_nii_ha_lines_v2:
 
         
         rchi2_no_broad = mfit.calculate_red_chi2(flam_nii, gfit_no_broad(lam_nii),\
-                                                          ivar_nii, n_free_params = 5)
+                                                          ivar_nii, n_free_params = 6)
         
 
         #####################################################################################
@@ -1969,7 +2007,7 @@ class fit_nii_ha_lines_v2:
                             bounds = {'amplitude' : (0.0, None), 'stddev' : (1.5, None)})
 
         ## Initial gaussian fit
-        g_init = g_nii + g_ha + g_ha_b
+        g_init = cont + g_nii + g_ha + g_ha_b
         fitter_broad = fitting.LevMarLSQFitter()
 
         gfit_broad = fitter_broad(g_init, lam_nii, flam_nii,\
@@ -1977,7 +2015,7 @@ class fit_nii_ha_lines_v2:
 
         
         rchi2_broad = mfit.calculate_red_chi2(flam_nii, gfit_broad(lam_nii), \
-                                                       ivar_nii, n_free_params = 8)
+                                                       ivar_nii, n_free_params = 9)
 
         #####################################################################################
         #####################################################################################
@@ -2185,11 +2223,14 @@ class fit_nii_ha_lines_v2:
         
         g_ha = g_ha_n + g_ha_out
         
+        ## Continuum
+        cont = Const1D(amplitude = 0.0, name = 'nii_ha_cont')
+        
         #####################################################################################
         ########################## Fit without broad component ##############################
 
         ## Initial gaussian fit
-        g_init = g_nii + g_ha
+        g_init = cont + g_nii + g_ha
 
         fitter_no_broad = fitting.LevMarLSQFitter()
 
@@ -2198,7 +2239,7 @@ class fit_nii_ha_lines_v2:
 
         
         rchi2_no_broad = mfit.calculate_red_chi2(flam_nii, gfit_no_broad(lam_nii),\
-                                                          ivar_nii, n_free_params = 10)
+                                                          ivar_nii, n_free_params = 11)
 
         #####################################################################################
         ########################## Fit with broad component #################################
@@ -2209,7 +2250,7 @@ class fit_nii_ha_lines_v2:
                             bounds = {'amplitude' : (0.0, None), 'stddev' : (1.5, None)})
 
         ## Initial gaussian fit
-        g_init = g_nii + g_ha + g_ha_b
+        g_init = cont + g_nii + g_ha + g_ha_b
         fitter_broad = fitting.LevMarLSQFitter()
 
         gfit_broad = fitter_broad(g_init, lam_nii, flam_nii,\
@@ -2217,7 +2258,7 @@ class fit_nii_ha_lines_v2:
 
         
         rchi2_broad = mfit.calculate_red_chi2(flam_nii, gfit_broad(lam_nii), \
-                                                       ivar_nii, n_free_params = 13)
+                                                       ivar_nii, n_free_params = 14)
         
         
         ## If broad-sigma < outflow-sigma -- exchange the gaussians
@@ -2384,11 +2425,14 @@ class fit_nii_ha_lines_v2:
 
         g_ha = g_ha_n
         
+        ## Continuum
+        cont = Const1D(amplitude = 0.0, name = 'nii_ha_cont')
+        
         #####################################################################################
         ########################## Fit without broad component ##############################
 
         ## Initial gaussian fit
-        g_init = g_nii + g_ha
+        g_init = cont + g_nii + g_ha
 
         fitter_no_broad = fitting.LevMarLSQFitter()
 
@@ -2397,7 +2441,7 @@ class fit_nii_ha_lines_v2:
 
         
         rchi2_no_broad = mfit.calculate_red_chi2(flam_nii, gfit_no_broad(lam_nii),\
-                                                          ivar_nii, n_free_params = 4)
+                                                          ivar_nii, n_free_params = 5)
         
 
         #####################################################################################
@@ -2409,7 +2453,7 @@ class fit_nii_ha_lines_v2:
                             bounds = {'amplitude' : (0.0, None), 'stddev' : (1.5, None)})
 
         ## Initial gaussian fit
-        g_init = g_nii + g_ha + g_ha_b
+        g_init = cont + g_nii + g_ha + g_ha_b
         fitter_broad = fitting.LevMarLSQFitter()
 
         gfit_broad = fitter_broad(g_init, lam_nii, flam_nii,\
@@ -2417,7 +2461,7 @@ class fit_nii_ha_lines_v2:
 
         
         rchi2_broad = mfit.calculate_red_chi2(flam_nii, gfit_broad(lam_nii), \
-                                                       ivar_nii, n_free_params = 7)
+                                                       ivar_nii, n_free_params = 8)
 
         #####################################################################################
         #####################################################################################
@@ -2616,11 +2660,14 @@ class fit_nii_ha_lines_v2:
 
         g_ha = g_ha_n + g_ha_out
         
+        ## Continuum
+        cont = Const1D(amplitude = 0.0, name = 'nii_ha_cont')
+        
         #####################################################################################
         ########################## Fit without broad component ##############################
 
         ## Initial gaussian fit
-        g_init = g_nii + g_ha
+        g_init = cont + g_nii + g_ha
 
         fitter_no_broad = fitting.LevMarLSQFitter()
 
@@ -2629,7 +2676,7 @@ class fit_nii_ha_lines_v2:
 
         
         rchi2_no_broad = mfit.calculate_red_chi2(flam_nii, gfit_no_broad(lam_nii),\
-                                                          ivar_nii, n_free_params = 8)
+                                                          ivar_nii, n_free_params = 9)
 
         #####################################################################################
         ########################## Fit with broad component #################################
@@ -2641,7 +2688,7 @@ class fit_nii_ha_lines_v2:
         
         
         ## Initial gaussian fit
-        g_init = g_nii + g_ha + g_ha_b
+        g_init = cont + g_nii + g_ha + g_ha_b
         fitter_broad = fitting.LevMarLSQFitter()
 
         gfit_broad = fitter_broad(g_init, lam_nii, flam_nii,\
@@ -2649,7 +2696,7 @@ class fit_nii_ha_lines_v2:
 
         
         rchi2_broad = mfit.calculate_red_chi2(flam_nii, gfit_broad(lam_nii), \
-                                                       ivar_nii, n_free_params = 11)
+                                                       ivar_nii, n_free_params = 12)
 
         #####################################################################################
         #####################################################################################

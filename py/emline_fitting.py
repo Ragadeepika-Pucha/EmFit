@@ -3,7 +3,7 @@ This script consists of functions related to fitting the emission line spectra,
 and plotting the models and residuals.
 
 Author : Ragadeepika Pucha
-Version : 2023, May 19
+Version : 2023, May 22
 """
 
 ####################################################################################################
@@ -80,7 +80,7 @@ def fit_emline_spectra(specprod, survey, program, healpix, targetid, z):
     """
     
     ## Rest-frame emission-line spectra
-    lam_rest, flam_rest, ivar_rest = spec_utils.get_emline_spectra(specprod, survey, program, \
+    lam_rest, flam_rest, ivar_rest, res_matrix = spec_utils.get_emline_spectra(specprod, survey, program, \
                                                                   healpix, targetid, z, rest_frame = True, \
                                                                   plot_continuum = False)
     
@@ -88,15 +88,17 @@ def fit_emline_spectra(specprod, survey, program, healpix, targetid, z):
     
     ## Error spectra
     err_rest = 1/np.sqrt(ivar_rest)
-    err_rest[~np.isfinite(err_rest)] = 0
+    err_rest[~np.isfinite(err_rest)] = 0.0
     
     ## List of tables of different iterations
     tables = []
+    n_sii = fits_orig[-1].n_submodels
+    n_oiii = fits_orig[1].n_submodels
 
     for kk in range(100):
-        n_sii = fits_orig[-1].n_submodels
-        n_oiii = fits_orig[1].n_submodels
-        flam_new = random.gauss(flam_rest, err_rest)
+        noise_spec = random.gauss(0, err_rest)
+        to_add_spec = res_matrix.dot(noise_spec)
+        flam_new = flam_rest + to_add_spec
         fits, rchi2s, t_params = fit_spectra_iteration(lam_rest, flam_new, \
                                                        ivar_rest, n_sii, n_oiii)
         tables.append(t_params)
@@ -127,11 +129,11 @@ def fit_emline_spectra(specprod, survey, program, healpix, targetid, z):
     nii_ha_models = ['nii6548', 'nii6548_out', 'nii6583', 'nii6583_out', 'ha_n', 'ha_out', 'ha_b']
     sii_models = ['sii6716', 'sii6716_out', 'sii6731', 'sii6731_out']
     
-    hb_params = emp.get_bestfit_parameters(t_fits, hb_models)
-    oiii_params = emp.get_bestfit_parameters(t_fits, oiii_models)
-    nii_ha_params = emp.get_bestfit_parameters(t_fits, nii_ha_models)
-    sii_params = emp.get_bestfit_parameters(t_fits, sii_models)
-
+    hb_params = emp.get_bestfit_parameters(t_fits, hb_models, emline = 'hb')
+    oiii_params = emp.get_bestfit_parameters(t_fits, oiii_models, emline = 'oiii')
+    nii_ha_params = emp.get_bestfit_parameters(t_fits, nii_ha_models, emline = 'nii_ha')
+    sii_params = emp.get_bestfit_parameters(t_fits, sii_models, emline = 'sii')
+    
     total = tgt|hb_params|oiii_params|nii_ha_params|sii_params|per
     tfinal = Table(total)
     
@@ -196,22 +198,22 @@ def fit_spectra_iteration(lam, flam, ivar, n_sii = None, n_oiii = None):
     
     ######################################################################################
     ## [SII] fit
-    if (n_sii == 2):
-        ## n_sii = 2 -- single component fits
+    if (n_sii == 3):
+        ## n_sii = 3 -- single component fits
         gfit_sii, rchi2_sii = fit_lines.fit_sii_lines.fit_one_component(lam_sii, flam_sii, ivar_sii)
-    elif (n_sii == 4):
-        ## n_sii = 4 -- two component fits
+    elif (n_sii == 5):
+        ## n_sii =  5 -- two component fits
         gfit_sii, rchi2_sii = fit_lines.fit_sii_lines.fit_two_components(lam_sii, flam_sii, ivar_sii)
     elif (n_sii == None):
         ## Find the best fit
         gfit_sii, rchi2_sii, _, _ = find_bestfit.find_sii_best_fit(lam_sii, flam_sii, ivar_sii)
     
     ## [OIII] fit
-    if (n_oiii == 2):
-        ## n_oiii = 2 -- single component fits
+    if (n_oiii == 3):
+        ## n_oiii = 3 -- single component fits
         gfit_oiii, rchi2_oiii = fit_lines.fit_oiii_lines.fit_one_component(lam_oiii, flam_oiii, ivar_oiii)
-    elif (n_oiii == 4):
-        ## n_oiii = 4 -- two component fits
+    elif (n_oiii == 5):
+        ## n_oiii = 5 -- two component fits
         gfit_oiii, rchi2_oiii = fit_lines.fit_oiii_lines.fit_two_components(lam_oiii, flam_oiii, ivar_oiii)
     elif (n_oiii == None):
         ## Find the best fit
@@ -241,6 +243,11 @@ def fit_spectra_iteration(lam, flam, ivar, n_sii = None, n_oiii = None):
     oiii_params = emp.get_parameters(gfit_oiii, oiii_models)
     nii_ha_params = emp.get_parameters(gfit_nii_ha, nii_ha_models)
     sii_params = emp.get_parameters(gfit_sii, sii_models)
+    
+    hb_params['hb_continuum'] = [gfit_hb['hb_cont'].amplitude.value]
+    oiii_params['oiii_continuum'] = [gfit_oiii['oiii_cont'].amplitude.value]
+    nii_ha_params['nii_ha_continuum'] = [gfit_nii_ha['nii_ha_cont'].amplitude.value]
+    sii_params['sii_continuum'] = [gfit_sii['sii_cont'].amplitude.value]
     
     # hb_params['hb_rchi2'] = [rchi2_hb]
     # oiii_params['oiii_rchi2'] = [rchi2_oiii]

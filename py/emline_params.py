@@ -3,7 +3,7 @@ This script consists of functions for computing the parameters of the emission-l
 It consists of the following functions:
 
 Author : Ragadeepika Pucha
-Version : 2023, April 7
+Version : 2023, May 23
 """
 
 ###################################################################################################
@@ -66,7 +66,7 @@ def get_parameters(gfit, models):
     
 ###################################################################################################
 
-def get_bestfit_parameters(table, models):
+def get_bestfit_parameters(table, models, emline):
     """
     Get the bestfit parameters from iterations of fits
     
@@ -87,17 +87,18 @@ def get_bestfit_parameters(table, models):
     params = {}
     
     for model in models:
-    
         amplitude_arr = table[f'{model}_amplitude'].data
         mean_arr = table[f'{model}_mean'].data
         std_arr = table[f'{model}_std'].data
         flux_arr = table[f'{model}_flux'].data
         sigma_arr = table[f'{model}_sigma'].data
-
-        allzero = (np.all(np.isclose(amplitude_arr, 0.0)))&\
-        (np.all(np.isclose(mean_arr, 0.0)))&\
-        (np.all(np.isclose(std_arr, 0.0)))
-
+        
+        amp_zero = (np.all(np.isclose(amplitude_arr, 0.0)))
+        mean_zero = (np.all(np.isclose(mean_arr, 0.0)))
+        std_zero = (np.all(np.isclose(std_arr, 0.0)))
+        
+        allzero = amp_zero|mean_zero|std_zero
+        
         if (allzero):
             amp = 0.0
             amp_err = 0.0
@@ -114,39 +115,21 @@ def get_bestfit_parameters(table, models):
             sigma_fits = 0.0
             sigma_err_fits = 0.0
         else:
-            # amp, _, amp_err = sigma_clipped_stats(amplitude_arr)
-            # mean, _, mean_err = sigma_clipped_stats(mean_arr)
-            # var = std_arr**2
-            # std, _, std_err = np.sqrt(sigma_clipped_stats(var))
-            # flux, _, flux_err = sigma_clipped_stats(flux_arr)
-            # sigma, _, sigma_err = sigma_clipped_stats(sigma_arr)
-            # flux, flux_err = mfit.compute_emline_flux(amp, std, amp_err, std_err)
-            # sigma, sigma_err = mfit.lamspace_to_velspace(std, mean, std_err, mean_err)
-            
             cond = (amplitude_arr > 0)&(mean_arr > 0)&(std_arr > 0)
             
-            amp, _, amp_err = sigma_clipped_stats(np.where(~cond, np.nan, amplitude_arr))
-            mean, _, mean_err = sigma_clipped_stats(np.where(~cond, np.nan, mean_arr))
+            amp = np.nanmean(np.where(~cond, np.nan, amplitude_arr))
+            amp_err = np.nanstd(np.where(~cond, np.nan, amplitude_arr))
+            mean = np.nanmean(np.where(~cond, np.nan, mean_arr))
+            mean_err = np.nanstd(np.where(~cond, np.nan, mean_arr))
             var = np.where(~cond, np.nan, std_arr)**2
-            std, _, std_err = np.sqrt(sigma_clipped_stats(var))
-            flux_fits, _, flux_err_fits = sigma_clipped_stats(np.where(~cond, np.nan, flux_arr))
-            sigma_fits, _, sigma_err_fits = sigma_clipped_stats(np.where(~cond, np.nan, sigma_arr))
+            std = np.sqrt(np.nanmean(var))
+            std_err = np.sqrt(np.nanstd(var))
             flux, flux_err = mfit.compute_emline_flux(amp, std, amp_err, std_err)
             sigma, sigma_err = mfit.lamspace_to_velspace(std, mean, std_err, mean_err)
-            
-            # amp = np.nanmean(np.where(~cond, np.nan, amplitude_arr))
-            # amp_err = np.nanstd(np.where(~cond, np.nan, amplitude_arr))
-            # mean = np.nanmean(np.where(~cond, np.nan, mean_arr))
-            # mean_err = np.nanstd(np.where(~cond, np.nan, mean_arr))
-            # var = np.where(~cond, np.nan, std_arr)**2
-            # std = np.sqrt(np.nanmean(var))
-            # std_err = np.sqrt(np.nanstd(var))
-            # flux, flux_err = mfit.compute_emline_flux(amp, std, amp_err, std_err)
-            # sigma, sigma_err = mfit.lamspace_to_velspace(std, mean, std_err, mean_err)
-            # flux_fits = np.nanmean(np.where(~cond, np.nan, flux_arr))
-            # flux_err_fits = np.nanstd(np.where(~cond, np.nan, flux_arr))
-            # sigma_fits = np.nanmean(np.where(~cond, np.nan, sigma_arr))
-            # sigma_err_fits = np.nanstd(np.where(~cond, np.nan, sigma_arr))
+            flux_fits = np.nanmean(np.where(~cond, np.nan, flux_arr))
+            flux_err_fits = np.nanstd(np.where(~cond, np.nan, flux_arr))
+            sigma_fits = np.nanmean(np.where(~cond, np.nan, sigma_arr))
+            sigma_err_fits = np.nanstd(np.where(~cond, np.nan, sigma_arr))
             
         params[f'{model}_amplitude'] = [amp]
         params[f'{model}_amplitude_err'] = [amp_err]
@@ -162,7 +145,19 @@ def get_bestfit_parameters(table, models):
         params[f'{model}_flux_err_fits'] = [flux_err_fits]
         params[f'{model}_sigma_fits'] = [sigma_fits]
         params[f'{model}_sigma_err_fits'] = [sigma_err_fits]
-
+        
+        ## Continuum computation 
+        cont_col = table[f'{emline}_continuum'].data
+        if (np.all(np.isclose(cont_col, 0.0))):
+            cont = 0.0
+            cont_err = 0.0
+        else:
+            cont = np.nanmean(np.where(np.isclose(cont_col, 0.0), np.nan, cont_col))
+            cont_err = np.nanstd(np.where(np.isclose(cont_col, 0.0), np.nan, cont_col))
+            
+        params[f'{emline}_continuum'] = [cont]
+        params[f'{emline}_continuum_err'] = [cont_err]
+        
     return (params)
 
 ####################################################################################################

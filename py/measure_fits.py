@@ -44,6 +44,7 @@ def calculate_red_chi2(data, model, ivar, n_free_params):
     
     ## chi2
     chi2 = sum(((data - model)**2)*ivar)
+    
     ## Reduced chi2
     red_chi2 = chi2/(len(data)-n_free_params)
     

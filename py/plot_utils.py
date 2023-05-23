@@ -8,7 +8,7 @@ The following functions are available:
     4) plot_from_params(lam_rest, flam_rest, t, index, rchi2s)
 
 Author : Ragadeepika Pucha
-Version : 2023, May 19
+Version : 2023, May 22
 
 """
 
@@ -17,7 +17,7 @@ Version : 2023, May 19
 import numpy as np
 
 from astropy.table import Table
-from astropy.modeling.models import Gaussian1D
+from astropy.modeling.models import Gaussian1D, Const1D
 
 import fitsio
 import matplotlib.pyplot as plt
@@ -168,6 +168,9 @@ def plot_spectra_fits(lam_rest, flam_rest, fits, rchi2s, title = None):
     
     ## Hb fits
     n_hb = hb_fit.n_submodels
+    
+    ## Hb continuum
+    hb_cont = hb_fit['hb_cont'].amplitude.value
 
     if (n_hb == 1):
         hb.plot(lam_hb, hb_fit(lam_hb), color = 'orange')
@@ -177,7 +180,7 @@ def plot_spectra_fits(lam_rest, flam_rest, fits, rchi2s, title = None):
                     xy = (4870, 0.9), xycoords = hb.get_xaxis_transform(), \
                     fontsize = 16, color = 'k')
     else:
-        hb.plot(lam_hb, hb_fit['hb_n'](lam_hb), color = 'orange')
+        hb.plot(lam_hb, hb_fit['hb_n'](lam_hb) + hb_cont, color = 'orange')
         sig_hb_n = mfit.lamspace_to_velspace(hb_fit['hb_n'].stddev.value, \
                                              hb_fit['hb_n'].mean.value)
         hb.annotate('$\sigma \\rm(H\\beta;n)$ = '+str(round(sig_hb_n, 1))+' km/s', \
@@ -185,7 +188,7 @@ def plot_spectra_fits(lam_rest, flam_rest, fits, rchi2s, title = None):
                     fontsize = 16, color = 'k')
         
         if ('hb_out' in hb_fit.submodel_names):
-            hb.plot(lam_hb, hb_fit['hb_out'](lam_hb), color = 'orange')
+            hb.plot(lam_hb, hb_fit['hb_out'](lam_hb) + hb_cont, color = 'orange')
             sig_hb_out = mfit.lamspace_to_velspace(hb_fit['hb_out'].stddev.value, \
                                                    hb_fit['hb_out'].mean.value)
             
@@ -194,7 +197,7 @@ def plot_spectra_fits(lam_rest, flam_rest, fits, rchi2s, title = None):
                         fontsize = 16, color = 'k')
             
         if ('hb_b' in hb_fit.submodel_names):
-            hb.plot(lam_hb, hb_fit['hb_b'](lam_hb), color = 'blue')
+            hb.plot(lam_hb, hb_fit['hb_b'](lam_hb) + hb_cont, color = 'blue')
             sig_hb_b = mfit.lamspace_to_velspace(hb_fit['hb_b'].stddev.value,\
                                                       hb_fit['hb_b'].mean.value)
 
@@ -228,8 +231,11 @@ def plot_spectra_fits(lam_rest, flam_rest, fits, rchi2s, title = None):
     n_oiii = oiii_fit.n_submodels
     names_oiii = oiii_fit.submodel_names
     
-    for ii in range(n_oiii):
-        oiii.plot(lam_oiii, oiii_fit[names_oiii[ii]](lam_oiii), color = 'orange')
+    ### [OIII] continuum
+    oiii_cont = oiii_fit['oiii_cont'].amplitude.value
+    
+    for ii in range(1, n_oiii):
+        oiii.plot(lam_oiii, oiii_fit[names_oiii[ii]](lam_oiii) + oiii_cont, color = 'orange')
                 
     sig_oiii = mfit.lamspace_to_velspace(oiii_fit['oiii5007'].stddev.value, \
                                          oiii_fit['oiii5007'].mean.value)
@@ -267,10 +273,13 @@ def plot_spectra_fits(lam_rest, flam_rest, fits, rchi2s, title = None):
     ha.set(ylabel = '$F_{\lambda}$')
     plt.setp(ha.get_xticklabels(), visible = False)
     
+    ## [NII] + Ha continuum
+    nii_ha_cont = nii_ha_fit['nii_ha_cont'].amplitude.value
+    
     ## Plot narrow components
-    ha.plot(lam_nii, nii_ha_fit['nii6548'](lam_nii), color = 'orange')
-    ha.plot(lam_nii, nii_ha_fit['nii6583'](lam_nii), color = 'orange')
-    ha.plot(lam_nii, nii_ha_fit['ha_n'](lam_nii), color = 'orange')
+    ha.plot(lam_nii, nii_ha_fit['nii6548'](lam_nii) + nii_ha_cont, color = 'orange')
+    ha.plot(lam_nii, nii_ha_fit['nii6583'](lam_nii) + nii_ha_cont, color = 'orange')
+    ha.plot(lam_nii, nii_ha_fit['ha_n'](lam_nii) + nii_ha_cont, color = 'orange')
     
     sig_nii = mfit.lamspace_to_velspace(nii_ha_fit['nii6548'].stddev.value, \
                                         nii_ha_fit['nii6548'].mean.value)
@@ -286,9 +295,9 @@ def plot_spectra_fits(lam_rest, flam_rest, fits, rchi2s, title = None):
     
     ## Outflow components
     if ('nii6548_out' in nii_ha_fit.submodel_names):
-        ha.plot(lam_nii, nii_ha_fit['nii6548_out'](lam_nii), color = 'orange')
-        ha.plot(lam_nii, nii_ha_fit['nii6583_out'](lam_nii), color = 'orange')
-        ha.plot(lam_nii, nii_ha_fit['ha_out'](lam_nii), color = 'orange')
+        ha.plot(lam_nii, nii_ha_fit['nii6548_out'](lam_nii) + nii_ha_cont, color = 'orange')
+        ha.plot(lam_nii, nii_ha_fit['nii6583_out'](lam_nii) + nii_ha_cont, color = 'orange')
+        ha.plot(lam_nii, nii_ha_fit['ha_out'](lam_nii) + nii_ha_cont, color = 'orange')
         
         sig_nii_out = mfit.lamspace_to_velspace(nii_ha_fit['nii6548_out'].stddev.value, \
                                                 nii_ha_fit['nii6548_out'].mean.value)
@@ -306,7 +315,7 @@ def plot_spectra_fits(lam_rest, flam_rest, fits, rchi2s, title = None):
         
     ## Broad component
     if ('ha_b' in nii_ha_fit.submodel_names):
-        ha.plot(lam_nii, nii_ha_fit['ha_b'](lam_nii), color = 'blue')
+        ha.plot(lam_nii, nii_ha_fit['ha_b'](lam_nii) + nii_ha_cont, color = 'blue')
         
         sig_ha_b = mfit.lamspace_to_velspace(nii_ha_fit['ha_b'].stddev.value, \
                                              nii_ha_fit['ha_b'].mean.value)
@@ -345,8 +354,11 @@ def plot_spectra_fits(lam_rest, flam_rest, fits, rchi2s, title = None):
     n_sii = sii_fit.n_submodels
     names_sii = sii_fit.submodel_names
     
-    for ii in range(n_sii):
-        sii.plot(lam_sii, sii_fit[names_sii[ii]](lam_sii), color = 'orange')
+    ## [SII] continuum
+    sii_cont = sii_fit['sii_cont'].amplitude.value
+    
+    for ii in range(1, n_sii):
+        sii.plot(lam_sii, sii_fit[names_sii[ii]](lam_sii) + sii_cont, color = 'orange')
         
     sig_sii = mfit.lamspace_to_velspace(sii_fit['sii6716'].stddev.value, \
                                         sii_fit['sii6716'].mean.value)
@@ -479,12 +491,14 @@ def plot_from_params(lam_rest, flam_rest, t, index, rchi2s, title = None):
     ######################################################################################
     ## Hbeta model
     hb_models = []
+    
+    hb_cont = Const1D(amplitude = t['HB_CONTINUUM'].data[index], name = 'hb_cont')
 
     gfit_hb_n = Gaussian1D(amplitude = t['HB_N_AMPLITUDE'].data[index], \
                           mean = t['HB_N_MEAN'].data[index], \
                           stddev = t['HB_N_STD'].data[index], name = 'hb_n')
 
-    gfit_hb = gfit_hb_n
+    gfit_hb = hb_cont + gfit_hb_n
 
     if (t['HB_OUT_FLUX'].data[0] != 0):
         gfit_hb_out = Gaussian1D(amplitude = t['HB_OUT_AMPLITUDE'].data[index], \
@@ -507,6 +521,8 @@ def plot_from_params(lam_rest, flam_rest, t, index, rchi2s, title = None):
     ######################################################################################
     ######################################################################################
     ## [OIII] model
+    
+    oiii_cont = Const1D(amplitude = t['OIII_CONTINUUM'].data[index], name = 'oiii_cont')
 
     gfit_oiii4959 = Gaussian1D(amplitude = t['OIII4959_AMPLITUDE'].data[index], \
                               mean = t['OIII4959_MEAN'].data[index], \
@@ -516,7 +532,7 @@ def plot_from_params(lam_rest, flam_rest, t, index, rchi2s, title = None):
                               mean = t['OIII5007_MEAN'].data[index], \
                               stddev = t['OIII5007_STD'].data[index], name = 'oiii5007')
 
-    gfit_oiii = gfit_oiii4959 + gfit_oiii5007
+    gfit_oiii = oiii_cont + gfit_oiii4959 + gfit_oiii5007
 
     oiii_models = []
 
@@ -540,6 +556,8 @@ def plot_from_params(lam_rest, flam_rest, t, index, rchi2s, title = None):
     ######################################################################################
     ######################################################################################
     ## [NII] + Ha model
+    
+    nii_ha_cont = Const1D(amplitude = t['NII_HA_CONTINUUM'].data[index], name = 'nii_ha_cont')
 
     gfit_nii6548 = Gaussian1D(amplitude = t['NII6548_AMPLITUDE'].data[index], \
                              mean = t['NII6548_MEAN'].data[index], \
@@ -553,7 +571,7 @@ def plot_from_params(lam_rest, flam_rest, t, index, rchi2s, title = None):
                         mean = t['HA_N_MEAN'].data[index], \
                         stddev = t['HA_N_STD'].data[index], name = 'ha_n')
 
-    gfit_nii_ha = gfit_nii6548 + gfit_nii6583 + gfit_ha
+    gfit_nii_ha = nii_ha_cont + gfit_nii6548 + gfit_nii6583 + gfit_ha
 
     nii_ha_models = []
 
@@ -590,6 +608,8 @@ def plot_from_params(lam_rest, flam_rest, t, index, rchi2s, title = None):
     ######################################################################################
     ######################################################################################
     ## [SII] model
+    
+    sii_cont = Const1D(amplitude = t['SII_CONTINUUM'].data[index], name = 'sii_cont')
 
     gfit_sii6716 = Gaussian1D(amplitude = t['SII6716_AMPLITUDE'].data[index], \
                              mean = t['SII6716_MEAN'].data[index], \
@@ -599,7 +619,7 @@ def plot_from_params(lam_rest, flam_rest, t, index, rchi2s, title = None):
                              mean = t['SII6731_MEAN'].data[index], \
                              stddev = t['SII6731_STD'].data[index], name = 'sii6731')
 
-    gfit_sii = gfit_sii6716 + gfit_sii6731
+    gfit_sii = sii_cont + gfit_sii6716 + gfit_sii6731
 
     sii_models = []
 
