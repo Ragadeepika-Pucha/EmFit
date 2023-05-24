@@ -2,7 +2,7 @@
 This script consists of utility functions for emission-line fitting related stuff.
 
 Author : Ragadeepika Pucha
-Version : 2023, March 21
+Version : 2023, March 24
 """
 
 ###################################################################################################

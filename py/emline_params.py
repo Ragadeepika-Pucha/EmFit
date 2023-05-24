@@ -11,7 +11,36 @@ Version : 2023, May 23
 import numpy as np
 
 import measure_fits as mfit
+import spec_utils
 from astropy.stats import sigma_clipped_stats
+###################################################################################################
+
+def compute_final_rchi2(lam, flam, ivar, fits, dof):
+    
+    gfit_hb, gfit_oiii, gfit_nii_ha, gfit_sii = fits
+    hb_dof, oiii_dof, nii_ha_dof, sii_dof = dof
+    
+    ## Fitting windows for the different emission-lines.
+    
+    lam_hb, flam_hb, ivar_hb = spec_utils.get_fit_window(lam, flam, \
+                                                         ivar, em_line = 'hb')
+
+    lam_oiii, flam_oiii, ivar_oiii = spec_utils.get_fit_window(lam, flam, \
+                                                               ivar, em_line = 'oiii')
+    lam_nii_ha, flam_nii_ha, ivar_nii_ha = spec_utils.get_fit_window(lam, flam, \
+                                                                     ivar, em_line = 'nii_ha')
+    lam_sii, flam_sii, ivar_sii = spec_utils.get_fit_window(lam, flam, \
+                                                            ivar, em_line = 'sii') 
+    
+    
+        
+    hb_rchi2 = mfit.calculate_red_chi2(flam_hb, gfit_hb(lam_hb), ivar_hb, hb_dof)
+    oiii_rchi2 = mfit.calculate_red_chi2(flam_oiii, gfit_oiii(lam_oiii), ivar_oiii, oiii_dof)
+    nii_ha_rchi2 = mfit.calculate_red_chi2(flam_nii_ha, gfit_nii_ha(lam_nii_ha), ivar_nii_ha, nii_ha_dof)
+    sii_rchi2 = mfit.calculate_red_chi2(flam_sii, gfit_sii(lam_sii), ivar_sii, sii_dof)
+    
+    return (hb_rchi2, oiii_rchi2, nii_ha_rchi2, sii_rchi2)
+
 ###################################################################################################
 
 def get_parameters(gfit, models):
@@ -159,6 +188,54 @@ def get_bestfit_parameters(table, models, emline):
         params[f'{emline}_continuum_err'] = [cont_err]
         
     return (params)
+
+####################################################################################################
+
+def fix_params(table):
+    emlines = ['hb', 'nii6548', 'nii6583', 'ha']
+    
+    for emline in emlines:
+        if ((emline == 'hb')|(emline == 'ha')):
+            amp_n = table[f'{emline}_n_amplitude'].data[0]
+            mean_n = table[f'{emline}_n_mean'].data[0]
+            std_n = table[f'{emline}_n_std'].data[0]
+            flux_n = table[f'{emline}_n_flux'].data[0]
+            sig_n = table[f'{emline}_n_sigma'].data[0]
+        else:
+            amp_n = table[f'{emline}_amplitude'].data[0]
+            mean_n = table[f'{emline}_mean'].data[0]
+            std_n = table[f'{emline}_std'].data[0]
+            flux_n = table[f'{emline}_flux'].data[0]
+            sig_n = table[f'{emline}_sigma'].data[0]
+        
+        amp_out = table[f'{emline}_out_amplitude'].data
+        mean_out = table[f'{emline}_out_mean'].data[0]
+        std_out = table[f'{emline}_out_std'].data[0]
+        flux_out = table[f'{emline}_out_flux'].data[0]
+        sig_out = table[f'{emline}_out_sigma'].data[0]
+        
+        if ((amp_n == 0)&(amp_out != 0)):
+            if ((emline == 'hb')|(emline == 'ha')):
+                table[f'{emline}_n_amplitude'][0] = amp_out
+                table[f'{emline}_n_mean'][0] = mean_out
+                table[f'{emline}_n_std'][0] = std_out
+                table[f'{emline}_n_flux'][0] = flux_out
+                table[f'{emline}_n_sigma'][0] = sig_out
+            else:
+                table[f'{emline}_amplitude'][0] = amp_out
+                table[f'{emline}_mean'][0] = mean_out
+                table[f'{emline}_std'][0] = std_out
+                table[f'{emline}_flux'][0] = flux_out
+                table[f'{emline}_sigma'][0] = sig_out
+            
+            table[f'{emline}_out_amplitude'][0] = amp_n
+            table[f'{emline}_out_mean'][0] = mean_n
+            table[f'{emline}_out_std'][0] = std_n
+            table[f'{emline}_out_flux'][0] = flux_n
+            table[f'{emline}_out_sigma'][0] = sig_n
+            
+    
+    return (table)
 
 ####################################################################################################
 

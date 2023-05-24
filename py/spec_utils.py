@@ -191,7 +191,7 @@ def get_emline_spectra(specprod, survey, program, healpix, targetid,\
     bands = coadd_spec.bands[0]
     
     ## EBV
-    ## Correc for MW Transmission
+    ## Correct for MW Transmission
     ebv = coadd_spec.fibermap['EBV'].data
     
     ## MW Transmission

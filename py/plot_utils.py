@@ -500,14 +500,14 @@ def plot_from_params(lam_rest, flam_rest, t, index, rchi2s, title = None):
 
     gfit_hb = hb_cont + gfit_hb_n
 
-    if (t['HB_OUT_FLUX'].data[0] != 0):
+    if (t['HB_OUT_FLUX'].data[index] != 0):
         gfit_hb_out = Gaussian1D(amplitude = t['HB_OUT_AMPLITUDE'].data[index], \
                                 mean = t['HB_OUT_MEAN'].data[index], \
                                 stddev = t['HB_OUT_STD'].data[index], name = 'hb_out')
         hb_models.append(gfit_hb_out)
 
 
-    if (t['HB_B_FLUX'].data[0] != 0):
+    if (t['HB_B_FLUX'].data[index] != 0):
         gfit_hb_b = Gaussian1D(amplitude = t['HB_B_AMPLITUDE'].data[index], \
                               mean = t['HB_B_MEAN'].data[index], \
                               stddev = t['HB_B_STD'].data[index], name = 'hb_b')
@@ -536,7 +536,7 @@ def plot_from_params(lam_rest, flam_rest, t, index, rchi2s, title = None):
 
     oiii_models = []
 
-    if (t['OIII5007_OUT_FLUX'].data[0] != 0):
+    if (t['OIII5007_OUT_FLUX'].data[index] != 0):
         gfit_oiii4959_out = Gaussian1D(amplitude = t['OIII4959_OUT_AMPLITUDE'].data[index], \
                                       mean = t['OIII4959_OUT_MEAN'].data[index], \
                                       stddev = t['OIII4959_OUT_STD'].data[index], \
@@ -575,7 +575,7 @@ def plot_from_params(lam_rest, flam_rest, t, index, rchi2s, title = None):
 
     nii_ha_models = []
 
-    if (t['NII6548_OUT_FLUX'].data[0] != 0):
+    if (t['NII6548_OUT_FLUX'].data[index] != 0):
         gfit_nii6548_out = Gaussian1D(amplitude = t['NII6548_OUT_AMPLITUDE'].data[index], \
                                       mean = t['NII6548_OUT_MEAN'].data[index], \
                                       stddev = t['NII6548_OUT_STD'].data[index], \
@@ -595,7 +595,7 @@ def plot_from_params(lam_rest, flam_rest, t, index, rchi2s, title = None):
         nii_ha_models.append(gfit_nii6583_out)
         nii_ha_models.append(gfit_ha_out)
 
-    if (t['HA_B_FLUX'].data[0] != 0):
+    if (t['HA_B_FLUX'].data[index] != 0):
         gfit_ha_b = Gaussian1D(amplitude = t['HA_B_AMPLITUDE'].data[index], \
                               mean = t['HA_B_MEAN'].data[index], \
                               stddev = t['HA_B_STD'].data[index], \
@@ -623,7 +623,7 @@ def plot_from_params(lam_rest, flam_rest, t, index, rchi2s, title = None):
 
     sii_models = []
 
-    if (t['SII6716_OUT_FLUX'].data[0] != 0):
+    if (t['SII6716_OUT_FLUX'].data[index] != 0):
 
         gfit_sii6716_out = Gaussian1D(amplitude = t['SII6716_OUT_AMPLITUDE'].data[index], \
                                      mean = t['SII6716_OUT_MEAN'].data[index], \

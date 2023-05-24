@@ -3,7 +3,7 @@ This script consists of functions for fitting emission-lines.
 The different functions are divided into different classes for different emission lines.
 
 Author : Ragadeepika Pucha
-Version : 2023, May 22
+Version : 2023, May 24
 """
 
 ###################################################################################################
@@ -19,7 +19,7 @@ import fit_lines as fl
 
 ###################################################################################################
 
-def find_sii_best_fit(lam_sii, flam_sii, ivar_sii):
+def find_sii_best_fit(lam_sii, flam_sii, ivar_sii, fit_cont = True):
     """
     Find the best fit for [SII]6716,6731 doublet.
     The code fits both one-component and two-component fits and picks the best version.
@@ -50,16 +50,18 @@ def find_sii_best_fit(lam_sii, flam_sii, ivar_sii):
         1 : Amp ([SII]out) > Amp ([SII])
         2 : Sigma ([SII]) > Sigma ([SII]out)
         
-    del_rchi2 : float
-        Percentage difference between one and two-component fits
+    n_dof : int
+        Number of degrees of freedom
     """
     ## Array for assigning flag bits
     flag_bits = np.array([])
     ## Single-component fits
-    gfit_1comp, rchi2_1comp = fl.fit_sii_lines.fit_one_component(lam_sii, flam_sii, ivar_sii)
+    gfit_1comp, rchi2_1comp = fl.fit_sii_lines.fit_one_component(lam_sii, flam_sii, ivar_sii, \
+                                                                 fit_cont = fit_cont)
 
     ## Two-component fits
-    gfit_2comp, rchi2_2comp = fl.fit_sii_lines.fit_two_components(lam_sii, flam_sii, ivar_sii)
+    gfit_2comp, rchi2_2comp = fl.fit_sii_lines.fit_two_components(lam_sii, flam_sii, ivar_sii, \
+                                                                 fit_cont = fit_cont)
 
     ## Select the best-fit based on rchi2
     ## If the rchi2 of 2-component is better by 20%, then the 2-component fit is picked.
@@ -88,20 +90,31 @@ def find_sii_best_fit(lam_sii, flam_sii, ivar_sii):
         flag_bits = np.append(flag_bits, 2)
     
     flag_bits = np.sort(flag_bits.astype(int))
+    
+    ## Degrees of freedom
         
     if ((del_rchi2 >= 20)&(sig_sii_out > sig_sii)&\
         (amp_sii6716 > amp_sii6716_out)&(amp_sii6731 > amp_sii6731_out)):
         ## 2-component rchi2 improves by 20%
         ## Sigma (Outflow) > Sigma (Narrow) 
         ## Amplitude (Narrow) > Amplitude (Outflow)
-        return (gfit_2comp, rchi2_2comp, flag_bits, del_rchi2)
+        if (fit_cont == True):
+            n_dof = 8
+        else:
+            n_dof = 7
+        return (gfit_2comp, rchi2_2comp, flag_bits, n_dof)
     else:
-        return (gfit_1comp, rchi2_1comp, flag_bits, del_rchi2)
+        if (fit_cont == True):
+            n_dof = 5
+        else:
+            n_dof = 4
+        
+        return (gfit_1comp, rchi2_1comp, flag_bits, n_dof)
     
 ####################################################################################################
 ####################################################################################################
 
-def find_oiii_best_fit(lam_oiii, flam_oiii, ivar_oiii):
+def find_oiii_best_fit(lam_oiii, flam_oiii, ivar_oiii, fit_cont = True):
     """
     Find the best fit for [OIII]4959,5007 doublet.
     The code fits both one-component and two-component fits and picks the best version.
@@ -132,17 +145,19 @@ def find_oiii_best_fit(lam_oiii, flam_oiii, ivar_oiii):
         1 : Amp ([OIII]out) > Amp ([OIII])
         2 : Sigma ([OIII]) > Sigma ([OIII]out)
         
-    del_rchi2 : float
-        Percentage difference between one and two-component fits
+    n_dof : int
+        Number of degrees of freedom
     """
     
     flag_bits = np.array([])
     
     ## Single component fit
-    gfit_1comp, rchi2_1comp = fl.fit_oiii_lines.fit_one_component(lam_oiii, flam_oiii, ivar_oiii)
+    gfit_1comp, rchi2_1comp = fl.fit_oiii_lines.fit_one_component(lam_oiii, flam_oiii, ivar_oiii, \
+                                                                 fit_cont = fit_cont)
     
     ## Two-component fit
-    gfit_2comp, rchi2_2comp = fl.fit_oiii_lines.fit_two_components(lam_oiii, flam_oiii, ivar_oiii)
+    gfit_2comp, rchi2_2comp = fl.fit_oiii_lines.fit_two_components(lam_oiii, flam_oiii, ivar_oiii, \
+                                                                  fit_cont = fit_cont)
     
     ## Select the best fit based on rchi2
     ## Rchi2 of the 2-componen is improved by 20%, then the 2-component fit is picked
@@ -179,14 +194,25 @@ def find_oiii_best_fit(lam_oiii, flam_oiii, ivar_oiii):
         ## Sigma ([OIII]out) > Sigma ([OIII])
         ## Amp ([OIII]) > Amp ([OIII]out)
         
-        return (gfit_2comp, rchi2_2comp, flag_bits, del_rchi2)
+        if (fit_cont == True):
+            n_dof = 7
+        else:
+            n_dof = 6
+            
+        return (gfit_2comp, rchi2_2comp, flag_bits, n_dof)
     else:
-        return (gfit_1comp, rchi2_1comp, flag_bits, del_rchi2)
+        
+        if (fit_cont == True):
+            n_dof = 4
+        else:
+            n_dof = 3
+        
+        return (gfit_1comp, rchi2_1comp, flag_bits, n_dof)
     
 ####################################################################################################
 ####################################################################################################
 
-def find_hb_best_fit(lam_hb, flam_hb, ivar_hb, sii_bestfit):
+def find_hb_best_fit(lam_hb, flam_hb, ivar_hb, sii_bestfit, fit_cont = True):
     """
     Function to find the best fit for Hbeta, with or without broad-lines
     
@@ -225,48 +251,55 @@ def find_hb_best_fit(lam_hb, flam_hb, ivar_hb, sii_bestfit):
         8 : outflow Hbeta component does not converge
         9 : sigma (Hbeta; n) < 40 km/s
         
-    del_rchi2 : float
-        Percentage difference between rchi2 with and without broad-line.
+    n_dof : int
+        Number of degrees of freedom
     """
 
-    n_sii = sii_bestfit.n_submodels
+    sii_models = sii_bestfit.submodel_names
     
-    ## If n_sii == 3, first try free-fit model, otherwise fix the width of Hbeta to [SII]
-    ## If n_sii == 5, fix the width of narrow and outflow components to [SII]
+    ## If 'sii6716_out' and 'sii6731_out' not in submodels, 
+    ## first try free-fit model, otherwise fix the width of Hbeta to [SII]
     
-    if (n_sii == 3):
-        gfit_free, rchi2_free, flag_bits, del_rchi2 = fl.fit_hb_line.fit_free_one_component(lam_hb, flam_hb, ivar_hb, \
-                                                                     sii_bestfit, frac_temp = 100.)
+    ## If 'sii6716_out' and 'sii6731_out' in submodels, 
+    ## fix the width of narrow and outflow components to [SII]
+    
+    if (('sii6716_out' not in sii_models)&('sii6731_out' not in sii_models)):
+        gfit_free, rchi2_free, flag_bits, n_dof = fl.fit_hb_line.fit_free_one_component(lam_hb, flam_hb, ivar_hb, \
+                                                                     sii_bestfit, frac_temp = 100., fit_cont = fit_cont)
         
         sig_sii = mfit.lamspace_to_velspace(sii_bestfit['sii6716'].stddev.value, \
                                            sii_bestfit['sii6716'].mean.value)
         
         n_hb = gfit_free.n_submodels
-        
-        sig_hb = mfit.lamspace_to_velspace(gfit_free['hb_n'].stddev.value, \
+        if (n_hb == 1):
+            sig_hb = mfit.lamspace_to_velspace(gfit_free.stddev.value, \
+                                          gfit_free.mean.value)
+        else:
+            sig_hb = mfit.lamspace_to_velspace(gfit_free['hb_n'].stddev.value, \
                                           gfit_free['hb_n'].mean.value)
             
         per_diff = (sig_sii - sig_hb)*100/sig_sii
                 
         if ((per_diff <= -30)|(per_diff >= 0)):
-            gfit_hb, rchi2_hb, flag_bits, del_rchi2 = fl.fit_hb_line.fit_fixed_one_component(lam_hb, flam_hb, \
-                                                                      ivar_hb, sii_bestfit)
+            gfit_hb, rchi2_hb, flag_bits, n_dof = fl.fit_hb_line.fit_fixed_one_component(lam_hb, flam_hb, \
+                                                                      ivar_hb, sii_bestfit, fit_cont = fit_cont)
             flag_bits = np.append(flag_bits, 7)
         else:
-            gfit_hb, rchi2_hb, flag_bits, del_rchi2 = gfit_free, rchi2_free, flag_bits, del_rchi2
+            gfit_hb, rchi2_hb, flag_bits, n_dof = gfit_free, rchi2_free, flag_bits, n_dof
             
     else:
-        gfit_hb, rchi2_hb, flag_bits, del_rchi2 = fl.fit_hb_line.fit_fixed_two_components(lam_hb, flam_hb, \
-                                                                                             ivar_hb, sii_bestfit)
+        gfit_hb, rchi2_hb, flag_bits, n_dof = fl.fit_hb_line.fit_fixed_two_components(lam_hb, flam_hb, \
+                                                                                          ivar_hb, sii_bestfit, \
+                                                                                         fit_cont = fit_cont)
             
     flag_bits = np.sort(flag_bits.astype(int))
         
-    return (gfit_hb, rchi2_hb, flag_bits, del_rchi2)
+    return (gfit_hb, rchi2_hb, flag_bits, n_dof)
     
 ####################################################################################################
 ####################################################################################################
 
-def find_nii_ha_best_fit(lam_nii, flam_nii, ivar_nii, sii_bestfit, ver = 'v1'):
+def find_nii_ha_best_fit(lam_nii, flam_nii, ivar_nii, sii_bestfit, fit_cont = True):
     """
     Function to find the best fit for [NII]+Ha, with or without broad-lines
     
@@ -292,71 +325,47 @@ def find_nii_ha_best_fit(lam_nii, flam_nii, ivar_nii, sii_bestfit, ver = 'v1'):
     rchi2 : float
         Reduced chi2 of the best-fit
         
-    del_rchi2 : float
-        Percentage difference between rchi2 with and without broad-line.
+    n_dof : int
+        Number of degrees of freedom
     """
-    n_sii = sii_bestfit.n_submodels
     
-    ## first try fixing [NII] to [SII] and letting Ha free
-    ## If Ha fit doesn't converge, fix Ha to [SII] as well
+    sii_models = sii_bestfit.submodel_names
     
-    if (ver == 'v1'):
-        if (n_sii == 3):
-            gfit_free, rchi2_free, flag_bits, del_rchi2 = fl.fit_nii_ha_lines_v1.fit_free_ha_one_component(lam_nii, flam_nii, ivar_nii, \
-                                                                                  sii_bestfit, frac_temp = 100.)
+    ## If 'sii6716_out' and 'sii6731_out' not in submodels, 
+    ## first try free-fit model, otherwise fix the width of Halpha to [SII]
+    
+    ## If 'sii6716_out' and 'sii6731_out' in submodels, 
+    ## fix the width of narrow and outflow components to [SII]
+    
+    if (('sii6716_out' not in sii_models)&('sii6731_out' not in sii_models)):
+        gfit_free, rchi2_free, flag_bits, n_dof = fl.fit_nii_ha_lines.fit_free_ha_one_component(lam_nii, flam_nii, ivar_nii, \
+                                                                              sii_bestfit, frac_temp = 100., fit_cont = fit_cont)
 
-            sig_sii = mfit.lamspace_to_velspace(sii_bestfit['sii6716'].stddev.value, \
-                                               sii_bestfit['sii6716'].mean.value)
+        sig_sii = mfit.lamspace_to_velspace(sii_bestfit['sii6716'].stddev.value, \
+                                           sii_bestfit['sii6716'].mean.value)
 
-            sig_ha = mfit.lamspace_to_velspace(gfit_free['ha_n'].stddev.value, \
-                                              gfit_free['ha_n'].mean.value)
+        sig_ha = mfit.lamspace_to_velspace(gfit_free['ha_n'].stddev.value, \
+                                          gfit_free['ha_n'].mean.value)
 
-            per_diff = (sig_sii - sig_ha)*100/sig_sii
+        per_diff = (sig_sii - sig_ha)*100/sig_sii
 
-            if (((per_diff <= -30)|(per_diff >= 0))|(gfit_free['ha_n'].amplitude.value == 0)):
-                gfit_nii_ha, rchi2_nii_ha, flag_bits, del_rchi2 = fl.fit_nii_ha_lines_v1.fit_fixed_one_component(lam_nii, flam_nii, \
-                                                                                        ivar_nii, sii_bestfit)
-                if ((per_diff <= -30)|(per_diff >= 0)):
-                    flag_bits = np.append(flag_bits, 7)
-                if (gfit_free['ha_n'].amplitude.value == 0):
-                    flag_bits = np.append(flag_bits, 9)
-            else:
-                gfit_nii_ha, rchi2_nii_ha, flag_bits, del_rchi2 = gfit_free, rchi2_free, flag_bits, del_rchi2
-
+        if (((per_diff <= -30)|(per_diff >= 0))|(gfit_free['ha_n'].amplitude.value == 0)):
+            gfit_nii_ha, rchi2_nii_ha, flag_bits, n_dof = fl.fit_nii_ha_lines.fit_fixed_one_component(lam_nii, flam_nii, \
+                                                                                    ivar_nii, sii_bestfit, fit_cont = fit_cont)
+            if ((per_diff <= -30)|(per_diff >= 0)):
+                flag_bits = np.append(flag_bits, 7)
+            if (gfit_free['ha_n'].amplitude.value == 0):
+                flag_bits = np.append(flag_bits, 9)
         else:
-            gfit_nii_ha, rchi2_nii_ha, flag_bits, del_rchi2 = fl.fit_nii_ha_lines_v1.fit_fixed_two_components(lam_nii, flam_nii, \
-                                                                                                             ivar_nii, sii_bestfit)
-                
-    elif (ver == 'v2'):
-        if (n_sii == 3):
-            gfit_free, rchi2_free, flag_bits, del_rchi2 = fl.fit_nii_ha_lines_v2.fit_free_ha_one_component(lam_nii, flam_nii, ivar_nii, \
-                                                                                  sii_bestfit, frac_temp = 100.)
+            gfit_nii_ha, rchi2_nii_ha, flag_bits, n_dof = gfit_free, rchi2_free, flag_bits, n_dof
 
-            sig_sii = mfit.lamspace_to_velspace(sii_bestfit['sii6716'].stddev.value, \
-                                               sii_bestfit['sii6716'].mean.value)
-
-            sig_ha = mfit.lamspace_to_velspace(gfit_free['ha_n'].stddev.value, \
-                                              gfit_free['ha_n'].mean.value)
-
-            per_diff = (sig_sii - sig_ha)*100/sig_sii
-
-            if (((per_diff <= -30)|(per_diff >= 0))|(gfit_free['ha_n'].amplitude.value == 0)):
-                gfit_nii_ha, rchi2_nii_ha, flag_bits, del_rchi2 = fl.fit_nii_ha_lines_v2.fit_fixed_one_component(lam_nii, flam_nii, \
-                                                                                        ivar_nii, sii_bestfit)
-                if ((per_diff <= -30)|(per_diff >= 0)):
-                    flag_bits = np.append(flag_bits, 7)
-                if (gfit_free['ha_n'].amplitude.value == 0):
-                    flag_bits = np.append(flag_bits, 9)
-            else:
-                gfit_nii_ha, rchi2_nii_ha, flag_bits, del_rchi2 = gfit_free, rchi2_free, flag_bits, del_rchi2
-
-        else:
-            gfit_nii_ha, rchi2_nii_ha, flag_bits, del_rchi2 = fl.fit_nii_ha_lines_v2.fit_fixed_two_components(lam_nii, flam_nii, \
-                                                                                                             ivar_nii, sii_bestfit)
-        
+    else:
+        gfit_nii_ha, rchi2_nii_ha, flag_bits, n_dof = fl.fit_nii_ha_lines.fit_fixed_two_components(lam_nii, flam_nii, \
+                                                                                                         ivar_nii, sii_bestfit, \
+                                                                                                         fit_cont = fit_cont)
     flag_bits = np.sort(flag_bits.astype(int))
     
-    return (gfit_nii_ha, rchi2_nii_ha, flag_bits, del_rchi2)
+    return (gfit_nii_ha, rchi2_nii_ha, flag_bits, n_dof)
 
 ####################################################################################################
 ####################################################################################################
