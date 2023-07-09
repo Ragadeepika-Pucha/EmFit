@@ -7,7 +7,7 @@ Version : 2023, May 23
 """
 
 ###################################################################################################
-
+from astropy.table import Table
 import numpy as np
 
 import measure_fits as mfit
@@ -237,6 +237,33 @@ def fix_params(table):
     
     return (table)
 
+####################################################################################################
+
+def calculate_emline_noise(specprod, survey, program, healpix, targetid, z):
+    
+    lam_rest, flam_rest, ivar_rest, _ = spec_utils.get_emline_spectra(specprod, survey, program, \
+                                                                   healpix, targetid, z, \
+                                                                   rest_frame = True, \
+                                                                   plot_continuum = False)
+    
+    hb_noise = mfit.compute_noise_emline(lam_rest, flam_rest, em_line = 'hb')
+    oiii_noise = mfit.compute_noise_emline(lam_rest, flam_rest, em_line = 'oiii')
+    nii_ha_noise = mfit.compute_noise_emline(lam_rest, flam_rest, em_line = 'nii_ha')
+    sii_noise = mfit.compute_noise_emline(lam_rest, flam_rest, em_line = 'sii')
+    
+    params = {}
+    params['TARGETID'] = [targetid]
+    params['HB_NOISE'] = [hb_noise]
+    params['OIII_NOISE'] = [oiii_noise]
+    params['NII_HA_NOISE'] = [nii_ha_noise]
+    params['SII_NOISE'] = [sii_noise]
+    
+    t_params = Table(params)
+    
+    #t_params.write(f'output/single_files/emfit-noise-{targetid}.fits')
+    
+    return (t_params)
+    
 ####################################################################################################
 
 # def get_sii_params(fitter_sii, gfit_sii):
