@@ -70,7 +70,7 @@ def find_coadded_spectra(specprod, survey, program, healpix, targetid):
 
 ###################################################################################################
 
-def find_fastspec_models(specprod, survey, program, healpix, targetid):
+def find_fastspec_models(specprod, survey, program, healpix, targetid, ver = 'v3.0'):
     """
     This function finds the fastspecfit stellar continuum for a given spectra.
     
@@ -90,6 +90,9 @@ def find_fastspec_models(specprod, survey, program, healpix, targetid):
         
     targetid : int64
         The unique TARGETID associated with the target
+        
+    ver : str
+        Version of the fastspecfit
 
     Returns
     -------
@@ -104,7 +107,7 @@ def find_fastspec_models(specprod, survey, program, healpix, targetid):
     """
     
     ## Fastspecfit healpix directory
-    fastspec_dir = f'/global/cfs/cdirs/desi/spectro/fastspecfit/{specprod}/v2.0/healpix'
+    fastspec_dir = f'/global/cfs/cdirs/desi/spectro/fastspecfit/{specprod}/{ver}/healpix'
     ## Specific healpix directory of the target
     target_dir = f'{survey}/{program}/{healpix//100}/{healpix}'
     ## Fastspecfit file directory of the target
