@@ -70,7 +70,7 @@ def find_coadded_spectra(specprod, survey, program, healpix, targetid):
 
 ###################################################################################################
 
-def find_stellar_continuum(specprod, survey, program, healpix, targetid):
+def find_fastspec_models(specprod, survey, program, healpix, targetid):
     """
     This function finds the fastspecfit stellar continuum for a given spectra.
     
@@ -90,14 +90,17 @@ def find_stellar_continuum(specprod, survey, program, healpix, targetid):
         
     targetid : int64
         The unique TARGETID associated with the target
-        
+
     Returns
     -------
     modelwave : numpy array
         Model wavelength array
         
     total_cont : numpy array
-        Total continuum array including stellar continuum + smooth continuum models    
+        Total continuum array including stellar continuum + smooth continuum models
+        
+    em_model : numpy array
+        Emission-line model array
     """
     
     ## Fastspecfit healpix directory
@@ -127,11 +130,13 @@ def find_stellar_continuum(specprod, survey, program, healpix, targetid):
     cont_model = model[0,0,:]
     ## Smooth continuum model
     smooth_cont_model = model[0,1,:]
+    ## Emission-line model
+    em_model = model[0,2,:]
 
     ## Total continuum model
     total_cont = cont_model + smooth_cont_model
     
-    return (modelwave, total_cont)
+    return (modelwave, total_cont, em_model)
 
 ###################################################################################################
 
@@ -204,7 +209,7 @@ def get_emline_spectra(specprod, survey, program, healpix, targetid,\
     res_matrix = coadd_spec.R[bands][0]
     
     ## Stellar continuum model
-    modelwave, total_cont = find_stellar_continuum(specprod, survey, program, healpix, targetid)
+    modelwave, total_cont, _ = find_fastspec_models(specprod, survey, program, healpix, targetid)
     
     ## Subtract the continuum from the flux
     emline_spec = flam - total_cont
