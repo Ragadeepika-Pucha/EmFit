@@ -2,13 +2,13 @@
 This script consists of spectra-related utility functions.
 The following functions are available:
     1) find_coadded_spectra(specprod, survey, program, healpix, targetid)
-    2) find_stellar_continuum(specprod, survey, program, healpix, targetid)
+    2) find_fastspec_models(specprod, survey, program, healpix, targetid, ver)
     3) get_emline_spectra(specprod, survey, program, healpix, targetid, \
                           z, rest_frame = False, plot_continuum = False)
     4) get_fit_window(lam_rest, flam_rest, ivar_rest, em_line)
 
 Author : Ragadeepika Pucha
-Version : 2023, May 22
+Version : 2023, Oct 3rd
 """
 ###################################################################################################
 
@@ -70,7 +70,7 @@ def find_coadded_spectra(specprod, survey, program, healpix, targetid):
 
 ###################################################################################################
 
-def find_fastspec_models(specprod, survey, program, healpix, targetid, ver = 'v3.0'):
+def find_fastspec_models(specprod, survey, program, healpix, targetid, ver = 'v3.0', fspec = False):
     """
     This function finds the fastspecfit stellar continuum for a given spectra.
     
@@ -93,6 +93,9 @@ def find_fastspec_models(specprod, survey, program, healpix, targetid, ver = 'v3
         
     ver : str
         Version of the fastspecfit
+        
+    fspec : bool
+        Whether or not to return the fastspecfit measurements row
 
     Returns
     -------
@@ -117,6 +120,7 @@ def find_fastspec_models(specprod, survey, program, healpix, targetid, ver = 'v3
     
     ## Metadata 
     meta = Table(fitsio.read(fastfile, 'METADATA'))
+   
     ## Models
     models, hdr = fitsio.read(fastfile, 'MODELS', header = True)
     
@@ -139,7 +143,16 @@ def find_fastspec_models(specprod, survey, program, healpix, targetid, ver = 'v3
     ## Total continuum model
     total_cont = cont_model + smooth_cont_model
     
-    return (modelwave, total_cont, em_model)
+    if (fspec == True):
+         ## Fastspecfit
+        fspec = Table(fitsio.read(fastfile, 'FASTSPEC'))
+        tgt = (fspec['TARGETID'] == targetid)
+        fspec_row = fspec[tgt]
+        
+        return (modelwave, total_cont, em_model, fspec_row)
+
+    else:
+        return (modelwave, total_cont, em_model)
 
 ###################################################################################################
 
