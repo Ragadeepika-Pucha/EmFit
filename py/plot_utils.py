@@ -21,6 +21,8 @@ import numpy as np
 from astropy.table import Table
 from astropy.modeling.models import Gaussian1D, Const1D
 
+from desiutil.dust import dust_transmission
+
 import fitsio
 import matplotlib.pyplot as plt
 import spec_utils
@@ -521,40 +523,6 @@ def plot_from_params(table, index, title = None):
     return (fig)
 
 ####################################################################################################
-
-# def plot_spectra_fastspec_model(lam, flam, model, axs = None):
-#     """
-#     This function overplots the fastspecfit model on the spectra.
-    
-#     Parameters
-#     ----------
-#     lam : numpy array
-#         Wavelength array for the spectra
-        
-#     flam : numpy array
-#         Flux array of the spectra
-        
-#     model : numpy array
-#         Model array of the spectra
-        
-#     axs : axis object
-#         Axes where the plot needs to be. Default is None
-        
-#     Returns
-#     -------
-#         None
-#     """
-    
-#     if (axs == None):
-#         plt.figure(figsize = (24, 8))
-#         axs = plt.gca()
-        
-#     ## Plotting spectra
-#     axs.plot(lam, flam, color = 'grey', label = 'Spectra')
-#     ## Overplotting the model
-#     axs.plot(lam, model, color = 'k', lw = 2.0, label = 'Fastspec Model')
-#     axs.set(xlabel = '$\lambda$', ylabel = '$F_{\lambda}$')
-#     axs.legend(fontsize = 16, loc = 'best')
     
 def plot_spectra_fastspec_model(lam_rest, flam_rest, model_rest, fspec_row, title = None):
     """
@@ -805,15 +773,23 @@ def compare_different_fits(table, index, t_em):
                                                                             ver = 'v3.0', \
                                                                             fspec = True)
 
-    ## Total fastspecfit model
-    fast_model_v2 = cont_v2 + em_model_v2
-    fast_model_v3 = cont_v3 + em_model_v3
+    
+    
+    
+    ## Correct for MW Transmission
+    lam = coadd_spec.wave['brz']
+    flam = coadd_spec.flux['brz'].flatten()
+    ebv = coadd_spec.fibermap['EBV'].data
+    mw_trans_spec = dust_transmission(lam, ebv)
+    flam = flam/mw_trans_spec
     
     ## Convert to rest-frame values
-    lam_rest = coadd_spec.wave['brz']/(1+z)
-    flam_rest = coadd_spec.flux['brz'].flatten()*(1+z)
-    fmodel_rest_v2 = fast_model_v2*(1+z)
-    fmodel_rest_v3 = fast_model_v3*(1+z)
+    lam_rest = lam/(1+z)
+    flam_rest = flam*(1+z)
+    cont_rest_v2 = cont_v2*(1+z)
+    cont_rest_v3 = cont_v3*(1+z)
+    em_rest_v2 = em_model_v2*(1+z)
+    em_rest_v3 = em_model_v3*(1+z)
     
     ## Emfit Information
     sel = np.nonzero((t_em['TARGETID'].data == targetid))[0][0]
@@ -832,11 +808,17 @@ def compare_different_fits(table, index, t_em):
     
     
     ## Figures
-    fig_em = plot_spectra_fits(lam_rest, flam_rest - (cont_v2*(1+z)), fits, \
+    # fig_em = plot_spectra_fits(lam_rest, flam_rest - (cont_v2*(1+z)), fits, \
+    #                            rchi2s, title = title)
+    # fig_v2 = plot_spectra_fastspec_model(lam_rest, flam_rest, fmodel_rest_v2, \
+    #                                      fspec_row_v2, title = title)
+    # fig_v3 = plot_spectra_fastspec_model(lam_rest, flam_rest, fmodel_rest_v3, \
+    #                                      fspec_row_v3, title = title)
+    fig_em = plot_spectra_fits(lam_rest, flam_rest - cont_rest_v2, fits, \
                                rchi2s, title = title)
-    fig_v2 = plot_spectra_fastspec_model(lam_rest, flam_rest, fmodel_rest_v2, \
+    fig_v2 = plot_spectra_fastspec_model(lam_rest, flam_rest - cont_rest_v2, em_rest_v2, \
                                          fspec_row_v2, title = title)
-    fig_v3 = plot_spectra_fastspec_model(lam_rest, flam_rest, fmodel_rest_v3, \
+    fig_v3 = plot_spectra_fastspec_model(lam_rest, flam_rest - cont_rest_v3, em_rest_v3, \
                                          fspec_row_v3, title = title)
     
     return (fig_em, fig_v2, fig_v3)
