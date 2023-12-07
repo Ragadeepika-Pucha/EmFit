@@ -54,14 +54,14 @@ class fit_sii_lines:
 
         ## Initial gaussian fits  
         ## Set default sigma values to 130 km/s ~ 2.9 in wavelength space
-        ## Set amplitudes > 0, sigma > 40 km/s
-        
+        ## Set amplitudes > 0, sigma > 35 km/s
         g_sii6716 = Gaussian1D(amplitude = amp_sii, mean = 6718.294, \
                                stddev = 2.9, name = 'sii6716', \
                                bounds = {'amplitude' : (0.0, None), 'stddev' : (0.8, None)})
         g_sii6731 = Gaussian1D(amplitude = amp_sii, mean = 6732.673, \
                                stddev = 2.9, name = 'sii6731', \
                                bounds = {'amplitude' : (0.0, None), 'stddev' : (0.8, None)})
+        
 
         ## Tie means of the two gaussians
         def tie_mean_sii(model):
@@ -86,6 +86,7 @@ class fit_sii_lines:
             ## Fit
             gfit_1comp = fitter_1comp(g_init, lam_sii, flam_sii, \
                                 weights = np.sqrt(ivar_sii), maxiter = 1000)
+            
             rchi2_1comp = mfit.calculate_red_chi2(flam_sii, gfit_1comp(lam_sii),\
                                                        ivar_sii, n_free_params = 5)
         else:
@@ -334,6 +335,7 @@ class fit_oiii_lines:
         ## Initial gaussians
         ## Set default values of sigma ~ 130 km/s ~ 2.1
         ## Set amplitudes > 0
+        
         g_oiii4959 = Gaussian1D(amplitude = amp_oiii4959/2, mean = 4960.295, \
                                 stddev = 1.0, name = 'oiii4959', \
                                 bounds = {'amplitude' : (0.0, None), 'stddev' : (0.6, None)})
