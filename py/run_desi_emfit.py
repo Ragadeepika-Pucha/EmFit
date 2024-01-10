@@ -28,7 +28,7 @@ start = time.time()
 
 t = Table.read(filename)
 num_partitions = cores = cpu_count()
-
+## This returns 256 -- use 128 -- Try 256, 128, 64
 pool = Pool(processes = cores)
 inputs = [(obj['SPECPROD'], obj['SURVEY'], obj['PROGRAM'], obj['HEALPIX'], obj['TARGETID'], obj['Z']) for obj in t]
 t_final = vstack(pool.starmap(emfit.fit_emline_spectra, inputs))
