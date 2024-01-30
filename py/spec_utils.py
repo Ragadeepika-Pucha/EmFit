@@ -9,7 +9,7 @@ The following functions are available:
     5) compute_resolution_sigma(coadd_spec)
 
 Author : Ragadeepika Pucha
-Version : 2024, Jan 10th
+Version : 2024, Jan 30th
 """
 ###################################################################################################
 
@@ -66,11 +66,17 @@ def find_coadded_spectra(specprod, survey, program, healpix, targetid):
     coadd_file = f'{coadd_dir}/coadd-{survey}-{program}-{healpix}.fits'
     
     ## Get spectra
-    ## Skipping HDUs that are not required for optimization
+    ## Skipping HDUs that are not required for optimization 
+    ## This is not working for DESI 22.5 
+    ## Might update it later
     ## MASK and RESOLUTION hdus are needed
-    spec = read_spectra(coadd_file, \
-                        skip_hdus = ('EXP_FIBERMAP', 'SCORES', \
-                                     'EXTRA_CATALOG')).select(targets = targetid)
+    # spec = read_spectra(coadd_file, \
+    #                     skip_hdus = ('EXP_FIBERMAP', 'SCORES', \
+    #                                  'EXTRA_CATALOG')).select(targets = targetid)
+    
+    ## Get spectra
+    spec = read_spectra(coadd_file).select(targets = targetid)
+    
     ## Coadd the spectra across cameras
     coadd_spec = coadd_cameras(spec)
     
@@ -78,10 +84,11 @@ def find_coadded_spectra(specprod, survey, program, healpix, targetid):
 
 ###################################################################################################
 
-def find_fastspec_models(specprod, survey, program, healpix, targetid, \
-                         ver = 'v3.0', fspec = False):
+def find_fastspec_models(specprod, survey, program, healpix, targetid, fspec = False):
+    
     """
     This function finds and returns the fastspecfit models for a given spectra.
+    The version depends on the "specprod"
     
     Parameters 
     ----------
@@ -100,10 +107,7 @@ def find_fastspec_models(specprod, survey, program, healpix, targetid, \
         
     targetid : int64
         The unique TARGETID associated with the target
-        
-    ver : str
-        Version of the fastspecfit. Default is v3.0
-        
+         
     fspec : bool
         Whether or not to return the fastspecfit measurements row.
         Default is False
@@ -125,6 +129,19 @@ def find_fastspec_models(specprod, survey, program, healpix, targetid, \
         
     """
     
+    # ver : str
+    #     Version of the fastspecfit. Default is v3.2
+    #     Latest Fuji version: v3.2
+    #     Latest Guadalupe version: v3.1
+    #     Latest Iron version: v2.1
+    
+    if (specprod == 'fuji'):
+        ver = 'v3.2'
+    elif (specprod == 'guadalupe'):
+        ver = 'v3.1'
+    elif (specprod == 'iron'):
+        ver = 'v2.1'
+
     ## Fastspecfit healpix directory
     ## Read-only file - using /dvs_ro/cfs/.. directory
     fastspec_dir = f'/dvs_ro/cfs/cdirs/desi/spectro/fastspecfit/{specprod}/{ver}/healpix'
@@ -243,7 +260,6 @@ def get_emline_spectra(specprod, survey, program, healpix, targetid, \
     lam = coadd_spec.wave[bands]
     flam = coadd_spec.flux[bands].flatten()/mw_trans_spec
     ivar = coadd_spec.ivar[bands].flatten()
-    #res_matrix = coadd_spec.resolution_data[bands]
     
     ## Stellar continuum model
     modelwave, total_cont, _ = find_fastspec_models(specprod, survey, program, healpix, targetid)
