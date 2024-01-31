@@ -17,9 +17,38 @@ import numpy as np
 
 ###################################################################################################
 
+def calculate_chi2(data, model, ivar):
+    """
+    This function computes the chi2 for a given fit to the data
+    
+    Parameters
+    ----------
+    data : numpy array
+        Data array
+        
+    model : numpy array
+        Model array
+        
+    ivar : numpy array
+        Inverse variance array
+        
+    Returns
+    -------
+    chi2 : float
+        chi2 value for the given fit to the fata
+    
+    """
+    
+    ## chi2
+    chi2 = sum(((data - model)**2)*ivar)
+    
+    return (chi2)
+
+###################################################################################################
+
 def calculate_red_chi2(data, model, ivar, n_free_params):
     """
-    This function computed the reduced chi2 for a given fit to the data
+    This function computes the reduced chi2 for a given fit to the data
     
     Parameters
     ----------
