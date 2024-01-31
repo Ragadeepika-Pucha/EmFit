@@ -17,14 +17,17 @@ import fit_utils
 import measure_fits as mfit
 import fit_lines as fl
 
+from scipy.stats import chi2
+
 ###################################################################################################
 
-def find_sii_best_fit(lam_sii, flam_sii, ivar_sii, fit_cont = True):
+def find_sii_best_fit(lam_sii, flam_sii, ivar_sii):
     """
     Find the best fit for [SII]6716,6731 doublet.
     The code fits both one-component and two-component fits and picks the best version.
-    The two-component fit needs to be >20% better to be picked.
-
+    The two-component fit is picked if the p-value for chi2 distribution is < 3e-7 --> 
+    5-sigma confidence for an extra component statistically.
+    
     Parameters
     ----------
     lam_sii : numpy array
@@ -38,88 +41,143 @@ def find_sii_best_fit(lam_sii, flam_sii, ivar_sii, fit_cont = True):
 
     Returns
     -------
-    gfit : Astropy model
+    sii_bestfit : Astropy model
         Best-fit 1 component or 2 component model
-
-    rchi2: float
-        Reduced chi2 of the best-fit
-        
-    flag_bits : numpy array
-        Array of flag bits associated with [SII] fitting.
-        0 : chi2 for two-component fit improves by 20%
-        1 : Amp ([SII]out) > Amp ([SII])
-        2 : Sigma ([SII]) > Sigma ([SII]out)
-        
+    
     n_dof : int
         Number of degrees of freedom
     """
-    ## Array for assigning flag bits
-    flag_bits = np.array([])
-    ## Single-component fits
-    gfit_1comp, rchi2_1comp = fl.fit_sii_lines.fit_one_component(lam_sii, flam_sii, ivar_sii, \
-                                                                 fit_cont = fit_cont)
-
-    ## Two-component fits
-    gfit_2comp, rchi2_2comp = fl.fit_sii_lines.fit_two_components(lam_sii, flam_sii, ivar_sii, \
-                                                                 fit_cont = fit_cont)
-
-    ## Select the best-fit based on rchi2
-    ## If the rchi2 of 2-component is better by 20%, then the 2-component fit is picked.
-    ## Otherwise, 1-component fit is the best fit.
-    del_rchi2 = ((rchi2_1comp - rchi2_2comp)/rchi2_1comp)*100
-
-    ## Also Amp ([SII]) > Amp ([SII]; out)
-    amp_sii6716 = gfit_2comp['sii6716'].amplitude.value
-    amp_sii6716_out = gfit_2comp['sii6716_out'].amplitude.value
     
-    amp_sii6731 = gfit_2comp['sii6731'].amplitude.value
-    amp_sii6731_out = gfit_2comp['sii6731_out'].amplitude.value
+    ## Single component fit
+    gfit_1comp = fl.fit_sii_lines.fit_one_component(lam_sii, flam_sii, ivar_sii)
     
-    ## Also Sig ([SII]; out) > Sig ([SII])
-    sig_sii = mfit.lamspace_to_velspace(gfit_2comp['sii6716'].stddev.value, \
-                                        gfit_2comp['sii6716'].mean.value)
-    sig_sii_out = mfit.lamspace_to_velspace(gfit_2comp['sii6716_out'].stddev.value, \
-                                            gfit_2comp['sii6716_out'].stddev.value)
+    ## Two-component fit
+    gfit_2comp = fl.fit_sii_lines.fit_two_components(lam_sii, flam_sii, ivar_sii)
     
-    ## Assigning flags:
-    if (del_rchi2 >= 20):
-        flag_bits = np.append(flag_bits, 0)
-    if ((amp_sii6716_out > amp_sii6716)|(amp_sii6731_out > amp_sii6731)):
-        flag_bits = np.append(flag_bits, 1)
-    if (sig_sii > sig_sii_out):
-        flag_bits = np.append(flag_bits, 2)
+    ## Chi2 values for both the fits
+    chi2_1comp = mfit.calculate_chi2(flam_sii, gfit_1comp(lam_sii), ivar_sii)
+    chi2_2comp = mfit.calculate_chi2(flam_sii, gfit_2comp(lam_sii), ivar_sii)
     
-    flag_bits = np.sort(flag_bits.astype(int))
+    ## Statistical check for the second component
+    df = 8-5
+    del_chi2 = chi2_1comp - chi2_2comp
+    p_val = chi2.sf(del_chi2, df)
     
-    ## Degrees of freedom
-        
-    if ((del_rchi2 >= 20)&(sig_sii_out > sig_sii)&\
-        (amp_sii6716 > amp_sii6716_out)&(amp_sii6731 > amp_sii6731_out)):
-        ## 2-component rchi2 improves by 20%
-        ## Sigma (Outflow) > Sigma (Narrow) 
-        ## Amplitude (Narrow) > Amplitude (Outflow)
-        if (fit_cont == True):
-            n_dof = 8
-        else:
-            n_dof = 7
-        return (gfit_2comp, rchi2_2comp, flag_bits, n_dof)
+    ## 5-sigma confidence of an extra component
+    if (p_val <= 3e-7):
+        sii_bestfit = gfit_2comp
+        n_dof = 8
     else:
-        if (fit_cont == True):
-            n_dof = 5
-        else:
-            n_dof = 4
+        sii_bestfit = gfit_1comp
+        n_dof = 5
         
-        return (gfit_1comp, rchi2_1comp, flag_bits, n_dof)
+    return (sii_bestfit, n_dof)
+
+####################################################################################################
+####################################################################################################
+
+# def find_sii_best_fit(lam_sii, flam_sii, ivar_sii, fit_cont = True):
+#     """
+#     Find the best fit for [SII]6716,6731 doublet.
+#     The code fits both one-component and two-component fits and picks the best version.
+#     The two-component fit needs to be >20% better to be picked.
+
+#     Parameters
+#     ----------
+#     lam_sii : numpy array
+#         Wavelength array of the [SII] region where the fits need to be performed.
+
+#     flam_sii : numpy array
+#         Flux array of the spectra in the [SII] region.
+
+#     ivar_sii : numpy array
+#         Inverse variance array of the spectra in the [SII] region.
+
+#     Returns
+#     -------
+#     gfit : Astropy model
+#         Best-fit 1 component or 2 component model
+
+#     rchi2: float
+#         Reduced chi2 of the best-fit
+        
+#     flag_bits : numpy array
+#         Array of flag bits associated with [SII] fitting.
+#         0 : chi2 for two-component fit improves by 20%
+#         1 : Amp ([SII]out) > Amp ([SII])
+#         2 : Sigma ([SII]) > Sigma ([SII]out)
+        
+#     n_dof : int
+#         Number of degrees of freedom
+#     """
+#     ## Array for assigning flag bits
+#     flag_bits = np.array([])
+#     ## Single-component fits
+#     gfit_1comp, rchi2_1comp = fl.fit_sii_lines.fit_one_component(lam_sii, flam_sii, ivar_sii, \
+#                                                                  fit_cont = fit_cont)
+
+#     ## Two-component fits
+#     gfit_2comp, rchi2_2comp = fl.fit_sii_lines.fit_two_components(lam_sii, flam_sii, ivar_sii, \
+#                                                                  fit_cont = fit_cont)
+
+#     ## Select the best-fit based on rchi2
+#     ## If the rchi2 of 2-component is better by 20%, then the 2-component fit is picked.
+#     ## Otherwise, 1-component fit is the best fit.
+#     del_rchi2 = ((rchi2_1comp - rchi2_2comp)/rchi2_1comp)*100
+
+#     ## Also Amp ([SII]) > Amp ([SII]; out)
+#     amp_sii6716 = gfit_2comp['sii6716'].amplitude.value
+#     amp_sii6716_out = gfit_2comp['sii6716_out'].amplitude.value
+    
+#     amp_sii6731 = gfit_2comp['sii6731'].amplitude.value
+#     amp_sii6731_out = gfit_2comp['sii6731_out'].amplitude.value
+    
+#     ## Also Sig ([SII]; out) > Sig ([SII])
+#     sig_sii = mfit.lamspace_to_velspace(gfit_2comp['sii6716'].stddev.value, \
+#                                         gfit_2comp['sii6716'].mean.value)
+#     sig_sii_out = mfit.lamspace_to_velspace(gfit_2comp['sii6716_out'].stddev.value, \
+#                                             gfit_2comp['sii6716_out'].stddev.value)
+    
+#     ## Assigning flags:
+#     if (del_rchi2 >= 20):
+#         flag_bits = np.append(flag_bits, 0)
+#     if ((amp_sii6716_out > amp_sii6716)|(amp_sii6731_out > amp_sii6731)):
+#         flag_bits = np.append(flag_bits, 1)
+#     if (sig_sii > sig_sii_out):
+#         flag_bits = np.append(flag_bits, 2)
+    
+#     flag_bits = np.sort(flag_bits.astype(int))
+    
+#     ## Degrees of freedom
+        
+#     if ((del_rchi2 >= 20)&(sig_sii_out > sig_sii)&\
+#         (amp_sii6716 > amp_sii6716_out)&(amp_sii6731 > amp_sii6731_out)):
+#         ## 2-component rchi2 improves by 20%
+#         ## Sigma (Outflow) > Sigma (Narrow) 
+#         ## Amplitude (Narrow) > Amplitude (Outflow)
+#         if (fit_cont == True):
+#             n_dof = 8
+#         else:
+#             n_dof = 7
+#         return (gfit_2comp, rchi2_2comp, flag_bits, n_dof)
+#     else:
+#         if (fit_cont == True):
+#             n_dof = 5
+#         else:
+#             n_dof = 4
+        
+#         return (gfit_1comp, rchi2_1comp, flag_bits, n_dof)
     
 ####################################################################################################
 ####################################################################################################
 
-def find_oiii_best_fit(lam_oiii, flam_oiii, ivar_oiii, fit_cont = True):
+def find_oiii_best_fit(lam_oiii, flam_oiii, ivar_oiii):
     """
-    Find the best fit for [OIII]4959,5007 doublet.
+    Find the best-fit for [OIII]4959, 5007 doublet.
     The code fits both one-component and two-component fits and picks the best version.
-    The two-component fit needs to be >20% better to be picked.
-
+    The two-component fit is picked if the p-value for chi2 distribution is < 3e-7 --> 
+    5-sigma confidence for an extra component statistically.
+    
     Parameters
     ----------
     lam_oiii : numpy array
@@ -133,81 +191,135 @@ def find_oiii_best_fit(lam_oiii, flam_oiii, ivar_oiii, fit_cont = True):
 
     Returns
     -------
-    gfit : Astropy model
+    oiii_bestfit : Astropy model
         Best-fit 1 component or 2 component model
-
-    rchi2: float
-        Reduced chi2 of the best-fit
-        
-    flag_bits : numpy array
-        Array of flag bits associated with [OIII] fitting.
-        0 : chi2 for two-component fit improves by 20%
-        1 : Amp ([OIII]out) > Amp ([OIII])
-        2 : Sigma ([OIII]) > Sigma ([OIII]out)
-        
+    
     n_dof : int
         Number of degrees of freedom
     """
     
-    flag_bits = np.array([])
-    
     ## Single component fit
-    gfit_1comp, rchi2_1comp = fl.fit_oiii_lines.fit_one_component(lam_oiii, flam_oiii, ivar_oiii, \
-                                                                 fit_cont = fit_cont)
+    gfit_1comp = fl.fit_oiii_lines.fit_one_component(lam_oiii, flam_oiii, ivar_oiii)
     
-    ## Two-component fit
-    gfit_2comp, rchi2_2comp = fl.fit_oiii_lines.fit_two_components(lam_oiii, flam_oiii, ivar_oiii, \
-                                                                  fit_cont = fit_cont)
+    ## Two component fit
+    gfit_2comp = fl.fit_oiii_lines.fit_two_components(lam_oiii, flam_oiii, ivar_oiii)
     
-    ## Select the best fit based on rchi2
-    ## Rchi2 of the 2-componen is improved by 20%, then the 2-component fit is picked
-    ## Otherwise, 1-component fit is the best fit
-    del_rchi2 = ((rchi2_1comp - rchi2_2comp)/rchi2_1comp)*100
+    ## Chi2 values for both the fits
+    chi2_1comp = mfit.calculate_chi2(flam_oiii, gfit_1comp(lam_oiii), ivar_oiii)
+    chi2_2comp = mfit.calculate_chi2(flam_oiii, gfit_2comp(lam_oiii), ivar_oiii)
     
-    ## Extra criterion - 
-    ## Amp ([OIII]) > Amp([OIII]; out)
-    ## Sigma ([OIII]) < Sigma ([OIII]; out)
-    amp_oiii5007 = gfit_2comp['oiii5007'].amplitude.value
-    amp_oiii5007_out = gfit_2comp['oiii5007_out'].amplitude.value
+    ## Statistical check for the second component
+    df = 7-4
+    del_chi2 = chi2_1comp - chi2_2comp
+    p_val = chi2.sf(del_chi2, df)
     
-    amp_oiii4959 = gfit_2comp['oiii4959'].amplitude.value
-    amp_oiii4959_out = gfit_2comp['oiii4959_out'].amplitude.value
-    
-    sig_oiii = mfit.lamspace_to_velspace(gfit_2comp['oiii5007'].stddev.value, \
-                                         gfit_2comp['oiii5007'].mean.value)
-    sig_oiii_out = mfit.lamspace_to_velspace(gfit_2comp['oiii5007_out'].stddev.value, \
-                                             gfit_2comp['oiii5007_out'].mean.value)
-    
-    ## Assigning flags:
-    if (del_rchi2 >= 20):
-        flag_bits = np.append(flag_bits, 0)
-    if ((amp_oiii4959_out > amp_oiii4959)|(amp_oiii5007_out > amp_oiii5007)):
-        flag_bits = np.append(flag_bits, 1)
-    if (sig_oiii > sig_oiii_out):
-        flag_bits = np.append(flag_bits, 2)
-    
-    flag_bits = np.sort(flag_bits.astype(int))
-    
-    if ((del_rchi2 >= 20)&(sig_oiii_out > sig_oiii)&\
-        (amp_oiii5007 > amp_oiii5007_out)&(amp_oiii4959 > amp_oiii4959_out)):
-        ## 2-component fit improves by 20%
-        ## Sigma ([OIII]out) > Sigma ([OIII])
-        ## Amp ([OIII]) > Amp ([OIII]out)
-        
-        if (fit_cont == True):
-            n_dof = 7
-        else:
-            n_dof = 6
-            
-        return (gfit_2comp, rchi2_2comp, flag_bits, n_dof)
+    ## 5-sigma confidence of an extra component
+    if (p_val <= 3e-7):
+        oiii_bestfit = gfit_2comp
+        n_dof = 7
     else:
+        oiii_bestfit = gfit_1comp
+        n_dof = 4
         
-        if (fit_cont == True):
-            n_dof = 4
-        else:
-            n_dof = 3
+    return (oiii_bestfit, n_dof)
+    
+####################################################################################################
+####################################################################################################
+
+# def find_oiii_best_fit(lam_oiii, flam_oiii, ivar_oiii, fit_cont = True):
+#     """
+#     Find the best fit for [OIII]4959,5007 doublet.
+#     The code fits both one-component and two-component fits and picks the best version.
+#     The two-component fit needs to be >20% better to be picked.
+
+#     Parameters
+#     ----------
+#     lam_oiii : numpy array
+#         Wavelength array of the [OIII] region where the fits need to be performed.
+
+#     flam_oiii : numpy array
+#         Flux array of the spectra in the [OIII] region.
+
+#     ivar_oiii : numpy array
+#         Inverse variance array of the spectra in the [OIII] region.
+
+#     Returns
+#     -------
+#     gfit : Astropy model
+#         Best-fit 1 component or 2 component model
+
+#     rchi2: float
+#         Reduced chi2 of the best-fit
         
-        return (gfit_1comp, rchi2_1comp, flag_bits, n_dof)
+#     flag_bits : numpy array
+#         Array of flag bits associated with [OIII] fitting.
+#         0 : chi2 for two-component fit improves by 20%
+#         1 : Amp ([OIII]out) > Amp ([OIII])
+#         2 : Sigma ([OIII]) > Sigma ([OIII]out)
+        
+#     n_dof : int
+#         Number of degrees of freedom
+#     """
+    
+#     flag_bits = np.array([])
+    
+#     ## Single component fit
+#     gfit_1comp, rchi2_1comp = fl.fit_oiii_lines.fit_one_component(lam_oiii, flam_oiii, ivar_oiii, \
+#                                                                  fit_cont = fit_cont)
+    
+#     ## Two-component fit
+#     gfit_2comp, rchi2_2comp = fl.fit_oiii_lines.fit_two_components(lam_oiii, flam_oiii, ivar_oiii, \
+#                                                                   fit_cont = fit_cont)
+    
+#     ## Select the best fit based on rchi2
+#     ## Rchi2 of the 2-componen is improved by 20%, then the 2-component fit is picked
+#     ## Otherwise, 1-component fit is the best fit
+#     del_rchi2 = ((rchi2_1comp - rchi2_2comp)/rchi2_1comp)*100
+    
+#     ## Extra criterion - 
+#     ## Amp ([OIII]) > Amp([OIII]; out)
+#     ## Sigma ([OIII]) < Sigma ([OIII]; out)
+#     amp_oiii5007 = gfit_2comp['oiii5007'].amplitude.value
+#     amp_oiii5007_out = gfit_2comp['oiii5007_out'].amplitude.value
+    
+#     amp_oiii4959 = gfit_2comp['oiii4959'].amplitude.value
+#     amp_oiii4959_out = gfit_2comp['oiii4959_out'].amplitude.value
+    
+#     sig_oiii = mfit.lamspace_to_velspace(gfit_2comp['oiii5007'].stddev.value, \
+#                                          gfit_2comp['oiii5007'].mean.value)
+#     sig_oiii_out = mfit.lamspace_to_velspace(gfit_2comp['oiii5007_out'].stddev.value, \
+#                                              gfit_2comp['oiii5007_out'].mean.value)
+    
+#     ## Assigning flags:
+#     if (del_rchi2 >= 20):
+#         flag_bits = np.append(flag_bits, 0)
+#     if ((amp_oiii4959_out > amp_oiii4959)|(amp_oiii5007_out > amp_oiii5007)):
+#         flag_bits = np.append(flag_bits, 1)
+#     if (sig_oiii > sig_oiii_out):
+#         flag_bits = np.append(flag_bits, 2)
+    
+#     flag_bits = np.sort(flag_bits.astype(int))
+    
+#     if ((del_rchi2 >= 20)&(sig_oiii_out > sig_oiii)&\
+#         (amp_oiii5007 > amp_oiii5007_out)&(amp_oiii4959 > amp_oiii4959_out)):
+#         ## 2-component fit improves by 20%
+#         ## Sigma ([OIII]out) > Sigma ([OIII])
+#         ## Amp ([OIII]) > Amp ([OIII]out)
+        
+#         if (fit_cont == True):
+#             n_dof = 7
+#         else:
+#             n_dof = 6
+            
+#         return (gfit_2comp, rchi2_2comp, flag_bits, n_dof)
+#     else:
+        
+#         if (fit_cont == True):
+#             n_dof = 4
+#         else:
+#             n_dof = 3
+        
+#         return (gfit_1comp, rchi2_1comp, flag_bits, n_dof)
     
 ####################################################################################################
 ####################################################################################################

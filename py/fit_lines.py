@@ -3,7 +3,7 @@ This script consists of funcitons for fitting emission-lines.
 The different functions are divided into different classes for different emission lines.
 
 Author : Ragadeepika Pucha
-Version : 2023, May 24
+Version : 2024, January 30
 """
 
 ###################################################################################################
@@ -16,16 +16,18 @@ from astropy.modeling.models import Gaussian1D, Polynomial1D, Const1D
 import fit_utils
 import measure_fits as mfit
 
+from scipy.stats import chi2
+
 ###################################################################################################
 
 class fit_sii_lines:
     """
     Different functions associated with [SII]6716, 6731 doublet fitting:
-        1) fit_one_component(lam_sii, flam_sii, ivar_sii, fit_cont)
-        2) fit_two_components(lam_sii, flam_sii, ivar_sii, fit_cont)
+        1) fit_one_component(lam_sii, flam_sii, ivar_sii)
+        2) fit_two_components(lam_sii, flam_sii, ivar_sii)
     """
     
-    def fit_one_component(lam_sii, flam_sii, ivar_sii, fit_cont = True):
+    def fit_one_component(lam_sii, flam_sii, ivar_sii):
         """
         Function to fit a single component to [SII]6716, 6731 doublet.
         
@@ -44,9 +46,6 @@ class fit_sii_lines:
         -------
         gfit : Astropy model
             Best-fit 1 component model
-
-        rchi2: float
-            Reduced chi2 of the best-fit
         """
         
         ## Initial estimate of amplitudes
@@ -62,7 +61,6 @@ class fit_sii_lines:
                                stddev = 2.9, name = 'sii6731', \
                                bounds = {'amplitude' : (0.0, None), 'stddev' : (0.8, None)})
         
-
         ## Tie means of the two gaussians
         def tie_mean_sii(model):
             return (model['sii6716'].mean + 14.329)
@@ -75,36 +73,23 @@ class fit_sii_lines:
 
         g_sii6731.stddev.tied = tie_std_sii
         
-        if (fit_cont == True):
-            ## Continuum as a constant
-            cont = Const1D(amplitude = 0.0, name = 'sii_cont')
+        
+        ## Continuum as a constant
+        cont = Const1D(amplitude = 0.0, name = 'sii_cont')
 
-            ## Initial Gaussian fit
-            g_init = cont + g_sii6716 + g_sii6731
-            fitter_1comp = fitting.LevMarLSQFitter()
+        ## Initial Gaussian fit
+        g_init = cont + g_sii6716 + g_sii6731
+        fitter_1comp = fitting.LevMarLSQFitter()
 
-            ## Fit
-            gfit_1comp = fitter_1comp(g_init, lam_sii, flam_sii, \
-                                weights = np.sqrt(ivar_sii), maxiter = 1000)
-            
-            rchi2_1comp = mfit.calculate_red_chi2(flam_sii, gfit_1comp(lam_sii),\
-                                                       ivar_sii, n_free_params = 5)
-        else:
-            ## Initial Gaussian fit
-            g_init = g_sii6716 + g_sii6731
-            fitter_1comp = fitting.LevMarLSQFitter()
-
-            ## Fit
-            gfit_1comp = fitter_1comp(g_init, lam_sii, flam_sii, \
-                                weights = np.sqrt(ivar_sii), maxiter = 1000)
-            rchi2_1comp = mfit.calculate_red_chi2(flam_sii, gfit_1comp(lam_sii),\
-                                                       ivar_sii, n_free_params = 4)
+        ## Fit
+        gfit_1comp = fitter_1comp(g_init, lam_sii, flam_sii, \
+                            weights = np.sqrt(ivar_sii), maxiter = 1000)       
                 
-        return (gfit_1comp, rchi2_1comp)
+        return (gfit_1comp)
     
 ####################################################################################################
     
-    def fit_two_components(lam_sii, flam_sii, ivar_sii, fit_cont = True):
+    def fit_two_components(lam_sii, flam_sii, ivar_sii):
         """
         Function to fit two components to [SII]6716, 6731 doublet.
         
@@ -123,9 +108,6 @@ class fit_sii_lines:
         -------
         gfit : Astropy model
             Best-fit 2 component model
-
-        rchi2: float
-            Reduced chi2 of the best-fit
         """
         
         ## Initial estimate of amplitudes
@@ -142,11 +124,11 @@ class fit_sii_lines:
                                stddev = 2.9, name = 'sii6731', \
                               bounds = {'amplitude' : (0.0, None), 'stddev' : (0.8, None)})
 
-        g_sii6716_out = Gaussian1D(amplitude = amp_sii/6, mean = 6718.294, \
-                                   stddev = 4.0, name = 'sii6716_out', \
+        g_sii6716_out = Gaussian1D(amplitude = amp_sii/5, mean = 6718.294, \
+                                   stddev = 4.5, name = 'sii6716_out', \
                                    bounds = {'amplitude' : (0.0, None), 'stddev' : (1.6, None)})
-        g_sii6731_out = Gaussian1D(amplitude = amp_sii/6, mean = 6732.673, \
-                                   stddev = 4.0, name = 'sii6731_out', \
+        g_sii6731_out = Gaussian1D(amplitude = amp_sii/5, mean = 6732.673, \
+                                   stddev = 4.5, name = 'sii6731_out', \
                                    bounds = {'amplitude' : (0.0, None), 'stddev' : (1.6, None)})
 
         ## Tie means of the main gaussian components
@@ -182,29 +164,17 @@ class fit_sii_lines:
 
         g_sii6731_out.amplitude.tied = tie_amp_sii
         
-        if (fit_cont == True):
-            ## Continuum
-            cont = Const1D(amplitude = 0.0, name = 'sii_cont')
+        ## Continuum
+        cont = Const1D(amplitude = 0.0, name = 'sii_cont')
 
-            ## Initial gaussian
-            g_init = cont + g_sii6716 + g_sii6731 + g_sii6716_out + g_sii6731_out
-            fitter_2comp = fitting.LevMarLSQFitter()
+        ## Initial gaussian
+        g_init = cont + g_sii6716 + g_sii6731 + g_sii6716_out + g_sii6731_out
+        fitter_2comp = fitting.LevMarLSQFitter()
 
-            gfit_2comp = fitter_2comp(g_init, lam_sii, flam_sii, \
-                                weights = np.sqrt(ivar_sii), maxiter = 1000)
-            rchi2_2comp = mfit.calculate_red_chi2(flam_sii, gfit_2comp(lam_sii), \
-                                                       ivar_sii, n_free_params = 8)
-        else:
-            ## Initial gaussian
-            g_init = g_sii6716 + g_sii6731 + g_sii6716_out + g_sii6731_out
-            fitter_2comp = fitting.LevMarLSQFitter()
-
-            gfit_2comp = fitter_2comp(g_init, lam_sii, flam_sii, \
-                                weights = np.sqrt(ivar_sii), maxiter = 1000)
-            rchi2_2comp = mfit.calculate_red_chi2(flam_sii, gfit_2comp(lam_sii), \
-                                                       ivar_sii, n_free_params = 7)
+        gfit_2comp = fitter_2comp(g_init, lam_sii, flam_sii, \
+                            weights = np.sqrt(ivar_sii), maxiter = 1000)
         
-        return (gfit_2comp, rchi2_2comp)    
+        return (gfit_2comp)    
     
 ####################################################################################################
 ####################################################################################################
@@ -212,11 +182,11 @@ class fit_sii_lines:
 class fit_oiii_lines:
     """
     Different functions associated with [OIII]4959, 5007 doublet fitting:
-        1) fit_one_component(lam_oiii, flam_oiii, ivar_oiii, fit_cont)
-        2) fit_two_components(lam_oiii, flam_oiii, ivar_oiii, fit_cont)
+        1) fit_one_component(lam_oiii, flam_oiii, ivar_oiii)
+        2) fit_two_components(lam_oiii, flam_oiii, ivar_oiii)
     """
 
-    def fit_one_component(lam_oiii, flam_oiii, ivar_oiii, fit_cont = True):
+    def fit_one_component(lam_oiii, flam_oiii, ivar_oiii):
         """
         Function to fit a single component to [OIII]4959,5007 doublet.
         
@@ -235,9 +205,6 @@ class fit_oiii_lines:
         -------
         gfit : Astropy model
             Best-fit 1 component model
-
-        rchi2: float
-            Reduced chi2 of the best-fit
         """
         
         # Find initial estimates of amplitudes
@@ -248,10 +215,10 @@ class fit_oiii_lines:
         ## Set default values of sigma ~ 130 km/s ~ 2.1
         ## Set amplitudes > 0
         g_oiii4959 = Gaussian1D(amplitude = amp_oiii4959, mean = 4960.295, \
-                                stddev = 1.0, name = 'oiii4959', \
+                                stddev = 2.1, name = 'oiii4959', \
                                 bounds = {'amplitude' : (0.0, None), 'stddev' : (0.6, None)})
         g_oiii5007 = Gaussian1D(amplitude = amp_oiii5007, mean = 5008.239, \
-                                stddev = 1.0, name = 'oiii5007', \
+                                stddev = 2.1, name = 'oiii5007', \
                                 bounds = {'amplitude' : (0.0, None), 'stddev' : (0.6, None)})
 
         ## Tie Means of the two gaussians
@@ -273,38 +240,24 @@ class fit_oiii_lines:
 
         g_oiii5007.stddev.tied = tie_std_oiii
         
-        if (fit_cont == True):
-            ## Continuum
-            cont = Const1D(amplitude = 0.0, name = 'oiii_cont')
+    
+        ## Continuum
+        cont = Const1D(amplitude = 0.0, name = 'oiii_cont')
 
-            ## Initial Gaussian fit
-            g_init = cont + g_oiii4959 + g_oiii5007
+        ## Initial Gaussian fit
+        g_init = cont + g_oiii4959 + g_oiii5007
 
-            ## Fitter
-            fitter_1comp = fitting.LevMarLSQFitter()
+        ## Fitter
+        fitter_1comp = fitting.LevMarLSQFitter()
 
-            gfit_1comp = fitter_1comp(g_init, lam_oiii, flam_oiii, \
-                                weights = np.sqrt(ivar_oiii), maxiter = 1000)
-            rchi2_1comp = mfit.calculate_red_chi2(flam_oiii, gfit_1comp(lam_oiii), \
-                                                       ivar_oiii, n_free_params = 4) 
+        gfit_1comp = fitter_1comp(g_init, lam_oiii, flam_oiii, \
+                            weights = np.sqrt(ivar_oiii), maxiter = 1000)
             
-        else:
-            ## Initial Gaussian fit
-            g_init = g_oiii4959 + g_oiii5007
-
-            ## Fitter
-            fitter_1comp = fitting.LevMarLSQFitter()
-
-            gfit_1comp = fitter_1comp(g_init, lam_oiii, flam_oiii, \
-                                weights = np.sqrt(ivar_oiii), maxiter = 1000)
-            rchi2_1comp = mfit.calculate_red_chi2(flam_oiii, gfit_1comp(lam_oiii), \
-                                                       ivar_oiii, n_free_params = 3)
-        
-        return (gfit_1comp, rchi2_1comp)
+        return (gfit_1comp)
     
 ####################################################################################################
 
-    def fit_two_components(lam_oiii, flam_oiii, ivar_oiii, fit_cont = True):
+    def fit_two_components(lam_oiii, flam_oiii, ivar_oiii):
         """
         Function to fit a two components to [OIII]4959,5007 doublet.
         
@@ -323,9 +276,6 @@ class fit_oiii_lines:
         -------
         gfit : Astropy model
             Best-fit 2 component model
-
-        rchi2: float
-            Reduced chi2 of the best-fit
         """
         
         # Find initial estimates of amplitudes
@@ -344,10 +294,10 @@ class fit_oiii_lines:
                                 bounds = {'amplitude' : (0.0, None), 'stddev' : (0.6, None)})
 
         g_oiii4959_out = Gaussian1D(amplitude = amp_oiii4959/4, mean = 4960.295, \
-                                    stddev = 6.0, name = 'oiii4959_out', \
+                                    stddev = 4.0, name = 'oiii4959_out', \
                                     bounds = {'amplitude' : (0.0, None), 'stddev' : (1.2, None)})
         g_oiii5007_out = Gaussian1D(amplitude = amp_oiii5007/4, mean = 5008.239, \
-                                    stddev = 6.0, name = 'oiii5007_out', \
+                                    stddev = 4.0, name = 'oiii5007_out', \
                                     bounds = {'amplitude' : (0.0, None), 'stddev' : (1.2, None)})
 
         ## Tie Means of the two gaussians
@@ -388,33 +338,20 @@ class fit_oiii_lines:
 
         g_oiii5007_out.stddev.tied = tie_std_oiii_out
         
-        if (fit_cont == True):
-            ## Continuum
-            cont = Const1D(amplitude = 0.0, name = 'oiii_cont')
 
-            ## Initial Gaussian fit
-            g_init = cont + g_oiii4959 + g_oiii5007 + g_oiii4959_out + g_oiii5007_out
+        ## Continuum
+        cont = Const1D(amplitude = 0.0, name = 'oiii_cont')
 
-            ## Fitter
-            fitter_2comp = fitting.LevMarLSQFitter()
+        ## Initial Gaussian fit
+        g_init = cont + g_oiii4959 + g_oiii5007 + g_oiii4959_out + g_oiii5007_out
 
-            gfit_2comp = fitter_2comp(g_init, lam_oiii, flam_oiii, \
-                                weights = np.sqrt(ivar_oiii), maxiter = 1000)
-            rchi2_2comp = mfit.calculate_red_chi2(flam_oiii, gfit_2comp(lam_oiii), \
-                                                       ivar_oiii, n_free_params = 7)
-        else:
-            ## Initial Gaussian fit
-            g_init = g_oiii4959 + g_oiii5007 + g_oiii4959_out + g_oiii5007_out
+        ## Fitter
+        fitter_2comp = fitting.LevMarLSQFitter()
 
-            ## Fitter
-            fitter_2comp = fitting.LevMarLSQFitter()
-
-            gfit_2comp = fitter_2comp(g_init, lam_oiii, flam_oiii, \
-                                weights = np.sqrt(ivar_oiii), maxiter = 1000)
-            rchi2_2comp = mfit.calculate_red_chi2(flam_oiii, gfit_2comp(lam_oiii), \
-                                                       ivar_oiii, n_free_params = 6)
-        
-        return (gfit_2comp, rchi2_2comp)
+        gfit_2comp = fitter_2comp(g_init, lam_oiii, flam_oiii, \
+                            weights = np.sqrt(ivar_oiii), maxiter = 1000)
+            
+        return (gfit_2comp)
 
 ####################################################################################################
 ####################################################################################################
@@ -423,10 +360,9 @@ class fit_hb_line:
     """
     Different functions associated with fitting the Hbeta emission-line, 
     including a broad-component:
-        1) fit_free_one_component(lam_hb, flam_hb, ivar_hb, sii_bestfit, frac_temp, fit_cont)
-        2) fit_free_two_components(lam_hb, flam_hb, ivar_hb, sii_bestfit, frac_temp, fit_cont)
-        3) fit_fixed_one_component(lam_hb, flam_hb, ivar_hb, sii_bestfit, fit_cont)
-        4) fit_fixed_two_components(lam_hb, flam_hb, ivar_hb, sii_bestfit, fit_cont)
+        1) fit_free_one_component(lam_hb, flam_hb, ivar_hb, sii_bestfit, frac_temp)
+        2) fit_fixed_one_component(lam_hb, flam_hb, ivar_hb, sii_bestfit)
+        3) fit_fixed_two_components(lam_hb, flam_hb, ivar_hb, sii_bestfit)
     """
     
     def fit_free_one_component(lam_hb, flam_hb, ivar_hb, sii_bestfit, \
