@@ -65,6 +65,33 @@ def find_sii_best_fit(lam_sii, flam_sii, ivar_sii):
     
     ## 5-sigma confidence of an extra component
     if (p_val <= 3e-7):
+        sii_out_sig = mfit.lamspace_to_velspace(gfit_2comp['sii6716_out'].stddev.value, \
+                                               gfit_2comp['sii6716_out'].mean.value)
+        sii_sig = mfit.lamspace_to_velspace(gfit_2comp['sii6716'].stddev.value, \
+                                               gfit_2comp['sii6716'].mean.value)
+        
+        if (sii_out_sig < sii_sig):
+            ## Set the broader component as "outflow" component
+            gfit_sii6716 = Gaussian1D(amplitude = gfit_2comp['sii6716_out'].amplitude, \
+                                     mean = gfit_2comp['sii6716_out'].mean, \
+                                     stddev = gfit_2comp['sii6716_out'].stddev, \
+                                     name = 'sii6716')
+            gfit_sii6731 = Gaussian1D(amplitude = gfit_2comp['sii6731_out'].amplitude, \
+                                     mean = gfit_2comp['sii6731_out'].mean, \
+                                     stddev = gfit_2comp['sii6731_out'].stddev, \
+                                     name = 'sii6731')
+            gfit_sii6716_out = Gaussian1D(amplitude = gfit_2comp['sii6716'].amplitude, \
+                                         mean = gfit_2comp['sii6716'].mean, \
+                                         stddev = gfit_2comp['sii6716'].stddev, \
+                                         name = 'sii6716_out')
+            gfit_sii6731_out = Gaussian1D(amplitude = gfit_2comp['sii6731'].amplitude, \
+                                         mean = gfit_2comp['sii6731_out'].mean, \
+                                         stddev = gfit_2comp['sii6731_out'].stddev, \
+                                         name = 'sii6731_out')
+            cont = gfit_2comp['sii_cont']
+            
+            gfit_2comp = cont + gfit_sii6716 + gfit_sii6731 + gfit_sii6716_out + gfit_sii6731_out
+        
         sii_bestfit = gfit_2comp
         n_dof = 8
     else:
@@ -85,18 +112,18 @@ def find_oiii_best_fit(lam_oiii, flam_oiii, ivar_oiii):
     
     Parameters
     ----------
-    lam_sii : numpy array
-        Wavelength array of the [SII] region where the fits need to be performed.
+    lam_oiii : numpy array
+        Wavelength array of the [OIII] region where the fits need to be performed.
 
-    flam_sii : numpy array
-        Flux array of the spectra in the [SII] region.
+    flam_oiii : numpy array
+        Flux array of the spectra in the [OIII] region.
 
-    ivar_sii : numpy array
-        Inverse variance array of the spectra in the [SII] region.
+    ivar_oiii : numpy array
+        Inverse variance array of the spectra in the [OIII] region.
 
     Returns
     -------
-    sii_bestfit : Astropy model
+    oiii_bestfit : Astropy model
         Best-fit 1 component or 2 component model
     
     n_dof : int
@@ -120,6 +147,32 @@ def find_oiii_best_fit(lam_oiii, flam_oiii, ivar_oiii):
     
     ## 5-sigma confidence of an extra component
     if (p_val <= 3e-7):
+        ## Set the broad component as the "outflow" component
+        oiii_out_sig = mfit.lamspace_to_velspace(gfit_2comp['oiii5007_out'].stddev.value, \
+                                                 gfit_2comp['oiii5007_out'].mean.value)
+        oiii_sig = mfit.lamspace_to_velspace(gfit_2comp['oiii5007'].stddev.value, \
+                                            gfit_2comp['oiii5007'].mean.value)
+        
+        if (oiii_out_sig < oiii_sig):
+            gfit_oiii4959 = Gaussian1D(amplitude = gfit_2comp['oiii4959_out'].amplitude, \
+                                      mean = gfit_2comp['oiii4959_out'].mean, \
+                                      stddev = gfit_2comp['oiii4959_out'].stddev, \
+                                      name = 'oiii4959')
+            gfit_oiii5007 = Gaussian1D(amplitude = gfit_2comp['oiii5007_out'].amplitude, \
+                                      mean = gfit_2comp['oiii5007_out'].mean, \
+                                      stddev = gfit_2comp['oiii5007_out'].stddev, \
+                                      name = 'oiii5007')
+            gfit_oiii4959_out = Gaussian1D(amplitude = gfit_2comp['oiii4959'].amplitude, \
+                                          mean = gfit_2comp['oiii4959'].mean, \
+                                          stddev = gfit_2comp['oiii4959'].stddev, \
+                                          name = 'oiii4959_out')
+            gfit_oiii5007_out = Gaussian1D(amplitude = gfit_2comp['oiii5007'].amplitude, \
+                                          mean = gfit_2comp['oiii5007'].mean, \
+                                          stddev = gfit_2comp['oiii5007'].stddev, \
+                                          name = 'oiii5007_out')
+            cont = gfit_2comp['oiii_cont'] 
+            gfit_2comp = cont + gfit_oiii4959 + gfit_oiii5007 + gfit_oiii4959_out + gfit_oiii5007_out
+        
         oiii_bestfit = gfit_2comp
         n_dof = 7
     else:
@@ -185,8 +238,15 @@ def find_hb_free_best_fit(lam_hb, flam_hb, ivar_hb, sii_bestfit):
         del_chi2 = chi2_no_b - chi2_b
         p_val = chi2.sf(del_chi2, df)
         
-        ## 5-sigma confidence of an extra component
-        if (p_val <= 3e-7):
+        ## Broad Hb width
+        hb_b_sig = mfit.lamspace_to_velspace(gfit_b['hb_b'].stddev.value, \
+                                            gfit_b['hb_b'].mean.value)
+        hb_b_fwhm = mfit.sigma_to_fwhm(hb_b_sig)
+        
+        ## Conditions for selecting a broad component:
+        ## 5-sigma confidence of an extra component is satisfied
+        ## Broad component FWHM > 300 km/s
+        if ((p_val <= 3e-7)&(hb_b_fwhm >= 300)):
             hb_bestfit = gfit_b
             n_dof = 7
         else:
@@ -212,8 +272,15 @@ def find_hb_free_best_fit(lam_hb, flam_hb, ivar_hb, sii_bestfit):
         del_chi2 = chi2_no_b - chi2_b
         p_val = chi2.sf(del_chi2, df)
         
-        ## 5-sigma confidence of an extra component
-        if (p_val <= 3e-7):
+        ## Broad Hb width
+        hb_b_sig = mfit.lamspace_to_velspace(gfit_b['hb_b'].stddev.value, \
+                                            gfit_b['hb_b'].mean.value)
+        hb_b_fwhm = mfit.sigma_to_fwhm(hb_b_sig)
+        
+        ## Conditions for selecting a broad component:
+        ## 5-sigma confidence of an extra component is satisfied
+        ## Broad component FWHM > 300 km/s
+        if ((p_val <= 3e-7)&(hb_b_fwhm >= 300)):
             hb_bestfit = gfit_b
             n_dof = 10
         else:
@@ -279,8 +346,15 @@ def find_hb_fixed_best_fit(lam_hb, flam_hb, ivar_hb, sii_bestfit):
         del_chi2 = chi2_no_b - chi2_b
         p_val = chi2.sf(del_chi2, df)
         
-        ## 5-sigma confidence of an extra component
-        if (p_val <= 3e-7):
+        ## Broad Hb width
+        hb_b_sig = mfit.lamspace_to_velspace(gfit_b['hb_b'].stddev.value, \
+                                            gfit_b['hb_b'].mean.value)
+        hb_b_fwhm = mfit.sigma_to_fwhm(hb_b_sig)
+        
+        ## Conditions for selecting a broad component:
+        ## 5-sigma confidence of an extra component is satisfied
+        ## Broad component FWHM > 300 km/s
+        if ((p_val <= 3e-7)&(hb_b_fwhm >= 300)):
             hb_bestfit = gfit_b
             n_dof = 6
         else:
@@ -306,8 +380,15 @@ def find_hb_fixed_best_fit(lam_hb, flam_hb, ivar_hb, sii_bestfit):
         del_chi2 = chi2_no_b - chi2_b
         p_val = chi2.sf(del_chi2, df)
         
-        ## 5-sigma confidence of an extra component
-        if (p_val <= 3e-7):
+        ## Broad Hb width
+        hb_b_sig = mfit.lamspace_to_velspace(gfit_b['hb_b'].stddev.value, \
+                                            gfit_b['hb_b'].mean.value)
+        hb_b_fwhm = mfit.sigma_to_fwhm(hb_b_sig)
+        
+        ## Conditions for selecting a broad component:
+        ## 5-sigma confidence of an extra component is satisfied
+        ## Broad component FWHM > 300 km/s
+        if ((p_val <= 3e-7)&(hb_b_fwhm >= 300)):
             hb_bestfit = gfit_b
             n_dof = 8
         else:
@@ -375,8 +456,15 @@ def find_nii_free_ha_best_fit(lam_nii_ha, flam_nii_ha, ivar_nii_ha, sii_bestfit)
         del_chi2 = chi2_no_b - chi2_b
         p_val = chi2.sf(del_chi2, df)
         
-        ## 5-sigma confidence of an extra component
-        if (p_val <= 3e-7):
+        ## Broad Ha width
+        ha_b_sig = mfit.lamspace_to_velspace(gfit_b['ha_b'].stddev.value, \
+                                            gfit_b['ha_b'].mean.value)
+        ha_b_fwhm = mfit.sigma_to_fwhm(ha_b_sig)
+        
+        ## Conditions for selecting a broad component:
+        ## 5-sigma confidence of an extra component is satisfied
+        ## Broad component FWHM > 300 km/s
+        if ((p_val <= 3e-7)&(ha_b_fwhm >= 300)):
             nii_ha_bestfit = gfit_b
             n_dof = 9
         else:
@@ -404,8 +492,15 @@ def find_nii_free_ha_best_fit(lam_nii_ha, flam_nii_ha, ivar_nii_ha, sii_bestfit)
         del_chi2 = chi2_no_b - chi2_b
         p_val = chi2.sf(del_chi2, df)
         
-        ## 5-sigma confidence of an extra component
-        if (p_val <= 3e-7):
+        ## Broad Ha width
+        ha_b_sig = mfit.lamspace_to_velspace(gfit_b['ha_b'].stddev.value, \
+                                            gfit_b['ha_b'].mean.value)
+        ha_b_fwhm = mfit.sigma_to_fwhm(ha_b_sig)
+        
+        ## Conditions for selecting a broad component:
+        ## 5-sigma confidence of an extra component is satisfied
+        ## Broad component FWHM > 300 km/s
+        if ((p_val <= 3e-7)&(ha_b_fwhm >= 300)):
             nii_ha_bestfit = gfit_b
             n_dof = 14
         else:
@@ -473,8 +568,15 @@ def find_nii_ha_best_fit(lam_nii_ha, flam_nii_ha, ivar_nii_ha, sii_bestfit):
         del_chi2 = chi2_no_b - chi2_b
         p_val = chi2.sf(del_chi2, df)
         
-        ## 5-sigma confidence of an extra component
-        if (p_val <= 3e-7):
+        ## Broad Ha width
+        ha_b_sig = mfit.lamspace_to_velspace(gfit_b['ha_b'].stddev.value, \
+                                            gfit_b['ha_b'].mean.value)
+        ha_b_fwhm = mfit.sigma_to_fwhm(ha_b_sig)
+        
+        ## Conditions for selecting a broad component:
+        ## 5-sigma confidence of an extra component is satisfied
+        ## Broad component FWHM > 300 km/s
+        if ((p_val <= 3e-7)&(ha_b_fwhm >= 300)):
             nii_ha_bestfit = gfit_b
             n_dof = 8
         else:
@@ -502,8 +604,15 @@ def find_nii_ha_best_fit(lam_nii_ha, flam_nii_ha, ivar_nii_ha, sii_bestfit):
         del_chi2 = chi2_no_b - chi2_b
         p_val = chi2.sf(del_chi2, df)
         
-        ## 5-sigma confidence of an extra component
-        if (p_val <= 3e-7):
+        ## Broad Ha width
+        ha_b_sig = mfit.lamspace_to_velspace(gfit_b['ha_b'].stddev.value, \
+                                            gfit_b['ha_b'].mean.value)
+        ha_b_fwhm = mfit.sigma_to_fwhm(ha_b_sig)
+        
+        ## Conditions for selecting a broad component:
+        ## 5-sigma confidence of an extra component is satisfied
+        ## Broad component FWHM > 300 km/s
+        if ((p_val <= 3e-7)&(ha_b_fwhm >= 300)):
             nii_ha_bestfit = gfit_b
             n_dof = 12
         else:
@@ -571,8 +680,15 @@ def find_free_nii_ha_best_fit(lam_nii_ha, flam_nii_ha, ivar_nii_ha, sii_bestfit)
         del_chi2 = chi2_no_b - chi2_b
         p_val = chi2.sf(del_chi2, df)
         
-        ## 5-sigma confidence of an extra component
-        if (p_val <= 3e-7):
+        ## Broad Ha width
+        ha_b_sig = mfit.lamspace_to_velspace(gfit_b['ha_b'].stddev.value, \
+                                            gfit_b['ha_b'].mean.value)
+        ha_b_fwhm = mfit.sigma_to_fwhm(ha_b_sig)
+        
+        ## Conditions for selecting a broad component:
+        ## 5-sigma confidence of an extra component is satisfied
+        ## Broad component FWHM > 300 km/s
+        if ((p_val <= 3e-7)&(ha_b_fwhm >= 300)):
             nii_ha_bestfit = gfit_b
             n_dof = 9
         else:
@@ -600,8 +716,15 @@ def find_free_nii_ha_best_fit(lam_nii_ha, flam_nii_ha, ivar_nii_ha, sii_bestfit)
         del_chi2 = chi2_no_b - chi2_b
         p_val = chi2.sf(del_chi2, df)
         
-        ## 5-sigma confidence of an extra component
-        if (p_val <= 3e-7):
+        ## Broad Ha width
+        ha_b_sig = mfit.lamspace_to_velspace(gfit_b['ha_b'].stddev.value, \
+                                            gfit_b['ha_b'].mean.value)
+        ha_b_fwhm = mfit.sigma_to_fwhm(ha_b_sig)
+        
+        ## Conditions for selecting a broad component:
+        ## 5-sigma confidence of an extra component is satisfied
+        ## Broad component FWHM > 300 km/s
+        if ((p_val <= 3e-7)&(ha_b_fwhm >= 300)):
             nii_ha_bestfit = gfit_b
             n_dof = 14
         else:
