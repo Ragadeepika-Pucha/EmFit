@@ -146,6 +146,38 @@ def velspace_to_lamspace(vel, lam_ref):
 
 ####################################################################################################
 
+def sigma_to_fwhm(sigma, sigma_err = None):
+    """
+    Calculate FWHM of an emission line from sigma values.
+    FWHM = 2*sqrt(2*log(2))*sigma
+    
+    Parameters
+    ----------
+    sigma : array
+        Array of sigma values
+        
+    sigma_err : array
+        Array of sigma error values
+        
+    Returns
+    -------
+    fwhm : array
+        Array of FWHM values
+        
+    fwhm_err : array
+        Array of FWHM error values
+    """
+    
+    fwhm = 2*np.sqrt(2*np.log(2))*sigma
+    
+    if (sigma_err is not None):
+        fwhm_err = 2*np.sqrt(2*np.log(2))*sigma_err
+        return (fwhm, fwhm_err)
+    else:
+        return (fwhm)
+    
+####################################################################################################
+
 def compute_noise_emline(lam_rest, flam_rest, em_line):
     """
     Function to compute noise near a given emission-line.
