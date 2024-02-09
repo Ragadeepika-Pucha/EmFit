@@ -3,7 +3,7 @@ This script consists of functions related to fitting the emission line spectra,
 and plotting the models and residuals.
 
 Author : Ragadeepika Pucha
-Version : 2023, May 24
+Version : 2024, February 8
 """
 
 ####################################################################################################
@@ -182,6 +182,196 @@ def fit_spectra(specprod, survey, program, healpix, targetid, z, free_balmer = T
         t_params.rename_column(col, col.upper())
         
     return (t_params)
+
+####################################################################################################
+####################################################################################################
+
+def construct_fits(t, index):
+    """
+    Construct fits of a particular source from the table of parameters.
+    
+    Parameters 
+    ----------
+    t : Astropy Table
+        Table of fit parameters
+        
+    index : int
+        Index number of the source
+        
+    Returns
+    -------
+    fits : list
+        List of [Hb, [OIII], [NII]+Ha, [SII]] fits
+    """
+    
+    ######################################################################################
+    ## Hbeta model
+    hb_models = []
+    
+    ## Hb continuum model
+    hb_cont = Const1D(amplitude = t['HB_CONTINUUM'].data[index], name = 'hb_cont')
+
+    ## Gaussian model for the narrow component
+    gfit_hb_n = Gaussian1D(amplitude = t['HB_N_AMPLITUDE'].data[index], \
+                          mean = t['HB_N_MEAN'].data[index], \
+                          stddev = t['HB_N_STD'].data[index], name = 'hb_n')
+
+    gfit_hb = hb_cont + gfit_hb_n
+
+    if (t['HB_OUT_FLUX'].data[index] != 0):
+        ## Gaussian model for the outflow component if available
+        gfit_hb_out = Gaussian1D(amplitude = t['HB_OUT_AMPLITUDE'].data[index], \
+                                mean = t['HB_OUT_MEAN'].data[index], \
+                                stddev = t['HB_OUT_STD'].data[index], name = 'hb_out')
+        hb_models.append(gfit_hb_out)
+
+
+    if (t['HB_B_FLUX'].data[index] != 0):
+        ## Gaussian model for the broad component if available
+        gfit_hb_b = Gaussian1D(amplitude = t['HB_B_AMPLITUDE'].data[index], \
+                              mean = t['HB_B_MEAN'].data[index], \
+                              stddev = t['HB_B_STD'].data[index], name = 'hb_b')
+
+        hb_models.append(gfit_hb_b)
+
+    ## Total Hb model
+    for model in hb_models:
+        gfit_hb = gfit_hb + model
+        
+    ######################################################################################
+    ######################################################################################
+    ## [OIII] model
+    
+    ## [OIII] continuum model
+    oiii_cont = Const1D(amplitude = t['OIII_CONTINUUM'].data[index], name = 'oiii_cont')
+    ## Gaussian model for [OIII]4959 narrow component
+    gfit_oiii4959 = Gaussian1D(amplitude = t['OIII4959_AMPLITUDE'].data[index], \
+                              mean = t['OIII4959_MEAN'].data[index], \
+                               stddev = t['OIII4959_STD'].data[index], name = 'oiii4959')
+    ## Gaussian model for [OIII]5007 narrow component
+    gfit_oiii5007 = Gaussian1D(amplitude = t['OIII5007_AMPLITUDE'].data[index], \
+                              mean = t['OIII5007_MEAN'].data[index], \
+                              stddev = t['OIII5007_STD'].data[index], name = 'oiii5007')
+
+    gfit_oiii = oiii_cont + gfit_oiii4959 + gfit_oiii5007
+
+    oiii_models = []
+
+    if (t['OIII5007_OUT_FLUX'].data[index] != 0):
+        ## Gaussian model for [OIII]4959 outflow component if available
+        gfit_oiii4959_out = Gaussian1D(amplitude = t['OIII4959_OUT_AMPLITUDE'].data[index], \
+                                      mean = t['OIII4959_OUT_MEAN'].data[index], \
+                                      stddev = t['OIII4959_OUT_STD'].data[index], \
+                                       name = 'oiii4959_out')
+        ## Gaussian model for [OIII]5007 outflow component if available
+        gfit_oiii5007_out = Gaussian1D(amplitude = t['OIII5007_OUT_AMPLITUDE'].data[index], \
+                                      mean = t['OIII5007_OUT_MEAN'].data[index], \
+                                      stddev = t['OIII5007_OUT_STD'].data[index], \
+                                       name = 'oiii5007_out')
+
+        oiii_models.append(gfit_oiii4959_out)
+        oiii_models.append(gfit_oiii5007_out)
+    ## Total [OIII] model
+    for model in oiii_models:
+        gfit_oiii = gfit_oiii + model
+    
+    ######################################################################################
+    ######################################################################################
+    ## [NII] + Ha model
+    
+    ## [NII]+Ha continuum model
+    nii_ha_cont = Const1D(amplitude = t['NII_HA_CONTINUUM'].data[index], name = 'nii_ha_cont')
+    ## Gaussian model for [NII]6548 narrow component
+    gfit_nii6548 = Gaussian1D(amplitude = t['NII6548_AMPLITUDE'].data[index], \
+                             mean = t['NII6548_MEAN'].data[index], \
+                             stddev = t['NII6548_STD'].data[index], name = 'nii6548')
+    ## Gaussian model for [NII]6583 narrow component
+    gfit_nii6583 = Gaussian1D(amplitude = t['NII6583_AMPLITUDE'].data[index], \
+                             mean = t['NII6583_MEAN'].data[index], \
+                             stddev = t['NII6583_STD'].data[index], name = 'nii6583')
+    ## Gaussian model for Ha narrow component
+    gfit_ha = Gaussian1D(amplitude = t['HA_N_AMPLITUDE'].data[index], \
+                        mean = t['HA_N_MEAN'].data[index], \
+                        stddev = t['HA_N_STD'].data[index], name = 'ha_n')
+
+    gfit_nii_ha = nii_ha_cont + gfit_nii6548 + gfit_nii6583 + gfit_ha
+
+    nii_ha_models = []
+
+    if (t['NII6548_OUT_FLUX'].data[index] != 0):
+        ## Gaussian model for [NII]6548 outflow component if available
+        gfit_nii6548_out = Gaussian1D(amplitude = t['NII6548_OUT_AMPLITUDE'].data[index], \
+                                      mean = t['NII6548_OUT_MEAN'].data[index], \
+                                      stddev = t['NII6548_OUT_STD'].data[index], \
+                                      name = 'nii6548_out')
+        ## Gaussian model for [NII]6583 outflow component if available
+        gfit_nii6583_out = Gaussian1D(amplitude = t['NII6583_OUT_AMPLITUDE'].data[index], \
+                                      mean = t['NII6583_OUT_MEAN'].data[index], \
+                                      stddev = t['NII6583_OUT_STD'].data[index], \
+                                      name = 'nii6583_out')
+        ## Gaussian model for Ha outflow component if available
+        gfit_ha_out = Gaussian1D(amplitude = t['HA_OUT_AMPLITUDE'].data[index], \
+                                mean = t['HA_OUT_MEAN'].data[index], \
+                                stddev = t['HA_OUT_STD'].data[index], \
+                                 name = 'ha_out')
+
+        nii_ha_models.append(gfit_nii6548_out)
+        nii_ha_models.append(gfit_nii6583_out)
+        nii_ha_models.append(gfit_ha_out)
+
+    if (t['HA_B_FLUX'].data[index] != 0):
+        ## Gaussian model for Hb broad component if available
+        gfit_ha_b = Gaussian1D(amplitude = t['HA_B_AMPLITUDE'].data[index], \
+                              mean = t['HA_B_MEAN'].data[index], \
+                              stddev = t['HA_B_STD'].data[index], \
+                               name = 'ha_b')
+        nii_ha_models.append(gfit_ha_b)
+    
+    ## Total [NII]+Ha model
+    for model in nii_ha_models:
+        gfit_nii_ha = gfit_nii_ha + model
+        
+    ######################################################################################
+    ######################################################################################
+    ## [SII] model
+    
+    ## [SII] continuum model
+    sii_cont = Const1D(amplitude = t['SII_CONTINUUM'].data[index], name = 'sii_cont')
+    ## Gaussian model for [SII]6716 narrow component
+    gfit_sii6716 = Gaussian1D(amplitude = t['SII6716_AMPLITUDE'].data[index], \
+                             mean = t['SII6716_MEAN'].data[index], \
+                             stddev = t['SII6716_STD'].data[index], name = 'sii6716')
+    ## Gaussian model for [SII]6731 narrow component
+    gfit_sii6731 = Gaussian1D(amplitude = t['SII6731_AMPLITUDE'].data[index], \
+                             mean = t['SII6731_MEAN'].data[index], \
+                             stddev = t['SII6731_STD'].data[index], name = 'sii6731')
+
+    gfit_sii = sii_cont + gfit_sii6716 + gfit_sii6731
+
+    sii_models = []
+
+    if (t['SII6716_OUT_FLUX'].data[index] != 0):
+        ## Gaussian model for [SII]6716 outflow component if available
+        gfit_sii6716_out = Gaussian1D(amplitude = t['SII6716_OUT_AMPLITUDE'].data[index], \
+                                     mean = t['SII6716_OUT_MEAN'].data[index], \
+                                     stddev = t['SII6716_OUT_STD'].data[index], \
+                                      name = 'sii6716_out')
+        ## Gaussian model for [SII]6731 outflow component if available
+        gfit_sii6731_out = Gaussian1D(amplitude = t['SII6731_OUT_AMPLITUDE'].data[index], \
+                                     mean = t['SII6731_OUT_MEAN'].data[index], \
+                                     stddev = t['SII6731_OUT_STD'].data[index], \
+                                      name = 'sii6731_out')
+
+        sii_models.append(gfit_sii6716_out)
+        sii_models.append(gfit_sii6731_out)
+    
+    ## Total [SII] model
+    for model in sii_models:
+        gfit_sii = gfit_sii + model
+
+    fits_tab = [gfit_hb, gfit_oiii, gfit_nii_ha, gfit_sii]
+    
+    return (fits_tab)
 
 ####################################################################################################
 ####################################################################################################
@@ -539,164 +729,5 @@ def fit_spectra(specprod, survey, program, healpix, targetid, z, free_balmer = T
 
 # ####################################################################################################
 
-def construct_fits(t, index):
-    
-    ######################################################################################
-    ## Hbeta model
-    hb_models = []
-    
-    hb_cont = Const1D(amplitude = t['HB_CONTINUUM'].data[index], name = 'hb_cont')
 
-    gfit_hb_n = Gaussian1D(amplitude = t['HB_N_AMPLITUDE'].data[index], \
-                          mean = t['HB_N_MEAN'].data[index], \
-                          stddev = t['HB_N_STD'].data[index], name = 'hb_n')
-
-    gfit_hb = hb_cont + gfit_hb_n
-
-    if (t['HB_OUT_FLUX'].data[index] != 0):
-        gfit_hb_out = Gaussian1D(amplitude = t['HB_OUT_AMPLITUDE'].data[index], \
-                                mean = t['HB_OUT_MEAN'].data[index], \
-                                stddev = t['HB_OUT_STD'].data[index], name = 'hb_out')
-        hb_models.append(gfit_hb_out)
-
-
-    if (t['HB_B_FLUX'].data[index] != 0):
-        gfit_hb_b = Gaussian1D(amplitude = t['HB_B_AMPLITUDE'].data[index], \
-                              mean = t['HB_B_MEAN'].data[index], \
-                              stddev = t['HB_B_STD'].data[index], name = 'hb_b')
-
-        hb_models.append(gfit_hb_b)
-
-
-    for model in hb_models:
-        gfit_hb = gfit_hb + model
-        
-    ######################################################################################
-    ######################################################################################
-    ## [OIII] model
-    
-    oiii_cont = Const1D(amplitude = t['OIII_CONTINUUM'].data[index], name = 'oiii_cont')
-
-    gfit_oiii4959 = Gaussian1D(amplitude = t['OIII4959_AMPLITUDE'].data[index], \
-                              mean = t['OIII4959_MEAN'].data[index], \
-                               stddev = t['OIII4959_STD'].data[index], name = 'oiii4959')
-
-    gfit_oiii5007 = Gaussian1D(amplitude = t['OIII5007_AMPLITUDE'].data[index], \
-                              mean = t['OIII5007_MEAN'].data[index], \
-                              stddev = t['OIII5007_STD'].data[index], name = 'oiii5007')
-
-    gfit_oiii = oiii_cont + gfit_oiii4959 + gfit_oiii5007
-
-    oiii_models = []
-
-    if (t['OIII5007_OUT_FLUX'].data[index] != 0):
-        gfit_oiii4959_out = Gaussian1D(amplitude = t['OIII4959_OUT_AMPLITUDE'].data[index], \
-                                      mean = t['OIII4959_OUT_MEAN'].data[index], \
-                                      stddev = t['OIII4959_OUT_STD'].data[index], \
-                                       name = 'oiii4959_out')
-
-        gfit_oiii5007_out = Gaussian1D(amplitude = t['OIII5007_OUT_AMPLITUDE'].data[index], \
-                                      mean = t['OIII5007_OUT_MEAN'].data[index], \
-                                      stddev = t['OIII5007_OUT_STD'].data[index], \
-                                       name = 'oiii5007_out')
-
-        oiii_models.append(gfit_oiii4959_out)
-        oiii_models.append(gfit_oiii5007_out)
-
-    for model in oiii_models:
-        gfit_oiii = gfit_oiii + model
-    
-    ######################################################################################
-    ######################################################################################
-    ## [NII] + Ha model
-    
-    nii_ha_cont = Const1D(amplitude = t['NII_HA_CONTINUUM'].data[index], name = 'nii_ha_cont')
-
-    gfit_nii6548 = Gaussian1D(amplitude = t['NII6548_AMPLITUDE'].data[index], \
-                             mean = t['NII6548_MEAN'].data[index], \
-                             stddev = t['NII6548_STD'].data[index], name = 'nii6548')
-
-    gfit_nii6583 = Gaussian1D(amplitude = t['NII6583_AMPLITUDE'].data[index], \
-                             mean = t['NII6583_MEAN'].data[index], \
-                             stddev = t['NII6583_STD'].data[index], name = 'nii6583')
-
-    gfit_ha = Gaussian1D(amplitude = t['HA_N_AMPLITUDE'].data[index], \
-                        mean = t['HA_N_MEAN'].data[index], \
-                        stddev = t['HA_N_STD'].data[index], name = 'ha_n')
-
-    gfit_nii_ha = nii_ha_cont + gfit_nii6548 + gfit_nii6583 + gfit_ha
-
-    nii_ha_models = []
-
-    if (t['NII6548_OUT_FLUX'].data[index] != 0):
-        gfit_nii6548_out = Gaussian1D(amplitude = t['NII6548_OUT_AMPLITUDE'].data[index], \
-                                      mean = t['NII6548_OUT_MEAN'].data[index], \
-                                      stddev = t['NII6548_OUT_STD'].data[index], \
-                                      name = 'nii6548_out')
-
-        gfit_nii6583_out = Gaussian1D(amplitude = t['NII6583_OUT_AMPLITUDE'].data[index], \
-                                      mean = t['NII6583_OUT_MEAN'].data[index], \
-                                      stddev = t['NII6583_OUT_STD'].data[index], \
-                                      name = 'nii6583_out')
-
-        gfit_ha_out = Gaussian1D(amplitude = t['HA_OUT_AMPLITUDE'].data[index], \
-                                mean = t['HA_OUT_MEAN'].data[index], \
-                                stddev = t['HA_OUT_STD'].data[index], \
-                                 name = 'ha_out')
-
-        nii_ha_models.append(gfit_nii6548_out)
-        nii_ha_models.append(gfit_nii6583_out)
-        nii_ha_models.append(gfit_ha_out)
-
-    if (t['HA_B_FLUX'].data[index] != 0):
-        gfit_ha_b = Gaussian1D(amplitude = t['HA_B_AMPLITUDE'].data[index], \
-                              mean = t['HA_B_MEAN'].data[index], \
-                              stddev = t['HA_B_STD'].data[index], \
-                               name = 'ha_b')
-        nii_ha_models.append(gfit_ha_b)
-
-    for model in nii_ha_models:
-        gfit_nii_ha = gfit_nii_ha + model
-        
-    ######################################################################################
-    ######################################################################################
-    ## [SII] model
-    
-    sii_cont = Const1D(amplitude = t['SII_CONTINUUM'].data[index], name = 'sii_cont')
-
-    gfit_sii6716 = Gaussian1D(amplitude = t['SII6716_AMPLITUDE'].data[index], \
-                             mean = t['SII6716_MEAN'].data[index], \
-                             stddev = t['SII6716_STD'].data[index], name = 'sii6716')
-
-    gfit_sii6731 = Gaussian1D(amplitude = t['SII6731_AMPLITUDE'].data[index], \
-                             mean = t['SII6731_MEAN'].data[index], \
-                             stddev = t['SII6731_STD'].data[index], name = 'sii6731')
-
-    gfit_sii = sii_cont + gfit_sii6716 + gfit_sii6731
-
-    sii_models = []
-
-    if (t['SII6716_OUT_FLUX'].data[index] != 0):
-
-        gfit_sii6716_out = Gaussian1D(amplitude = t['SII6716_OUT_AMPLITUDE'].data[index], \
-                                     mean = t['SII6716_OUT_MEAN'].data[index], \
-                                     stddev = t['SII6716_OUT_STD'].data[index], \
-                                      name = 'sii6716_out')
-
-        gfit_sii6731_out = Gaussian1D(amplitude = t['SII6731_OUT_AMPLITUDE'].data[index], \
-                                     mean = t['SII6731_OUT_MEAN'].data[index], \
-                                     stddev = t['SII6731_OUT_STD'].data[index], \
-                                      name = 'sii6731_out')
-
-        sii_models.append(gfit_sii6716_out)
-        sii_models.append(gfit_sii6731_out)
-
-    for model in sii_models:
-        gfit_sii = gfit_sii + model
-
-    fits_tab = [gfit_hb, gfit_oiii, gfit_nii_ha, gfit_sii]
-    
-    return (fits_tab)
-
-####################################################################################################
 
