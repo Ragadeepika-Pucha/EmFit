@@ -503,7 +503,7 @@ def plot_from_params(table, index, title = None):
     targetid = table['TARGETID'].data[index]
     z = table['Z'].data[index]
     
-    lam_rest, flam_rest, ivar_rest, _ = spec_utils.get_emline_spectra(specprod, survey, program, \
+    _, lam_rest, flam_rest, ivar_rest = spec_utils.get_emline_spectra(specprod, survey, program, \
                                                                      healpix, targetid, z, \
                                                                      rest_frame = True)
     
