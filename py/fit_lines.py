@@ -13,7 +13,6 @@ import numpy as np
 from astropy.modeling import fitting
 from astropy.modeling.models import Gaussian1D, Polynomial1D, Const1D
 
-import fit_utils
 import measure_fits as mfit
 
 from scipy.stats import chi2

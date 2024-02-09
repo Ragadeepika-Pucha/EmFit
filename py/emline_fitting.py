@@ -13,7 +13,7 @@ import numpy as np
 from astropy.table import Table, vstack
 from astropy.modeling.models import Gaussian1D, Const1D
 
-import fit_utils, spec_utils, plot_utils
+import spec_utils, plot_utils
 import fit_lines
 import measure_fits as mfit
 import emline_params as emp
