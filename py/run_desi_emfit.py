@@ -3,7 +3,7 @@ This script is for running the DESI EmFit Code for a given table of sources.
 It requires input and output filenames
 
 Author : Ragadeepika Pucha
-Version : 2023 April 27
+Version : 2024 February 8
 """
 
 import sys
@@ -28,10 +28,10 @@ start = time.time()
 
 t = Table.read(filename)
 num_partitions = cores = cpu_count()
-
-pool = Pool(processes = cores)
+## This returns 256 -- use 128 -- Try 256, 128, 64
+pool = Pool(processes = 128)
 inputs = [(obj['SPECPROD'], obj['SURVEY'], obj['PROGRAM'], obj['HEALPIX'], obj['TARGETID'], obj['Z']) for obj in t]
-t_final = vstack(pool.starmap(emfit.fit_emline_spectra, inputs))
+t_final = vstack(pool.starmap(emfit.fit_spectra, inputs))
 pool.close()
 pool.join()
 

@@ -1,14 +1,14 @@
 """
 The functions in this script are related to different measurements related to the fits.
 The script consists of following functions:
-    1) calculate_red_chi2(data, model, ivar, n_free_params)
+    1) calculate_chi2(data, model, ivar, n_dof, reduced_chi2)
     2) lamspace_to_velspace(del_lam, lam_ref)
     3) velspace_to_lamspace(vel, lam_ref)
     4) compute_noise_emline(lam_rest, flam_rest, model, em_line)
     5) compute_emline_flux(amplitude, stddev, amplitude_err, stddev_err)
     
 Author : Ragadeepika Pucha
-Version : 2023, May 8
+Version : 2024, February 8
 """
 
 ###################################################################################################
@@ -17,9 +17,10 @@ import numpy as np
 
 ###################################################################################################
 
-def calculate_red_chi2(data, model, ivar, n_free_params):
+def calculate_chi2(data, model, ivar, n_dof = None, reduced_chi2 = False):
     """
-    This function computed the reduced chi2 for a given fit to the data
+    This function computes the chi2 (or reduced chi2) for a given fit to the data
+    It returns reduced chi2 if reduced_chi2 is True and n_dof is not None.
     
     Parameters
     ----------
@@ -32,25 +33,31 @@ def calculate_red_chi2(data, model, ivar, n_free_params):
     ivar : numpy array
         Inverse variance array
         
-    n_free_params : int
-        Number of free parameters associated with the fit
+    n_dof : int
+        Number of degrees of freedom associated with the fit
+        
+    reduced_chi2 : bool
+        Whether or not to compute reduced chi2
         
     Returns
     -------
-    red_chi2 : float
-        Reduced chi2 value for the given fit to the fata
+    chi2 : float
+        chi2 value for the given fit to the data
     
     """
     
     ## chi2
     chi2 = sum(((data - model)**2)*ivar)
     
-    ## Reduced chi2
-    red_chi2 = chi2/(len(data)-n_free_params)
+    if ((reduced_chi2 == True)&(n_dof is not None)):
+        ## Reduced chi2
+        red_chi2 = chi2/(len(data)-n_dof)
+        return (red_chi2)
     
-    return (red_chi2)
-    
-####################################################################################################
+    else:
+        return (chi2)
+
+###################################################################################################
 
 def lamspace_to_velspace(del_lam, lam_ref, del_lam_err = None, lam_ref_err = None):
     """
@@ -115,6 +122,38 @@ def velspace_to_lamspace(vel, lam_ref):
     
     return (del_lam)
 
+####################################################################################################
+
+def sigma_to_fwhm(sigma, sigma_err = None):
+    """
+    Calculate FWHM of an emission line from sigma values.
+    FWHM = 2*sqrt(2*log(2))*sigma
+    
+    Parameters
+    ----------
+    sigma : array
+        Array of sigma values
+        
+    sigma_err : array
+        Array of sigma error values
+        
+    Returns
+    -------
+    fwhm : array
+        Array of FWHM values
+        
+    fwhm_err : array
+        Array of FWHM error values
+    """
+    
+    fwhm = 2*np.sqrt(2*np.log(2))*sigma
+    
+    if (sigma_err is not None):
+        fwhm_err = 2*np.sqrt(2*np.log(2))*sigma_err
+        return (fwhm, fwhm_err)
+    else:
+        return (fwhm)
+    
 ####################################################################################################
 
 def compute_noise_emline(lam_rest, flam_rest, em_line):
