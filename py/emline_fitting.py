@@ -48,7 +48,7 @@ plt.rcParams.update(**settings)
 
 ####################################################################################################    
 
-def fit_spectra(specprod, survey, program, healpix, targetid, z, free_balmer = True):
+def fit_spectra(specprod, survey, program, healpix, targetid, z, free_balmer = False):
     """
     Fit Hb, [OIII], [NII]+Ha, and [SII] emission lines for a given emission-line spectra
     
