@@ -1935,3 +1935,391 @@ class fit_nii_ha_lines:
     
 ####################################################################################################
 ####################################################################################################
+
+class fit_extreme_broadline_sources:
+    """
+    Different functions associated with fitting extreme broadline sources:
+        1) fit_nii_ha_sii(lam_nii_ha_sii, flam_nii_ha_sii, ivar_nii_ha_sii)
+        2) fit_hb_oiii_1comp(lam_hb_oiii, flam_hb_oiii, ivar_hb_oiii, nii_ha_sii_bestfit)
+        3) fit_hb_oiii_2comp(lam_hb_oiii, flam_hb_oiii, ivar_hb_oiii, nii_ha_sii_bestfit)
+        
+    """
+    def fit_nii_ha_sii(lam_nii_ha_sii, flam_nii_ha_sii, ivar_nii_ha_sii):
+        """
+        Function to fit [NII]+Ha+[SII] together for extreme broadline (quasar-like) sources
+        The widths of all the narrow-line components are tied together.
+        The function also allows for a broad component in Ha.
+
+        Parameters
+        ----------
+        lam_nii_ha_sii : numpy array
+            Wavelength array of the [NII]+Ha+[SII] region.
+
+        flam_nii_ha_sii : numpy array
+            Flux array of the spectra in the [NII]+Ha+[SII] region.
+
+        ivar_nii_ha_sii : numpy array
+            Inverse Variance array of the spectra in the [NII]+Ha+[SII] region.
+
+        Returns
+        -------
+        gfit : Astropy model
+            Best-fit model for the [NII]+Ha+[SII] region with a broad component
+        """
+        ############################ [SII]6716,6731 doublet ########################
+        ## Initial estimate of amplitudes
+        amp_sii6716 = np.max(flam_nii_ha_sii[(lam_nii_ha_sii >= 6716)&(lam_nii_ha_sii <= 6719)])
+        amp_sii6731 = np.max(flam_nii_ha_sii[(lam_nii_ha_sii >= 6731)&(lam_nii_ha_sii <= 6734)])
+
+        #print (amp_sii6716, amp_sii6731)
+
+        ## Initial gaussian fits
+        g_sii6716 = Gaussian1D(amplitude = amp_sii6716, mean = 6718.294, \
+                               stddev = 1.0, name = 'sii6716', \
+                               bounds = {'amplitude': (0.0, None), 'stddev':(0.0, None)})
+        g_sii6731 = Gaussian1D(amplitude = amp_sii6731, mean = 6732.673, \
+                              stddev = 1.0, name = 'sii6731', \
+                              bounds = {'amplitude': (0.0, None), 'stddev':(0.0, None)})
+
+        ## Tie means of the two gaussians
+        def tie_mean_sii(model):
+            return (model['sii6716'].mean + 14.329)
+
+        g_sii6731.mean.tied = tie_mean_sii
+
+        ## Tie sigma of the two gaussians in velocity space
+        def tie_std_sii(model):
+            return ((model['sii6716'].stddev)*(model['sii6731'].mean/model['sii6716'].mean))
+
+        g_sii6731.stddev.tied = tie_std_sii
+
+        g_sii = g_sii6716 + g_sii6731
+
+        ############################ [NII]6548,6583 doublet ########################
+        ## Initial estimate of amplitudes
+        amp_nii6548 = np.max(flam_nii_ha_sii[(lam_nii_ha_sii > 6542)&(lam_nii_ha_sii < 6552)])
+        amp_nii6583 = np.max(flam_nii_ha_sii[(lam_nii_ha_sii > 6580)&(lam_nii_ha_sii < 6590)])
+
+        ## Initial gaussian fits
+        g_nii6548 = Gaussian1D(amplitude = amp_nii6548, mean = 6549.852, \
+                              stddev = 1.0, name = 'nii6548', \
+                              bounds = {'amplitude':(0.0, None), 'stddev':(0.0, None)})
+        g_nii6583 = Gaussian1D(amplitude = amp_nii6583, mean = 6585.277, \
+                              stddev = 1.0, name = 'nii6583', \
+                              bounds = {'amplitude':(0.0, None), 'stddev':(0.0, None)})
+
+        ## Tie means of the two gaussians
+        def tie_mean_nii(model):
+            return (model['nii6548'].mean + 35.425)
+
+        g_nii6583.mean.tied = tie_mean_nii
+
+        ## Tie amplitudes of the two gaussians
+        def tie_amp_nii(model):
+            return (model['nii6548'].amplitude*2.96)
+
+        g_nii6583.amplitude.tied = tie_amp_nii
+
+        ## Tie sigma of both Gaussians to [SII] in velocity space
+        def tie_std_nii6548(model):
+            return ((model['sii6716'].stddev)*(model['nii6548'].mean/model['sii6716'].mean))
+
+        g_nii6548.stddev.tied = tie_std_nii6548
+
+        def tie_std_nii6583(model):
+            return ((model['sii6716'].stddev)*(model['nii6583'].mean/model['sii6716'].mean))
+
+        g_nii6583.stddev.tied = tie_std_nii6583
+
+        g_nii = g_nii6548 + g_nii6583
+
+        ############################ HALPHA ########################################
+        ## Initial estimate of amplitude
+        amp_ha = np.max(flam_nii_ha_sii[(lam_nii_ha_sii > 6560)&(lam_nii_ha_sii < 6568)])
+
+        ## Initial gaussian gits
+        g_ha_n = Gaussian1D(amplitude = amp_ha, mean = 6564.312, \
+                           stddev = 1.0, name = 'ha_n', \
+                           bounds = {'amplitude':(0.0, None), 'stddev':(0.0, None)})
+        g_ha_b = Gaussian1D(amplitude = amp_ha/2, mean = 6564.312, \
+                           stddev = 5.0, name = 'ha_b', \
+                           bounds = {'amplitude':(0.0, None), 'stddev':(0.0, None)})
+
+        ## Tie sigma of narrow Ha to [SII] in velocity space
+        def tie_std_ha(model):
+            return ((model['sii6716'].stddev)*(model['ha_n'].mean/model['sii6716'].mean))
+
+        g_ha_n.stddev.tied = tie_std_ha
+
+        g_ha = g_ha_n + g_ha_b
+
+        ############################ Continuum #####################################
+
+        cont = Const1D(amplitude = 0.0, name = 'nii_ha_sii_cont')
+
+        ## Initial Fit
+        g_init = cont + g_nii + g_ha + g_sii
+        fitter = fitting.LevMarLSQFitter()
+
+        gfit = fitter(g_init, lam_nii_ha_sii, flam_nii_ha_sii, \
+                     weights = np.sqrt(ivar_nii_ha_sii), maxiter = 1000)
+        ## Returns the best-fit model with a broad component
+        return (gfit)
+    
+####################################################################################################
+
+    def fit_hb_oiii_1comp(lam_hb_oiii, flam_hb_oiii, ivar_hb_oiii, nii_ha_sii_bestfit):
+        """
+        Function to fit Hb+[OIII] together for extreme broadline (quasar-like) sources
+        The widths of [OIII] are tied together and the widths of narrow and broad Hb components 
+        are tied to the narrow and broad Ha. 
+        This function fits one component each for the [OIII] doublet. 
+        It also allows for a broad component for Hb.
+
+        Parameters
+        ----------
+        lam_hb_oiii : numpy array
+            Wavelength array of the Hb+[OIII] region.
+
+        flam_hb_oiii : numpy array
+            Flux array of the spectra in the Hb+[OIII] region.
+
+        ivar_hb_oiii : numpy array
+            Inverse variance array of the spectra in the Hb+[OIII] region.
+            
+        nii_ha_sii_bestfit : Astropy model
+            Best fit model for the [NII]+Ha+[SII] emission-lines.
+
+        Returns
+        -------
+        gfit : Astropy model
+            Best-fit model for the Hb+[OIII] region with a broad component   
+        """
+        ############################ [OIII]4959,5007 doublet #######################
+        ## Initial estimates of amplitude
+        amp_oiii4959 = np.max(flam_hb_oiii[(lam_hb_oiii >= 4959)&(lam_hb_oiii <= 4961)])
+        amp_oiii5007 = np.max(flam_hb_oiii[(lam_hb_oiii >= 5007)&(lam_hb_oiii <= 5009)])
+
+        ## Initial gaussian fits
+        g_oiii4959 = Gaussian1D(amplitude = amp_oiii4959, mean = 4960.295, \
+                               stddev = 1.0, name = 'oiii4959', \
+                               bounds = {'amplitude' : (0.0, None), 'stddev':(0.0, None)})
+        g_oiii5007 = Gaussian1D(amplitude = amp_oiii5007, mean = 5008.239, \
+                               stddev = 1.0, name = 'oiii5007', \
+                               bounds = {'amplitude' : (0.0, None), 'stddev' : (0.0, None)})
+
+        ## Tie means of the two gaussians
+        def tie_mean_oiii(model):
+            return (model['oiii4959'].mean + 47.934)
+
+        g_oiii5007.mean.tied = tie_mean_oiii
+
+        ## Tie amplitudes of the two gaussians
+        def tie_amp_oiii(model):
+            return (model['oiii4959'].amplitude*2.98)
+
+        g_oiii5007.amplitude.tied = tie_amp_oiii
+
+        ## Tie standard deviations in velocity space
+        def tie_std_oiii(model):
+            return ((model['oiii4959'].stddev)*\
+                   (model['oiii5007'].mean/model['oiii4959'].mean))
+
+        g_oiii5007.stddev.tied = tie_std_oiii
+
+        g_oiii = g_oiii4959 + g_oiii5007
+
+        ############################ HBETA #########################################
+        ha_n_std = nii_ha_sii_bestfit['ha_n'].stddev.value
+        ha_b_std = nii_ha_sii_bestfit['ha_b'].stddev.value
+
+        ## Initial estimates of standard deviation for Hb
+        std_hb_n = (4862.683/nii_ha_sii_bestfit['ha_n'].mean.value)*ha_n_std
+        std_hb_b = (4862.683/nii_ha_sii_bestfit['ha_b'].mean.value)*ha_b_std
+
+        ## Initial estimate of amplitude
+        amp_hb = np.max(flam_hb_oiii[(lam_hb_oiii >= 4860)&(lam_hb_oiii <= 4864)])
+
+        ## Initial gaussian fits
+        g_hb_n = Gaussian1D(amplitude = amp_hb, mean = 4862.683, \
+                           stddev = std_hb_n, name = 'hb_n', \
+                           bounds = {'amplitude' : (0.0, None), 'stddev' : (0.0, None)})
+
+        g_hb_b = Gaussian1D(amplitude = amp_hb/2, mean = 4862.683, \
+                           stddev = std_hb_b, name = 'hb_b', \
+                           bounds = {'amplitude' : (0.0, None), 'stddev' : (0.0, None)})
+
+        ## Fix sigma of narrow Hb to narrow Ha
+        def tie_std_hb_n(model):
+            return ((model['hb_n'].mean/nii_ha_sii_bestfit['ha_n'].mean)*\
+                   nii_ha_sii_bestfit['ha_n'].stddev)
+
+        g_hb_n.stddev.tied = tie_std_hb_n
+        g_hb_n.stddev.fixed = True
+
+        ## Fix sigma of broad Hb to broad Ha
+        def tie_std_hb_b(model):
+            return ((model['hb_b'].mean/nii_ha_sii_bestfit['ha_b'].mean)*\
+                   nii_ha_sii_bestfit['ha_b'].stddev)
+
+        g_hb_b.stddev.tied = tie_std_hb_b
+        g_hb_b.stddev.fixed = True
+
+        g_hb = g_hb_n + g_hb_b
+
+        ############################ Continuum #####################################
+
+        cont = Const1D(amplitude = 0.0, name = 'hb_oiii_cont')
+
+        ## Initial Fit
+        g_init = cont + g_hb + g_oiii
+        fitter = fitting.LevMarLSQFitter()
+
+        gfit = fitter(g_init, lam_hb_oiii, flam_hb_oiii, \
+                     weights = np.sqrt(ivar_hb_oiii), maxiter = 1000)
+
+        return (gfit)
+
+
+####################################################################################################
+
+    def fit_hb_oiii_2comp(lam_hb_oiii, flam_hb_oiii, ivar_hb_oiii, nii_ha_sii_bestfit):
+        """
+        Function to fit Hb+[OIII] together for extreme broadline (quasar-like) sources
+        The widths of [OIII] are tied together and the widths of narrow and broad Hb components 
+        are tied to the narrow and broad Ha. 
+        This function fits two components each for the [OIII] doublet. 
+        It also allows for a broad component for Hb.
+
+        Parameters
+        ----------
+        lam_hb_oiii : numpy array
+            Wavelength array of the Hb+[OIII] region.
+
+        flam_hb_oiii : numpy array
+            Flux array of the spectra in the Hb+[OIII] region.
+
+        ivar_hb_oiii : numpy array
+            Inverse variance array of the spectra in the Hb+[OIII] region.
+            
+        nii_ha_sii_bestfit : Astropy model
+            Best fit model for the [NII]+Ha+[SII] emission-lines.
+
+        Returns
+        -------
+        gfit : Astropy model
+            Best-fit model for the Hb+[OIII] region with a broad component   
+        """
+
+        ############################ [OIII]4959,5007 doublet #######################
+        ## Initial estimates of amplitude
+        amp_oiii4959 = np.max(flam_hb_oiii[(lam_hb_oiii >= 4959)&(lam_hb_oiii <= 4961)])
+        amp_oiii5007 = np.max(flam_hb_oiii[(lam_hb_oiii >= 5007)&(lam_hb_oiii <= 5009)])
+
+        ## Initial gaussian fits
+        g_oiii4959 = Gaussian1D(amplitude = amp_oiii4959/2, mean = 4960.295, \
+                               stddev = 1.0, name = 'oiii4959', \
+                               bounds = {'amplitude' : (0.0, None), 'stddev':(0.0, None)})
+        g_oiii5007 = Gaussian1D(amplitude = amp_oiii5007/2, mean = 5008.239, \
+                               stddev = 1.0, name = 'oiii5007', \
+                               bounds = {'amplitude' : (0.0, None), 'stddev' : (0.0, None)})
+        g_oiii4959_out = Gaussian1D(amplitude = amp_oiii4959/4, mean = 4960.295, \
+                                   stddev = 4.0, name = 'oiii4959_out', \
+                                   bounds = {'amplitude' : (0.0, None), 'stddev' : (0.0, None)})
+        g_oiii5007_out = Gaussian1D(amplitude = amp_oiii5007/4, mean = 5008.239, \
+                                   stddev = 4.0, name = 'oiii5007_out', \
+                                   bounds = {'amplitude' : (0.0, None), 'stddev' : (0.0, None)})
+
+        ## Tie means of the narrow components
+        def tie_mean_oiii(model):
+            return (model['oiii4959'].mean + 47.934)
+
+        g_oiii5007.mean.tied = tie_mean_oiii
+
+        ## Tie amplitudes of the narrow components
+        def tie_amp_oiii(model):
+            return (model['oiii4959'].amplitude*2.98)
+
+        g_oiii5007.amplitude.tied = tie_amp_oiii
+
+        ## Tie standard deviations of narrow components in velocity space
+        def tie_std_oiii(model):
+            return ((model['oiii4959'].stddev)*\
+                   (model['oiii5007'].mean/model['oiii4959'].mean))
+
+        g_oiii5007.stddev.tied = tie_std_oiii
+
+        ## Tie means of outflow components
+        def tie_mean_oiii_out(model):
+            return (model['oiii4959_out'].mean + 47.934)
+
+        g_oiii5007_out.mean.tied = tie_mean_oiii_out
+
+        ## Tie amplitudes of the outflow components
+        def tie_amp_oiii_out(model):
+            return (model['oiii4959_out'].amplitude*2.98)
+
+        g_oiii5007_out.amplitude.tied = tie_amp_oiii_out
+
+        ## Tie standard deviations of outflow components in velocity space
+        def tie_std_oiii_out(model):
+            return ((model['oiii4959_out'].stddev)*\
+                   (model['oiii5007_out'].mean/model['oiii4959_out'].mean))
+
+        g_oiii5007_out.stddev.tied = tie_std_oiii_out
+
+        g_oiii = g_oiii4959 + g_oiii5007 + g_oiii4959_out + g_oiii5007_out
+
+        ############################ HBETA #########################################
+        ha_n_std = nii_ha_sii_bestfit['ha_n'].stddev.value
+        ha_b_std = nii_ha_sii_bestfit['ha_b'].stddev.value
+
+        ## Initial estimates of standard deviation for Hb
+        std_hb_n = (4862.683/nii_ha_sii_bestfit['ha_n'].mean.value)*ha_n_std
+        std_hb_b = (4862.683/nii_ha_sii_bestfit['ha_b'].mean.value)*ha_b_std
+
+        ## Initial estimate of amplitude
+        amp_hb = np.max(flam_hb_oiii[(lam_hb_oiii >= 4860)&(lam_hb_oiii <= 4864)])
+
+        ## Initial gaussian fits
+        g_hb_n = Gaussian1D(amplitude = amp_hb, mean = 4862.683, \
+                           stddev = std_hb_n, name = 'hb_n', \
+                           bounds = {'amplitude' : (0.0, None), 'stddev' : (0.0, None)})
+
+        g_hb_b = Gaussian1D(amplitude = amp_hb/2, mean = 4862.683, \
+                           stddev = std_hb_b, name = 'hb_b', \
+                           bounds = {'amplitude' : (0.0, None), 'stddev' : (0.0, None)})
+
+        ## Fix sigma of narrow Hb to narrow Ha
+        def tie_std_hb_n(model):
+            return ((model['hb_n'].mean/nii_ha_sii_bestfit['ha_n'].mean)*\
+                   nii_ha_sii_bestfit['ha_n'].stddev)
+
+        g_hb_n.stddev.tied = tie_std_hb_n
+        g_hb_n.stddev.fixed = True
+
+        ## Fix sigma of broad Hb to broad Ha
+        def tie_std_hb_b(model):
+            return ((model['hb_b'].mean/nii_ha_sii_bestfit['ha_b'].mean)*\
+                   nii_ha_sii_bestfit['ha_b'].stddev)
+
+        g_hb_b.stddev.tied = tie_std_hb_b
+        g_hb_b.stddev.fixed = True
+
+        g_hb = g_hb_n + g_hb_b
+
+        ############################ Continuum #####################################
+
+        cont = Const1D(amplitude = 0.0, name = 'hb_oiii_cont')
+
+        ## Initial Fit
+        g_init = cont + g_hb + g_oiii
+        fitter = fitting.LevMarLSQFitter()
+
+        gfit = fitter(g_init, lam_hb_oiii, flam_hb_oiii, \
+                     weights = np.sqrt(ivar_hb_oiii), maxiter = 1000)
+
+        return (gfit)
+
+####################################################################################################
+####################################################################################################

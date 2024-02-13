@@ -734,3 +734,136 @@ def find_free_nii_ha_best_fit(lam_nii_ha, flam_nii_ha, ivar_nii_ha, sii_bestfit)
 
 ####################################################################################################
 ####################################################################################################
+
+def find_nii_ha_sii_best_fit(lam_nii_ha_sii, flam_nii_ha_sii, ivar_nii_ha_sii):
+    """
+    Find the bestfit for [NII]+Ha+[SII]region. This is for the case of 
+    extreme broadline (quasar-like) sources. 
+    
+    Parameters
+    ----------
+    lam_hb_oiii : numpy array
+        Wavelength array of the Hb+[OIII] region.
+
+    flam_hb_oiii : numpy array
+        Flux array of the spectra in the Hb+[OIII] region.
+
+    ivar_hb_oiii : numpy array
+        Inverse variance array of the spectra in the Hb+[OIII] region.
+
+    nii_ha_sii_bestfit : Astropy model
+        Best fit model for the [NII]+Ha+[SII] emission-lines.
+
+    Returns
+    -------
+    nii_ha_sii_bestfit : Astropy model
+        Best-fit model for the Hb+[OIII] region with a broad component   
+        
+    n_dof : int
+        Number of degrees of freedom
+    """
+    
+    nii_ha_sii_bestfit = fl.fit_extreme_broadline_sources.fit_nii_ha_sii(lam_nii_ha_sii,\
+                                                                  flam_nii_ha_sii,\
+                                                                  ivar_nii_ha_sii)
+    
+    n_dof = 12
+    
+    return (nii_ha_sii_bestfit, n_dof)
+
+####################################################################################################
+####################################################################################################
+
+def find_hb_oiii_bestfit(lam_hb_oiii, flam_hb_oiii, ivar_hb_oiii, nii_ha_sii_bestfit):
+    """
+    Find the bestfit for the Hb+[OIII] region. This is for the case of 
+    extreme broadline (quasar-like) sources.
+    The code fits both one-component and two-component fits for [OIII] doublet and 
+    picks the best version.
+    The two-component fit is picked if the p-value for chi2 distribution is < 3e-7 -->
+    5-sigma confidence for an extra component statistically.
+    
+    Parameters
+    ----------
+    lam_hb_oiii : numpy array
+        Wavelength array of the Hb+[OIII] region.
+
+    flam_hb_oiii : numpy array
+        Flux array of the spectra in the Hb+[OIII] region.
+
+    ivar_hb_oiii : numpy array
+        Inverse variance array of the spectra in the Hb+[OIII] region.
+
+    nii_ha_sii_bestfit : Astropy model
+        Best fit model for the [NII]+Ha+[SII] emission-lines.
+
+    Returns
+    -------
+    hb_oiii_bestfit : Astropy model
+        Best-fit model for the Hb+[OIII] region with a broad component 
+        
+    n_dof : int
+        Number of degrees of freedom
+    """
+
+    ## Single component fit
+    gfit_1comp = fl.fit_extreme_broadline_sources.fit_hb_oiii_1comp(lam_hb_oiii, \
+                                                                    flam_hb_oiii, \
+                                                                    ivar_hb_oiii, \
+                                                                    nii_ha_sii_bestfit)
+    
+    ## Two component fit
+    gfit_2comp = fl.fit_extreme_broadline_sources.fit_hb_oiii_2comp(lam_hb_oiii, \
+                                                                    flam_hb_oiii, \
+                                                                    ivar_hb_oiii, \
+                                                                    nii_ha_sii_bestfit)
+    
+    ## Chi2 values for both the fits
+    chi2_1comp = mfit.calculate_chi2(flam_hb_oiii, gfit_1comp(lam_hb_oiii), ivar_hb_oiii)
+    chi2_2comp = mfit.calculate_chi2(flam_hb_oiii, gfit_2comp(lam_hb_oiii), ivar_hb_oiii)
+    
+    ## Statistical check for the second component
+    df = 11-8
+    del_chi2 = chi2_1comp - chi2_2comp
+    p_val = chi2.sf(del_chi2, df)
+    
+    ## 5-sigma confidence of an extra component
+    if (p_val <= 3e-7):
+        ## Set the broad component as the "outflow" component
+        oiii_out_sig = mfit.lamspace_to_velspace(gfit_2comp['oiii5007_out'].stddev.value, \
+                                                 gfit_2comp['oiii5007_out'].mean.value)
+        oiii_sig = mfit.lamspace_to_velspace(gfit_2comp['oiii5007'].stddev.value, \
+                                            gfit_2comp['oiii5007'].mean.value)
+        
+        if (oiii_out_sig < oiii_sig):
+            gfit_oiii4959 = Gaussian1D(amplitude = gfit_2comp['oiii4959_out'].amplitude, \
+                                      mean = gfit_2comp['oiii4959_out'].mean, \
+                                      stddev = gfit_2comp['oiii4959_out'].stddev, \
+                                      name = 'oiii4959')
+            gfit_oiii5007 = Gaussian1D(amplitude = gfit_2comp['oiii5007_out'].amplitude, \
+                                      mean = gfit_2comp['oiii5007_out'].mean, \
+                                      stddev = gfit_2comp['oiii5007_out'].stddev, \
+                                      name = 'oiii5007')
+            gfit_oiii4959_out = Gaussian1D(amplitude = gfit_2comp['oiii4959'].amplitude, \
+                                          mean = gfit_2comp['oiii4959'].mean, \
+                                          stddev = gfit_2comp['oiii4959'].stddev, \
+                                          name = 'oiii4959_out')
+            gfit_oiii5007_out = Gaussian1D(amplitude = gfit_2comp['oiii5007'].amplitude, \
+                                          mean = gfit_2comp['oiii5007'].mean, \
+                                          stddev = gfit_2comp['oiii5007'].stddev, \
+                                          name = 'oiii5007_out')
+            cont = gfit_2comp['hb_oiii_cont'] 
+            gfit_hb = gfit_2comp['hb_n'] + gfit_2comp['hb_b']
+            gfit_2comp = cont + gfit_hb + gfit_oiii4959 + gfit_oiii5007 + \
+            gfit_oiii4959_out + gfit_oiii5007_out
+        
+        hb_oiii_bestfit = gfit_2comp
+        n_dof = 11
+    else:
+        hb_oiii_bestfit = gfit_1comp
+        n_dof = 8
+        
+    return (hb_oiii_bestfit, n_dof)
+
+####################################################################################################
+####################################################################################################
