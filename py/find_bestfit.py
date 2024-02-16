@@ -62,8 +62,12 @@ def find_sii_best_fit(lam_sii, flam_sii, ivar_sii):
     del_chi2 = chi2_1comp - chi2_2comp
     p_val = chi2.sf(del_chi2, df)
     
+    ## Critetion to have min([SII]) in two-component model to be 35 km/s
+    sig_sii = mfit.lamspace_to_velspace(gfit_2comp['sii6716'].stddev.value, \
+                                       gfit_2comp['sii6716'].mean.value)
+    
     ## 5-sigma confidence of an extra component
-    if (p_val <= 3e-7):
+    if ((p_val <= 3e-7)&(sig_sii >= 35)):
         sii_bestfit = gfit_2comp
         n_dof = 8
     else:
@@ -117,8 +121,12 @@ def find_oiii_best_fit(lam_oiii, flam_oiii, ivar_oiii):
     del_chi2 = chi2_1comp - chi2_2comp
     p_val = chi2.sf(del_chi2, df)
     
+    ## Critetion to have min([OIII]) in two-component model to be 35 km/s
+    sig_oiii = mfit.lamspace_to_velspace(gfit_2comp['oiii5007'].stddev.value, \
+                                       gfit_2comp['oiii5007'].mean.value)
+    
     ## 5-sigma confidence of an extra component
-    if (p_val <= 3e-7):
+    if ((p_val <= 3e-7)&(sig_oiii >= 35)):
         oiii_bestfit = gfit_2comp
         n_dof = 7
     else:
