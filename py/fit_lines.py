@@ -374,6 +374,33 @@ class fit_oiii_lines:
 
         gfit_2comp = fitter_2comp(g_init, lam_oiii, flam_oiii, \
                             weights = np.sqrt(ivar_oiii), maxiter = 1000)
+        
+        ## Set the broad component as the "outflow" component
+        oiii_out_sig = mfit.lamspace_to_velspace(gfit_2comp['oiii5007_out'].stddev.value, \
+                                                 gfit_2comp['oiii5007_out'].mean.value)
+        oiii_sig = mfit.lamspace_to_velspace(gfit_2comp['oiii5007'].stddev.value, \
+                                            gfit_2comp['oiii5007'].mean.value)
+        
+        if (oiii_out_sig < oiii_sig):
+            gfit_oiii4959 = Gaussian1D(amplitude = gfit_2comp['oiii4959_out'].amplitude, \
+                                      mean = gfit_2comp['oiii4959_out'].mean, \
+                                      stddev = gfit_2comp['oiii4959_out'].stddev, \
+                                      name = 'oiii4959')
+            gfit_oiii5007 = Gaussian1D(amplitude = gfit_2comp['oiii5007_out'].amplitude, \
+                                      mean = gfit_2comp['oiii5007_out'].mean, \
+                                      stddev = gfit_2comp['oiii5007_out'].stddev, \
+                                      name = 'oiii5007')
+            gfit_oiii4959_out = Gaussian1D(amplitude = gfit_2comp['oiii4959'].amplitude, \
+                                          mean = gfit_2comp['oiii4959'].mean, \
+                                          stddev = gfit_2comp['oiii4959'].stddev, \
+                                          name = 'oiii4959_out')
+            gfit_oiii5007_out = Gaussian1D(amplitude = gfit_2comp['oiii5007'].amplitude, \
+                                          mean = gfit_2comp['oiii5007'].mean, \
+                                          stddev = gfit_2comp['oiii5007'].stddev, \
+                                          name = 'oiii5007_out')
+            cont = gfit_2comp['oiii_cont'] 
+            gfit_2comp = cont + gfit_oiii4959 + gfit_oiii5007 + \
+            gfit_oiii4959_out + gfit_oiii5007_out
             
         return (gfit_2comp)
 
