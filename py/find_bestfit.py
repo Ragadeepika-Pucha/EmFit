@@ -64,33 +64,6 @@ def find_sii_best_fit(lam_sii, flam_sii, ivar_sii):
     
     ## 5-sigma confidence of an extra component
     if (p_val <= 3e-7):
-        sii_out_sig = mfit.lamspace_to_velspace(gfit_2comp['sii6716_out'].stddev.value, \
-                                               gfit_2comp['sii6716_out'].mean.value)
-        sii_sig = mfit.lamspace_to_velspace(gfit_2comp['sii6716'].stddev.value, \
-                                               gfit_2comp['sii6716'].mean.value)
-        
-        if (sii_out_sig < sii_sig):
-            ## Set the broader component as "outflow" component
-            gfit_sii6716 = Gaussian1D(amplitude = gfit_2comp['sii6716_out'].amplitude, \
-                                     mean = gfit_2comp['sii6716_out'].mean, \
-                                     stddev = gfit_2comp['sii6716_out'].stddev, \
-                                     name = 'sii6716')
-            gfit_sii6731 = Gaussian1D(amplitude = gfit_2comp['sii6731_out'].amplitude, \
-                                     mean = gfit_2comp['sii6731_out'].mean, \
-                                     stddev = gfit_2comp['sii6731_out'].stddev, \
-                                     name = 'sii6731')
-            gfit_sii6716_out = Gaussian1D(amplitude = gfit_2comp['sii6716'].amplitude, \
-                                         mean = gfit_2comp['sii6716'].mean, \
-                                         stddev = gfit_2comp['sii6716'].stddev, \
-                                         name = 'sii6716_out')
-            gfit_sii6731_out = Gaussian1D(amplitude = gfit_2comp['sii6731'].amplitude, \
-                                         mean = gfit_2comp['sii6731_out'].mean, \
-                                         stddev = gfit_2comp['sii6731_out'].stddev, \
-                                         name = 'sii6731_out')
-            cont = gfit_2comp['sii_cont']
-            
-            gfit_2comp = cont + gfit_sii6716 + gfit_sii6731 + gfit_sii6716_out + gfit_sii6731_out
-        
         sii_bestfit = gfit_2comp
         n_dof = 8
     else:
