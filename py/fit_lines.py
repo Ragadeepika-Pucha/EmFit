@@ -3,7 +3,7 @@ This script consists of funcitons for fitting emission-lines.
 The different functions are divided into different classes for different emission lines.
 
 Author : Ragadeepika Pucha
-Version : 2024, February 16
+Version : 2024, February 18
 """
 
 ###################################################################################################
@@ -1149,7 +1149,7 @@ class fit_extreme_broadline_sources:
         3) fit_hb_oiii_2comp(lam_hb_oiii, flam_hb_oiii, ivar_hb_oiii, nii_ha_sii_bestfit)
         
     """
-    def fit_nii_ha_sii(lam_nii_ha_sii, flam_nii_ha_sii, ivar_nii_ha_sii):
+    def fit_nii_ha_sii(lam_nii_ha_sii, flam_nii_ha_sii, ivar_nii_ha_sii, sii_bestfit):
         """
         Function to fit [NII]+Ha+[SII] together for extreme broadline (quasar-like) sources
         The widths of all the narrow-line components are tied together.
@@ -1165,6 +1165,11 @@ class fit_extreme_broadline_sources:
 
         ivar_nii_ha_sii : numpy array
             Inverse Variance array of the spectra in the [NII]+Ha+[SII] region.
+            
+        sii_bestfit : Astropy model
+            Bestfit model for [SII]. 
+            The standard deviation of the narrow component is taken as the 
+            initial guess for the narrow components
 
         Returns
         -------
@@ -1175,15 +1180,15 @@ class fit_extreme_broadline_sources:
         ## Initial estimate of amplitudes
         amp_sii6716 = np.max(flam_nii_ha_sii[(lam_nii_ha_sii >= 6716)&(lam_nii_ha_sii <= 6719)])
         amp_sii6731 = np.max(flam_nii_ha_sii[(lam_nii_ha_sii >= 6731)&(lam_nii_ha_sii <= 6734)])
-
-        #print (amp_sii6716, amp_sii6731)
+        
+        temp_std = sii_bestfit['sii6716'].stddev.value
 
         ## Initial gaussian fits
         g_sii6716 = Gaussian1D(amplitude = amp_sii6716, mean = 6718.294, \
-                               stddev = 1.0, name = 'sii6716', \
+                               stddev = temp_std, name = 'sii6716', \
                                bounds = {'amplitude': (0.0, None), 'stddev':(0.0, None)})
         g_sii6731 = Gaussian1D(amplitude = amp_sii6731, mean = 6732.673, \
-                              stddev = 1.0, name = 'sii6731', \
+                              stddev = temp_std, name = 'sii6731', \
                               bounds = {'amplitude': (0.0, None), 'stddev':(0.0, None)})
 
         ## Tie means of the two gaussians
@@ -1207,10 +1212,10 @@ class fit_extreme_broadline_sources:
 
         ## Initial gaussian fits
         g_nii6548 = Gaussian1D(amplitude = amp_nii6548, mean = 6549.852, \
-                              stddev = 1.0, name = 'nii6548', \
+                              stddev = temp_std, name = 'nii6548', \
                               bounds = {'amplitude':(0.0, None), 'stddev':(0.0, None)})
         g_nii6583 = Gaussian1D(amplitude = amp_nii6583, mean = 6585.277, \
-                              stddev = 1.0, name = 'nii6583', \
+                              stddev = temp_std, name = 'nii6583', \
                               bounds = {'amplitude':(0.0, None), 'stddev':(0.0, None)})
 
         ## Tie means of the two gaussians
@@ -1244,10 +1249,10 @@ class fit_extreme_broadline_sources:
 
         ## Initial gaussian gits
         g_ha_n = Gaussian1D(amplitude = amp_ha, mean = 6564.312, \
-                           stddev = 1.0, name = 'ha_n', \
+                           stddev = temp_std, name = 'ha_n', \
                            bounds = {'amplitude':(0.0, None), 'stddev':(0.0, None)})
         g_ha_b = Gaussian1D(amplitude = amp_ha/2, mean = 6564.312, \
-                           stddev = 4.5, name = 'ha_b', \
+                           stddev = 6.0, name = 'ha_b', \
                            bounds = {'amplitude':(0.0, None), 'stddev':(0.0, None)})
 
         ## Tie sigma of narrow Ha to [SII] in velocity space
@@ -1523,6 +1528,34 @@ class fit_extreme_broadline_sources:
 
         gfit = fitter(g_init, lam_hb_oiii, flam_hb_oiii, \
                      weights = np.sqrt(ivar_hb_oiii), maxiter = 1000)
+        
+        ## Set the broad component as the "outflow" component
+        oiii_out_sig = mfit.lamspace_to_velspace(gfit['oiii5007_out'].stddev.value, \
+                                                 gfit['oiii5007_out'].mean.value)
+        oiii_sig = mfit.lamspace_to_velspace(gfit['oiii5007'].stddev.value, \
+                                            gfit['oiii5007'].mean.value)
+        
+        if (oiii_out_sig < oiii_sig):
+            gfit_oiii4959 = Gaussian1D(amplitude = gfit['oiii4959_out'].amplitude, \
+                                      mean = gfit['oiii4959_out'].mean, \
+                                      stddev = gfit['oiii4959_out'].stddev, \
+                                      name = 'oiii4959')
+            gfit_oiii5007 = Gaussian1D(amplitude = gfit['oiii5007_out'].amplitude, \
+                                      mean = gfit['oiii5007_out'].mean, \
+                                      stddev = gfit['oiii5007_out'].stddev, \
+                                      name = 'oiii5007')
+            gfit_oiii4959_out = Gaussian1D(amplitude = gfit['oiii4959'].amplitude, \
+                                          mean = gfit['oiii4959'].mean, \
+                                          stddev = gfit['oiii4959'].stddev, \
+                                          name = 'oiii4959_out')
+            gfit_oiii5007_out = Gaussian1D(amplitude = gfit['oiii5007'].amplitude, \
+                                          mean = gfit['oiii5007'].mean, \
+                                          stddev = gfit['oiii5007'].stddev, \
+                                          name = 'oiii5007_out')
+            cont = gfit['hb_oiii_cont'] 
+            gfit_hb = gfit['hb_n'] + gfit['hb_b']
+            gfit = cont + gfit_hb + gfit_oiii4959 + gfit_oiii5007 + \
+            gfit_oiii4959_out + gfit_oiii5007_out
 
         return (gfit)
 
