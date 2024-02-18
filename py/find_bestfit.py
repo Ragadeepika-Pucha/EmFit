@@ -482,7 +482,7 @@ def find_hb_best_fit(lam_hb, flam_hb, ivar_hb, nii_ha_bestfit):
 ####################################################################################################
 ####################################################################################################
 
-def find_nii_ha_sii_best_fit(lam_nii_ha_sii, flam_nii_ha_sii, ivar_nii_ha_sii, sii_bestfit):
+def find_nii_ha_sii_best_fit(lam_nii_ha_sii, flam_nii_ha_sii, ivar_nii_ha_sii):
     """
     Find the bestfit for [NII]+Ha+[SII]region. This is for the case of 
     extreme broadline (quasar-like) sources. 
@@ -497,9 +497,6 @@ def find_nii_ha_sii_best_fit(lam_nii_ha_sii, flam_nii_ha_sii, ivar_nii_ha_sii, s
 
     ivar_nii_ha_sii : numpy array
         Inverse variance array of the spectra in the [NII]+Ha+[SII] region.
-
-    sii_bestfit : Astropy model
-        Best fit model for the [SII] emission-lines.
         
     Returns
     -------
@@ -512,8 +509,7 @@ def find_nii_ha_sii_best_fit(lam_nii_ha_sii, flam_nii_ha_sii, ivar_nii_ha_sii, s
     
     nii_ha_sii_bestfit = fl.fit_extreme_broadline_sources.fit_nii_ha_sii(lam_nii_ha_sii,\
                                                                          flam_nii_ha_sii,\
-                                                                         ivar_nii_ha_sii, \
-                                                                         sii_bestfit)
+                                                                         ivar_nii_ha_sii)
     
     n_dof = 12
     

@@ -1149,7 +1149,7 @@ class fit_extreme_broadline_sources:
         3) fit_hb_oiii_2comp(lam_hb_oiii, flam_hb_oiii, ivar_hb_oiii, nii_ha_sii_bestfit)
         
     """
-    def fit_nii_ha_sii(lam_nii_ha_sii, flam_nii_ha_sii, ivar_nii_ha_sii, sii_bestfit):
+    def fit_nii_ha_sii(lam_nii_ha_sii, flam_nii_ha_sii, ivar_nii_ha_sii):
         """
         Function to fit [NII]+Ha+[SII] together for extreme broadline (quasar-like) sources
         The widths of all the narrow-line components are tied together.
@@ -1165,11 +1165,6 @@ class fit_extreme_broadline_sources:
 
         ivar_nii_ha_sii : numpy array
             Inverse Variance array of the spectra in the [NII]+Ha+[SII] region.
-            
-        sii_bestfit : Astropy model
-            Bestfit model for [SII]. 
-            The standard deviation of the narrow component is taken as the 
-            initial guess for the narrow components
 
         Returns
         -------
@@ -1181,14 +1176,12 @@ class fit_extreme_broadline_sources:
         amp_sii6716 = np.max(flam_nii_ha_sii[(lam_nii_ha_sii >= 6716)&(lam_nii_ha_sii <= 6719)])
         amp_sii6731 = np.max(flam_nii_ha_sii[(lam_nii_ha_sii >= 6731)&(lam_nii_ha_sii <= 6734)])
         
-        temp_std = sii_bestfit['sii6716'].stddev.value
-
         ## Initial gaussian fits
         g_sii6716 = Gaussian1D(amplitude = amp_sii6716, mean = 6718.294, \
-                               stddev = temp_std, name = 'sii6716', \
+                               stddev = 1.0, name = 'sii6716', \
                                bounds = {'amplitude': (0.0, None), 'stddev':(0.0, None)})
         g_sii6731 = Gaussian1D(amplitude = amp_sii6731, mean = 6732.673, \
-                              stddev = temp_std, name = 'sii6731', \
+                              stddev = 1.0, name = 'sii6731', \
                               bounds = {'amplitude': (0.0, None), 'stddev':(0.0, None)})
 
         ## Tie means of the two gaussians
@@ -1212,10 +1205,10 @@ class fit_extreme_broadline_sources:
 
         ## Initial gaussian fits
         g_nii6548 = Gaussian1D(amplitude = amp_nii6548, mean = 6549.852, \
-                              stddev = temp_std, name = 'nii6548', \
+                              stddev = 1.0, name = 'nii6548', \
                               bounds = {'amplitude':(0.0, None), 'stddev':(0.0, None)})
         g_nii6583 = Gaussian1D(amplitude = amp_nii6583, mean = 6585.277, \
-                              stddev = temp_std, name = 'nii6583', \
+                              stddev = 1.0, name = 'nii6583', \
                               bounds = {'amplitude':(0.0, None), 'stddev':(0.0, None)})
 
         ## Tie means of the two gaussians
@@ -1249,10 +1242,10 @@ class fit_extreme_broadline_sources:
 
         ## Initial gaussian gits
         g_ha_n = Gaussian1D(amplitude = amp_ha, mean = 6564.312, \
-                           stddev = temp_std, name = 'ha_n', \
+                           stddev = 1.0, name = 'ha_n', \
                            bounds = {'amplitude':(0.0, None), 'stddev':(0.0, None)})
         g_ha_b = Gaussian1D(amplitude = amp_ha/2, mean = 6564.312, \
-                           stddev = 6.0, name = 'ha_b', \
+                           stddev = 4.5, name = 'ha_b', \
                            bounds = {'amplitude':(0.0, None), 'stddev':(0.0, None)})
 
         ## Tie sigma of narrow Ha to [SII] in velocity space
