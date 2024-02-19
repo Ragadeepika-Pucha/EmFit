@@ -84,10 +84,10 @@ def fit_spectra(specprod, survey, program, healpix, targetid, z):
     ## Fit [SII] lines first
     lam_sii, flam_sii, ivar_sii = spec_utils.get_fit_window(lam_rest, flam_rest, ivar_rest, em_line = 'sii')
     sii_fit, _ = find_bestfit.find_sii_best_fit(lam_sii, flam_sii, ivar_sii)
-    sii_diff, sii_frac = measure_sii_difference(lam_sii, flam_sii)
+    sii_diff, sii_frac = mfit.measure_sii_difference(lam_sii, flam_sii)
     
     ## Conditions for separating extreme broadline sources
-    sii_frac_cond = (np.abs(sii_frac) >= 10)
+    sii_frac_cond = (np.abs(sii_frac) >= 2.5)
     sii_diff_cond = (sii_diff >= 0.5)
         
     if ('sii6716_out' in sii_fit.submodel_names):
@@ -98,15 +98,30 @@ def fit_spectra(specprod, survey, program, healpix, targetid, z):
         
     sii_out_cond = (sii_out_sig >= 1000)
     
-    ext_cond = (sii_frac_cond)|(sii_diff_cond)|(sii_out_cond)
+    ext_cond = ((sii_frac_cond)&(sii_diff_cond))|(sii_out_cond)
     
     if ext_cond:
         ## Fit using extreme-line fitting code
-        t_params = fit_spectra_extreme(coadd_spec, lam_rest, flam_rest, ivar_rest)
+        hb_params, oiii_params, \
+        nii_ha_params, sii_params = fit_spectra_extreme(coadd_spec, lam_rest, flam_rest, ivar_rest)
     else:
         ## Fit using normal fitting code
-        t_params = fit_spectra_normal(coadd_spec, lam_rest, flam_rest, ivar_rest)
+        hb_params, oiii_params, \
+        nii_ha_params, sii_params = fit_spectra_normal(coadd_spec, lam_rest, flam_rest, ivar_rest)
         
+    ######## Combine everything
+    tgt = {}
+    tgt['targetid'] = [targetid]
+    tgt['specprod'] = [specprod]
+    tgt['survey'] = [survey]
+    tgt['program'] = [program]
+    tgt['healpix'] = [healpix]
+    tgt['z'] = [z]
+    
+    t_params = Table(tgt|hb_params|oiii_params|nii_ha_params|sii_params)
+    for col in t_params.colnames:
+        t_params.rename_column(col, col.upper())
+    
     return (t_params)
 
 ####################################################################################################
@@ -133,8 +148,17 @@ def fit_spectra_normal(coadd_spec, lam_rest, flam_rest, ivar_rest):
         
     Returns
     -------
-    t_params : Astropy Table
-        Table of parameters from the fits
+    hb_params : dict
+        List of parameters related to Hb Fitting
+        
+    oiii_params : dict
+        List of parameters related to [OIII] Fitting
+        
+    nii_ha_params : dict
+        List of parameters related to [NII]+Ha Fitting
+        
+    sii_params : dict
+        List of parameters related to [SII] Fitting
     """
     
     ## Fitting windows for the different emission-lines
@@ -213,20 +237,7 @@ def fit_spectra_normal(coadd_spec, lam_rest, flam_rest, ivar_rest):
     sii_params['sii_rchi2'] = [rchi2_sii]
     sii_params['nii_ha_sii_rchi2'] = [0.0]
     
-    ######## Combine everything
-    tgt = {}
-    tgt['targetid'] = [targetid]
-    tgt['specprod'] = [specprod]
-    tgt['survey'] = [survey]
-    tgt['program'] = [program]
-    tgt['healpix'] = [healpix]
-    tgt['z'] = [z]
-    
-    t_params = Table(tgt|hb_params|oiii_params|nii_ha_params|sii_params)
-    for col in t_params.colnames:
-        t_params.rename_column(col, col.upper())
-        
-    return (t_params)
+    return (hb_params, oiii_params, nii_ha_params, sii_params)
 
 ####################################################################################################
 ####################################################################################################
@@ -252,8 +263,18 @@ def fit_spectra_extreme(coadd_spec, lam_rest, flam_rest, ivar_rest):
         
     Returns
     -------
-    t_params : Astropy Table
-        Table of parameters from the fits
+    hb_params : dict
+        List of parameters related to Hb Fitting
+        
+    oiii_params : dict
+        List of parameters related to [OIII] Fitting
+        
+    nii_ha_params : dict
+        List of parameters related to [NII]+Ha Fitting
+        
+    sii_params : dict
+        List of parameters related to [SII] Fitting
+    
     """
     
     ## Fitting windows for the different emission-line regions
@@ -270,9 +291,9 @@ def fit_spectra_extreme(coadd_spec, lam_rest, flam_rest, ivar_rest):
                                                                   ivar_hb_oiii, gfit_nii_ha_sii)
     
     ## Compute reduced_chi2
-    rchi2_nii_ha_sii = mfit.calculate_chi2(flam_nii_ha_sii, gfit_nii_ha_sii(lam_nii_ha_sii), \
+    rchi2_nii_ha_sii = mfit.calculate_chi2(flam_nii_ha_sii, gfit_nii_ha_sii(lam_nii_ha_sii), ivar_nii_ha_sii, \
                                           ndof_nii_ha_sii, reduced_chi2 = True)
-    rchi2_hb_oiii = mfit.calculate_chi2(flam_hb_oiii, gfit_hb_oiii(lam_hb_oiii), \
+    rchi2_hb_oiii = mfit.calculate_chi2(flam_hb_oiii, gfit_hb_oiii(lam_hb_oiii), ivar_hb_oiii, \
                                        ndof_hb_oiii, reduced_chi2 = True)
     
     ## Parameters for the fit
@@ -307,21 +328,8 @@ def fit_spectra_extreme(coadd_spec, lam_rest, flam_rest, ivar_rest):
     nii_ha_params['nii_ha_rchi2'] = [0.0]
     sii_params['sii_rchi2'] = [0.0]
     sii_params['nii_ha_sii_rchi2'] = [rchi2_nii_ha_sii]
-
-    ######## Combine everything
-    tgt = {}
-    tgt['targetid'] = [targetid]
-    tgt['specprod'] = [specprod]
-    tgt['survey'] = [survey]
-    tgt['program'] = [program]
-    tgt['healpix'] = [healpix]
-    tgt['z'] = [z]
-    
-    t_params = Table(tgt|hb_params|oiii_params|nii_ha_params|sii_params)
-    for col in t_params.colnames:
-        t_params.rename_column(col, col.upper())
         
-    return (t_params)
+    return (hb_params, oiii_params, nii_ha_params, sii_params)
 
 ####################################################################################################
 ####################################################################################################
@@ -550,7 +558,7 @@ def construct_extreme_fits(t, index):
                               mean = t['OIII4959_MEAN'].data[index], \
                               stddev = t['OIII4959_STD'].data[index], name = 'oiii4959')
     
-    gfit_oiii4959 = Gaussian1D(amplitude = t['OIII5007_AMPLITUDE'].data[index], \
+    gfit_oiii5007 = Gaussian1D(amplitude = t['OIII5007_AMPLITUDE'].data[index], \
                               mean = t['OIII5007_MEAN'].data[index], \
                               stddev = t['OIII5007_STD'].data[index], name = 'oiii5007')
     

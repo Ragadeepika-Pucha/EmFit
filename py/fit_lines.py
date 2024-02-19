@@ -1244,8 +1244,8 @@ class fit_extreme_broadline_sources:
         g_ha_n = Gaussian1D(amplitude = amp_ha, mean = 6564.312, \
                            stddev = 1.0, name = 'ha_n', \
                            bounds = {'amplitude':(0.0, None), 'stddev':(0.0, None)})
-        g_ha_b = Gaussian1D(amplitude = amp_ha/2, mean = 6564.312, \
-                           stddev = 4.5, name = 'ha_b', \
+        g_ha_b = Gaussian1D(amplitude = amp_ha/3, mean = 6564.312, \
+                           stddev = 6.0, name = 'ha_b', \
                            bounds = {'amplitude':(0.0, None), 'stddev':(0.0, None)})
 
         ## Tie sigma of narrow Ha to [SII] in velocity space
