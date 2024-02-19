@@ -331,7 +331,7 @@ def get_fit_window(lam_rest, flam_rest, ivar_rest, em_line):
         flam_win = flam_rest[lam_ii]
         ivar_win = ivar_rest[lam_ii]
     elif (em_line == 'sii'):
-        lam_ii = (lam_rest >= 6650)&(lam_rest <= 6900)
+        lam_ii = (lam_rest >= 6630)&(lam_rest <= 6900)
         lam_win = lam_rest[lam_ii]
         flam_win = flam_rest[lam_ii]
         ivar_win = ivar_rest[lam_ii]
