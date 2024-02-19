@@ -6,9 +6,10 @@ The script consists of following functions:
     3) velspace_to_lamspace(vel, lam_ref)
     4) compute_noise_emline(lam_rest, flam_rest, model, em_line)
     5) compute_emline_flux(amplitude, stddev, amplitude_err, stddev_err)
+    6) measure_sii_difference(lam_sii, flam_sii)
     
 Author : Ragadeepika Pucha
-Version : 2024, February 8
+Version : 2024, February 18
 """
 
 ###################################################################################################
@@ -234,5 +235,39 @@ def compute_emline_flux(amplitude, stddev, amplitude_err = None, stddev_err = No
         return (flux, flux_err)
     else:
         return (flux)
+
+####################################################################################################
+
+def measure_sii_difference(lam_sii, flam_sii):
+    """
+    To measure the difference between the left and right sides of the [SII]6716,6731 doublet.
+    
+    Parameters
+    ----------
+    lam_sii : numpy array
+        Wavelength array of the [SII] region
+        
+    flam_sii : numpy array
+        Flux array of the [SII] region
+        
+    Returns
+    -------
+    diff : float
+        Difference between median left flux and median right flux
+        
+    frac : float
+        Fraction of median left flux and median right flux
+    """
+
+    lam_left = (lam_sii <= 6670)|((lam_sii >= 6790)&(lam_sii <= 6700))
+    lam_right = (lam_sii >= 6700)
+    
+    flam_left = flam_sii[lam_left]
+    flam_right = flam_sii[lam_right]
+    
+    diff = np.median(flam_left) - np.median(flam_right)
+    frac = np.median(flam_left)/np.median(flam_right)
+    
+    return (diff, frac)
 
 ####################################################################################################
