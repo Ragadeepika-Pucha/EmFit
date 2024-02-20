@@ -61,8 +61,11 @@ class fit_sii_lines:
                                bounds = {'amplitude' : (0.0, None), 'stddev' : (0.0, None)})
         
         ## Tie means of the two gaussians
+        # def tie_mean_sii(model):
+        #     return (model['sii6716'].mean + 14.329)
+        
         def tie_mean_sii(model):
-            return (model['sii6716'].mean + 14.329)
+            return ((6732.673/6718.294)*model['sii6716'].mean)
 
         g_sii6731.mean.tied = tie_mean_sii
 
@@ -130,8 +133,11 @@ class fit_sii_lines:
                                    bounds = {'amplitude' : (0.0, None), 'stddev' : (0.8, None)})
 
         ## Tie means of the main gaussian components
+        # def tie_mean_sii(model):
+        #     return (model['sii6716'].mean + 14.379)
+        
         def tie_mean_sii(model):
-            return (model['sii6716'].mean + 14.379)
+            return ((6732.673/6718.294)*model['sii6716'].mean)
 
         g_sii6731.mean.tied = tie_mean_sii
 
@@ -143,8 +149,11 @@ class fit_sii_lines:
         g_sii6731.stddev.tied = tie_std_sii
 
         ## Tie means of the outflow components
+        # def tie_mean_sii_out(model):
+        #     return (model['sii6716_out'].mean + 14.379)
+        
         def tie_mean_sii_out(model):
-            return (model['sii6716_out'].mean + 14.379)
+            return ((6732.673/6718.294)*model['sii6716_out'].mean)
 
         g_sii6731_out.mean.tied = tie_mean_sii_out
 
@@ -247,8 +256,11 @@ class fit_oiii_lines:
                                 bounds = {'amplitude' : (0.0, None), 'stddev' : (0.0, None)})
 
         ## Tie Means of the two gaussians
+        # def tie_mean_oiii(model):
+        #     return (model['oiii4959'].mean + 47.934)
+        
         def tie_mean_oiii(model):
-            return (model['oiii4959'].mean + 47.934)
+            return ((5008.239/4960.295)*model['oiii4959'].mean)
 
         g_oiii5007.mean.tied = tie_mean_oiii
 
@@ -326,8 +338,11 @@ class fit_oiii_lines:
                                     bounds = {'amplitude' : (0.0, None), 'stddev' : (0.6, None)})
 
         ## Tie Means of the two gaussians
+        # def tie_mean_oiii(model):
+        #     return (model['oiii4959'].mean + 47.934)
+        
         def tie_mean_oiii(model):
-            return (model['oiii4959'].mean + 47.934)
+            return ((5008.239/4960.295)*model['oiii4959'].mean)
 
         g_oiii5007.mean.tied = tie_mean_oiii
 
@@ -345,8 +360,11 @@ class fit_oiii_lines:
         g_oiii5007.stddev.tied = tie_std_oiii
 
         ## Tie Means of the two gaussian outflow components
+        # def tie_mean_oiii_out(model):
+        #     return (model['oiii4959_out'].mean + 47.934)
+        
         def tie_mean_oiii_out(model):
-            return (model['oiii4959_out'].mean + 47.934)
+            return ((5008.239/4960.295)*model['oiii4959_out'].mean)
 
         g_oiii5007_out.mean.tied = tie_mean_oiii_out
 
@@ -474,8 +492,11 @@ class fit_nii_ha_lines:
                               bounds = {'amplitude' : (0.0, None)})
 
         ## Tie means of [NII] doublet gaussians
+        # def tie_mean_nii(model):
+        #     return (model['nii6548'].mean + 35.425)
+        
         def tie_mean_nii(model):
-            return (model['nii6548'].mean + 35.425)
+            return ((6585.277/6549.852)*model['nii6548'].mean)
 
         g_nii6583.mean.tied = tie_mean_nii
 
@@ -620,8 +641,10 @@ class fit_nii_ha_lines:
                               bounds = {'amplitude' : (0.0, None)})
 
         ## Tie means of [NII] doublet gaussians
+        # def tie_mean_nii(model):
+        #     return (model['nii6548'].mean + 35.425)
         def tie_mean_nii(model):
-            return (model['nii6548'].mean + 35.425)
+            return ((6585.277/6549.852)*model['nii6548'].mean)
 
         g_nii6583.mean.tied = tie_mean_nii
 
@@ -775,8 +798,11 @@ class fit_nii_ha_lines:
                               bounds = {'amplitude' : (0.0, None)})
 
         ## Tie means of [NII] doublet gaussians
+        # def tie_mean_nii(model):
+        #     return (model['nii6548'].mean + 35.425)
+        
         def tie_mean_nii(model):
-            return (model['nii6548'].mean + 35.425)
+            return ((6585.277/6549.852)*model['nii6548'].mean)
 
         g_nii6583.mean.tied = tie_mean_nii
 
@@ -811,8 +837,11 @@ class fit_nii_ha_lines:
                                   bounds = {'amplitude' : (0.0, None)})
 
         ## Tie means of [NII] doublet outflow gaussians
+        # def tie_mean_nii_out(model):
+        #     return (model['nii6548_out'].mean + 35.425)
+        
         def tie_mean_nii_out(model):
-            return (model['nii6548_out'].mean + 35.425)
+            return ((6585.277/6549.852)*model['nii6548_out'].mean)
 
         g_nii6583_out.mean.tied = tie_mean_nii_out
         
@@ -1185,8 +1214,11 @@ class fit_extreme_broadline_sources:
                               bounds = {'amplitude': (0.0, None), 'stddev':(0.0, None)})
 
         ## Tie means of the two gaussians
+        # def tie_mean_sii(model):
+        #     return (model['sii6716'].mean + 14.329)
+        
         def tie_mean_sii(model):
-            return (model['sii6716'].mean + 14.329)
+            return ((6732.673/6718.294)*model['sii6716'].mean)
 
         g_sii6731.mean.tied = tie_mean_sii
 
@@ -1212,8 +1244,11 @@ class fit_extreme_broadline_sources:
                               bounds = {'amplitude':(0.0, None), 'stddev':(0.0, None)})
 
         ## Tie means of the two gaussians
+        # def tie_mean_nii(model):
+        #     return (model['nii6548'].mean + 35.425)
+        
         def tie_mean_nii(model):
-            return (model['nii6548'].mean + 35.425)
+            return ((6585.277/6549.852)*model['nii6548'].mean)
 
         g_nii6583.mean.tied = tie_mean_nii
 
@@ -1312,8 +1347,11 @@ class fit_extreme_broadline_sources:
                                bounds = {'amplitude' : (0.0, None), 'stddev' : (0.0, None)})
 
         ## Tie means of the two gaussians
+        # def tie_mean_oiii(model):
+        #     return (model['oiii4959'].mean + 47.934)
+        
         def tie_mean_oiii(model):
-            return (model['oiii4959'].mean + 47.934)
+            return ((5008.239/4960.295)*model['oiii4959'].mean)
 
         g_oiii5007.mean.tied = tie_mean_oiii
 
@@ -1434,8 +1472,11 @@ class fit_extreme_broadline_sources:
                                    bounds = {'amplitude' : (0.0, None), 'stddev' : (0.0, None)})
 
         ## Tie means of the narrow components
+        # def tie_mean_oiii(model):
+        #     return (model['oiii4959'].mean + 47.934)
+        
         def tie_mean_oiii(model):
-            return (model['oiii4959'].mean + 47.934)
+            return ((5008.239/4960.295)*model['oiii4959'].mean)
 
         g_oiii5007.mean.tied = tie_mean_oiii
 
@@ -1453,8 +1494,11 @@ class fit_extreme_broadline_sources:
         g_oiii5007.stddev.tied = tie_std_oiii
 
         ## Tie means of outflow components
+        # def tie_mean_oiii_out(model):
+        #     return (model['oiii4959_out'].mean + 47.934)
+        
         def tie_mean_oiii_out(model):
-            return (model['oiii4959_out'].mean + 47.934)
+            return ((5008.239/4960.295)*model['oiii4959_out'].mean)
 
         g_oiii5007_out.mean.tied = tie_mean_oiii_out
 
