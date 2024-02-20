@@ -9,7 +9,7 @@ The following functions are available:
     5) compute_resolution_sigma(coadd_spec)
 
 Author : Ragadeepika Pucha
-Version : 2024, Jan 30th
+Version : 2024, February 18
 """
 ###################################################################################################
 

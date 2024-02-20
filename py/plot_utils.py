@@ -9,7 +9,7 @@ The following functions are available:
     4) plot_from_params(table, index, title = None)
 
 Author : Ragadeepika Pucha
-Version : 2024, February 8
+Version : 2024, February 18
 
 """
 
@@ -685,7 +685,7 @@ def plot_from_params(table, index, title = None):
     if (title == None):
         title = f'TARGETID: {targetid}; z : {round(z, 2)}'
     
-    if (table['HB_OIII_RCHI2'].data == 0):
+    if (table['HB_OIII_RCHI2'].data[index] == 0):
         ## Constructing the fits from the table
         fits = emfit.construct_normal_fits(table, index)
 
