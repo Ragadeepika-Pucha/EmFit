@@ -3,7 +3,7 @@ This script consists of funcitons for fitting emission-lines.
 The different functions are divided into different classes for different emission lines.
 
 Author : Ragadeepika Pucha
-Version : 2024, February 18
+Version : 2024, February 24
 """
 
 ###################################################################################################
@@ -1012,6 +1012,13 @@ class fit_hb_line:
         g_hb_n = Gaussian1D(amplitude = amp_hb, mean = 4862.683, \
                            stddev = std_hb, name = 'hb_n', \
                            bounds = {'amplitude' : (0.0, None)})
+        
+        ## Tie mean of Hb to Ha
+        def tie_mean_hb(model):
+            return ((4862.683/6564.312)*nii_ha_bestfit['ha_n'].mean)
+        
+        g_hb_n.mean.tied = tie_mean_hb
+        g_hb_n.mean.fixed = True
 
         ## Tie standard deviation of Hb to Ha in velocity space
         def tie_std_hb(model):
@@ -1037,6 +1044,13 @@ class fit_hb_line:
             g_hb_b = Gaussian1D(amplitude = amp_hb/2, mean = 4862.683, \
                                stddev = std_hb_b, name = 'hb_b', \
                                bounds = {'amplitude' : (0.0, None)})
+            
+            ## Tie mean of broad Hb to broad Ha
+            def tie_mean_hb_b(model):
+                return ((4862.683/6564.312)*nii_ha_bestfit['ha_b'].mean)
+
+            g_hb_b.mean.tied = tie_mean_hb_b
+            g_hb_b.mean.fixed = True
 
             ## Tie standard deviation of Hb to Ha in velocity space
             def tie_std_hb_b(model):
@@ -1102,6 +1116,13 @@ class fit_hb_line:
         g_hb_n = Gaussian1D(amplitude = amp_hb, mean = 4862.683, \
                            stddev = std_hb, name = 'hb_n', \
                            bounds = {'amplitude' : (0.0, None)})
+        
+        ## Tie mean of Hb to Ha
+        def tie_mean_hb(model):
+            return ((4862.683/6564.312)*nii_ha_bestfit['ha_n'].mean)
+        
+        g_hb_n.mean.tied = tie_mean_hb
+        g_hb_n.mean.fixed = True
 
         ## Tie standard deviation of Hb to Ha in velocity space
         def tie_std_hb(model):
@@ -1121,6 +1142,13 @@ class fit_hb_line:
         g_hb_out = Gaussian1D(amplitude = amp_hb, mean = 4862.683, \
                              stddev = std_hb_out, name = 'hb_out', \
                              bounds = {'amplitude' : (0.0, None)})
+        
+        ## Tie mean of outflow Hb to outflow Ha
+        def tie_mean_hb_out(model):
+            return ((4862.683/6564.312)*nii_ha_bestfit['ha_out'].mean)
+        
+        g_hb_out.mean.tied = tie_mean_hb_out
+        g_hb_out.mean.fixed = True
 
         ## Tie standard deviation of outflow Hb to outflow Ha in velocity space
         def tie_std_hb_out(model):
@@ -1146,7 +1174,14 @@ class fit_hb_line:
             g_hb_b = Gaussian1D(amplitude = amp_hb/2, mean = 4862.683, \
                                stddev = std_hb_b, name = 'hb_b', \
                                bounds = {'amplitude' : (0.0, None)})
+            
+            ## Tie mean of broad Hb to broad Ha
+            def tie_mean_hb_b(model):
+                return ((4862.683/6564.312)*nii_ha_bestfit['ha_b'].mean)
 
+            g_hb_b.mean.tied = tie_mean_hb_b
+            g_hb_b.mean.fixed = True
+            
             ## Tie standard deviation of broad Hb to broad Ha in velocity space
             def tie_std_hb_b(model):
                 return ((model['hb_b'].mean/nii_ha_bestfit['ha_b'].mean)*\
@@ -1168,7 +1203,6 @@ class fit_hb_line:
 
 ####################################################################################################
 ####################################################################################################
-
 
 class fit_extreme_broadline_sources:
     """
@@ -1389,6 +1423,20 @@ class fit_extreme_broadline_sources:
         g_hb_b = Gaussian1D(amplitude = amp_hb/2, mean = 4862.683, \
                            stddev = std_hb_b, name = 'hb_b', \
                            bounds = {'amplitude' : (0.0, None), 'stddev' : (0.0, None)})
+        
+        ## Tie mean of Hb to Ha
+        def tie_mean_hb(model):
+            return ((4862.683/6564.312)*nii_ha_bestfit['ha_n'].mean)
+        
+        g_hb_n.mean.tied = tie_mean_hb
+        g_hb_n.mean.fixed = True
+        
+        ## Tie mean of broad Hb to broad Ha
+        def tie_mean_hb_b(model):
+            return ((4862.683/6564.312)*nii_ha_bestfit['ha_b'].mean)
+
+        g_hb_b.mean.tied = tie_mean_hb_b
+        g_hb_b.mean.fixed = True
 
         ## Fix sigma of narrow Hb to narrow Ha
         def tie_std_hb_n(model):
@@ -1536,6 +1584,20 @@ class fit_extreme_broadline_sources:
         g_hb_b = Gaussian1D(amplitude = amp_hb/2, mean = 4862.683, \
                            stddev = std_hb_b, name = 'hb_b', \
                            bounds = {'amplitude' : (0.0, None), 'stddev' : (0.0, None)})
+        
+        ## Tie mean of Hb to Ha
+        def tie_mean_hb(model):
+            return ((4862.683/6564.312)*nii_ha_bestfit['ha_n'].mean)
+        
+        g_hb_n.mean.tied = tie_mean_hb
+        g_hb_n.mean.fixed = True
+        
+        ## Tie mean of broad Hb to broad Ha
+        def tie_mean_hb_b(model):
+            return ((4862.683/6564.312)*nii_ha_bestfit['ha_b'].mean)
+
+        g_hb_b.mean.tied = tie_mean_hb_b
+        g_hb_b.mean.fixed = True
 
         ## Fix sigma of narrow Hb to narrow Ha
         def tie_std_hb_n(model):

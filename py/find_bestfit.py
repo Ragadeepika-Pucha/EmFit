@@ -3,7 +3,7 @@ This script consists of functions for fitting emission-lines.
 The different functions are divided into different classes for different emission lines.
 
 Author : Ragadeepika Pucha
-Version : 2024, February 18
+Version : 2024, February 24
 """
 
 ###################################################################################################
@@ -462,9 +462,9 @@ def find_hb_best_fit(lam_hb, flam_hb, ivar_hb, nii_ha_bestfit):
                                                         ivar_hb, nii_ha_bestfit)
         
         if ('hb_b' not in hb_bestfit.submodel_names):
-            n_dof = 3
+            n_dof = 2
         else:
-            n_dof = 5
+            n_dof = 3
             
     else:
         ## Two components fit
@@ -472,9 +472,9 @@ def find_hb_best_fit(lam_hb, flam_hb, ivar_hb, nii_ha_bestfit):
                                                          ivar_hb, nii_ha_bestfit)
         
         if ('hb_b' not in hb_bestfit.submodel_names):
-            n_dof = 5
+            n_dof = 3
         else:
-            n_dof = 7
+            n_dof = 4
             
     ## Returns the bestfit
     return (hb_bestfit, n_dof)
@@ -567,17 +567,17 @@ def find_hb_oiii_bestfit(lam_hb_oiii, flam_hb_oiii, ivar_hb_oiii, nii_ha_sii_bes
     chi2_2comp = mfit.calculate_chi2(flam_hb_oiii, gfit_2comp(lam_hb_oiii), ivar_hb_oiii)
     
     ## Statistical check for the second component
-    df = 11-8
+    df = 9-6
     del_chi2 = chi2_1comp - chi2_2comp
     p_val = chi2.sf(del_chi2, df)
     
     ## 5-sigma confidence of an extra component
     if (p_val <= 3e-7):
         hb_oiii_bestfit = gfit_2comp
-        n_dof = 11
+        n_dof = 9
     else:
         hb_oiii_bestfit = gfit_1comp
-        n_dof = 8
+        n_dof = 6
         
     return (hb_oiii_bestfit, n_dof)
 
