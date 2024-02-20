@@ -3,7 +3,7 @@ This script consists of functions related to fitting the emission line spectra,
 and plotting the models and residuals.
 
 Author : Ragadeepika Pucha
-Version : 2024, February 8
+Version : 2024, February 18
 """
 
 ####################################################################################################
@@ -46,11 +46,12 @@ settings = {
 
 plt.rcParams.update(**settings)
 
-####################################################################################################    
+#################################################################################################### 
 
-def fit_spectra(specprod, survey, program, healpix, targetid, z, free_balmer = False):
+def fit_spectra(specprod, survey, program, healpix, targetid, z):
     """
-    Fit Hb, [OIII], [NII]+Ha, and [SII] emission lines for a given emission-line spectra
+    Function to fit Hb, [OIII], [NII], Ha, and [SII] emission-lines for a given target.
+    The code separates "normal" vs "extreme" broadline sources and fits them accordingly.
     
     Parameters
     ----------
@@ -63,22 +64,16 @@ def fit_spectra(specprod, survey, program, healpix, targetid, z, free_balmer = F
     program : str
         Program name for the spectra
         
-    healpix : str
+    healpix : int
         Healpix number of the target
-        
-    targetid : int64
-        The unique TARGETID associated with the target
         
     z : float
         Redshift of the target
         
-    free_balmer : bool
-        Whether or not to let sigma of balmer lines be free for the fit
-
     Returns
     -------
-    t_params : astropy table
-        Table of output parameters for the fit
+    t_params : Astropy Table
+        Table of parameters from the fits
     """
     
     ## Rest-frame emission-line spectra
@@ -86,8 +81,87 @@ def fit_spectra(specprod, survey, program, healpix, targetid, z, free_balmer = F
     flam_rest, ivar_rest = spec_utils.get_emline_spectra(specprod, survey, program, \
                                                          healpix, targetid, z, rest_frame = True)
     
-    ## Fitting windows for the different emission-lines.
+    ## Fit [SII] lines first
+    lam_sii, flam_sii, ivar_sii = spec_utils.get_fit_window(lam_rest, flam_rest, ivar_rest, em_line = 'sii')
+    sii_fit, _ = find_bestfit.find_sii_best_fit(lam_sii, flam_sii, ivar_sii)
+    sii_diff, sii_frac = mfit.measure_sii_difference(lam_sii, flam_sii)
     
+    ## Conditions for separating extreme broadline sources
+    sii_frac_cond = (np.abs(sii_frac) >= 2.5)
+    sii_diff_cond = (sii_diff >= 0.5)
+        
+    if ('sii6716_out' in sii_fit.submodel_names):
+        sii_out_sig = mfit.lamspace_to_velspace(sii_fit['sii6716_out'].stddev.value, \
+                                               sii_fit['sii6716_out'].mean.value)
+    else:
+        sii_out_sig = 0.0
+        
+    sii_out_cond = (sii_out_sig >= 1000)
+    
+    ext_cond = ((sii_frac_cond)&(sii_diff_cond))|(sii_out_cond)
+    
+    if ext_cond:
+        ## Fit using extreme-line fitting code
+        hb_params, oiii_params, \
+        nii_ha_params, sii_params = fit_spectra_extreme(coadd_spec, lam_rest, flam_rest, ivar_rest)
+    else:
+        ## Fit using normal fitting code
+        hb_params, oiii_params, \
+        nii_ha_params, sii_params = fit_spectra_normal(coadd_spec, lam_rest, flam_rest, ivar_rest)
+        
+    ######## Combine everything
+    tgt = {}
+    tgt['targetid'] = [targetid]
+    tgt['specprod'] = [specprod]
+    tgt['survey'] = [survey]
+    tgt['program'] = [program]
+    tgt['healpix'] = [healpix]
+    tgt['z'] = [z]
+    
+    t_params = Table(tgt|hb_params|oiii_params|nii_ha_params|sii_params)
+    for col in t_params.colnames:
+        t_params.rename_column(col, col.upper())
+    
+    return (t_params)
+
+####################################################################################################
+####################################################################################################
+
+def fit_spectra_normal(coadd_spec, lam_rest, flam_rest, ivar_rest):
+    """
+    Function to fit the given spectra with four different fitting windows - 
+    Hb, [OIII], [NII]+Ha, and [SII].
+    
+    Parameters
+    ----------
+    coadd_spec : obj
+        Coadded Spectra object (coadded across the cameras) of the given target
+        
+    lam_rest : numpy array
+        Rest-frame wavelength array of the spectra
+        
+    flam_rest : numpy array
+        Rest-frame flux array of the spectra
+        
+    ivar_rest : numpy array
+        Rest-frame inverse variance of the spectra
+        
+    Returns
+    -------
+    hb_params : dict
+        List of parameters related to Hb Fitting
+        
+    oiii_params : dict
+        List of parameters related to [OIII] Fitting
+        
+    nii_ha_params : dict
+        List of parameters related to [NII]+Ha Fitting
+        
+    sii_params : dict
+        List of parameters related to [SII] Fitting
+    """
+    
+    ## Fitting windows for the different emission-lines
     lam_hb, flam_hb, ivar_hb = spec_utils.get_fit_window(lam_rest, flam_rest, \
                                                          ivar_rest, em_line = 'hb')
 
@@ -98,26 +172,17 @@ def fit_spectra(specprod, survey, program, healpix, targetid, z, free_balmer = F
     lam_sii, flam_sii, ivar_sii = spec_utils.get_fit_window(lam_rest, flam_rest, \
                                                             ivar_rest, em_line = 'sii')
     
-    ## Fitting Routines
-    
+    ## Fitting routines
     ## Bestfit for [SII]
     gfit_sii, ndof_sii = find_bestfit.find_sii_best_fit(lam_sii, flam_sii, ivar_sii)
     ## Bestfit for [OIII]
     gfit_oiii, ndof_oiii = find_bestfit.find_oiii_best_fit(lam_oiii, flam_oiii, ivar_oiii)
-
-    if (free_balmer == True):
-        ## Bestfit for Hb with sigma (Hb) varying freely
-        gfit_hb, ndof_hb = find_bestfit.find_hb_free_best_fit(lam_hb, flam_hb, ivar_hb, gfit_sii)
-        ## Bestfit for [NII]+Ha with sigma (Ha) varying freely
-        gfit_nii_ha, ndof_nii_ha = find_bestfit.find_nii_free_ha_best_fit(lam_nii_ha, flam_nii_ha, \
-                                                                         ivar_nii_ha, gfit_sii)
-    else:
-        ## Bestfit for Hb with sigma (Hb) fixed to [SII]
-        gfit_hb, ndof_hb = find_bestfit.find_hb_fixed_best_fit(lam_hb, flam_hb, ivar_hb, gfit_sii)
-        ## Bestfit for [NII]+Ha with sigma (Ha) fixed to [SII]
-        gfit_nii_ha, ndof_nii_ha = find_bestfit.find_nii_ha_best_fit(lam_nii_ha, flam_nii_ha, \
-                                                                    ivar_nii_ha, gfit_sii)
-        
+    ## Bestfit for [NII]+Ha
+    gfit_nii_ha, ndof_nii_ha = find_bestfit.find_nii_ha_best_fit(lam_nii_ha, flam_nii_ha, \
+                                                                ivar_nii_ha, gfit_sii)
+    ## Bestfit for Hb
+    gfit_hb, ndof_hb = find_bestfit.find_hb_best_fit(lam_hb, flam_hb, ivar_hb, \
+                                                    gfit_nii_ha)
     ## Compute reduced chi2:
     rchi2_sii = mfit.calculate_chi2(flam_sii, gfit_sii(lam_sii), ivar_sii, \
                                     ndof_sii, reduced_chi2 = True)
@@ -128,7 +193,7 @@ def fit_spectra(specprod, survey, program, healpix, targetid, z, free_balmer = F
     rchi2_nii_ha = mfit.calculate_chi2(flam_nii_ha, gfit_nii_ha(lam_nii_ha), \
                                            ivar_nii_ha, ndof_nii_ha, reduced_chi2 = True)
     
-    ### Parameters for the fit
+    ## Parameters for the fit
     hb_models = ['hb_n', 'hb_out', 'hb_b']
     oiii_models = ['oiii4959', 'oiii4959_out', 'oiii5007', 'oiii5007_out']
     nii_ha_models = ['nii6548', 'nii6548_out', 'nii6583', 'nii6583_out', 'ha_n', 'ha_out', 'ha_b']
@@ -145,50 +210,133 @@ def fit_spectra(specprod, survey, program, healpix, targetid, z, free_balmer = F
     nii_ha_params['nii_ha_continuum'] = [gfit_nii_ha['nii_ha_cont'].amplitude.value]
     sii_params['sii_continuum'] = [gfit_sii['sii_cont'].amplitude.value]
     
-    ## NOISE
-    hb_noise = mfit.compute_noise_emline(lam_rest, flam_rest, 'hb')
-    oiii_noise = mfit.compute_noise_emline(lam_rest, flam_rest, 'oiii')
-    nii_ha_noise = mfit.compute_noise_emline(lam_rest, flam_rest, 'nii_ha')
-    sii_noise = mfit.compute_noise_emline(lam_rest, flam_rest, 'sii')
+    # ## NOISE
+    # hb_noise = mfit.compute_noise_emline(lam_rest, flam_rest, 'hb')
+    # oiii_noise = mfit.compute_noise_emline(lam_rest, flam_rest, 'oiii')
+    # nii_ha_noise = mfit.compute_noise_emline(lam_rest, flam_rest, 'nii_ha')
+    # sii_noise = mfit.compute_noise_emline(lam_rest, flam_rest, 'sii')
     
-    hb_params['hb_noise'] = [hb_noise]
-    oiii_params['oiii_noise'] = [oiii_noise]
-    nii_ha_params['nii_ha_noise'] = [nii_ha_noise]
-    sii_params['sii_noise'] = [sii_noise]
+    # hb_params['hb_noise'] = [hb_noise]
+    # oiii_params['oiii_noise'] = [oiii_noise]
+    # nii_ha_params['nii_ha_noise'] = [nii_ha_noise]
+    # sii_params['sii_noise'] = [sii_noise]
     
     ## N(DOF)
     hb_params['hb_ndof'] = [ndof_hb]
     oiii_params['oiii_ndof'] = [ndof_oiii]
+    oiii_params['hb_oiii_ndof'] = [int(0)]
     nii_ha_params['nii_ha_ndof'] = [ndof_nii_ha]
     sii_params['sii_ndof'] = [ndof_sii]
+    sii_params['nii_ha_sii_ndof'] = [int(0)]
 
     ## Reduced chi2
     hb_params['hb_rchi2'] = [rchi2_hb]
     oiii_params['oiii_rchi2'] = [rchi2_oiii]
+    oiii_params['hb_oiii_rchi2'] = [0.0]
     nii_ha_params['nii_ha_rchi2'] = [rchi2_nii_ha]
     sii_params['sii_rchi2'] = [rchi2_sii]
+    sii_params['nii_ha_sii_rchi2'] = [0.0]
     
-    ######## Combine everything
-    tgt = {}
-    tgt['targetid'] = [targetid]
-    tgt['specprod'] = [specprod]
-    tgt['survey'] = [survey]
-    tgt['program'] = [program]
-    tgt['healpix'] = [healpix]
-    tgt['z'] = [z]
-    
-    t_params = Table(tgt|hb_params|oiii_params|nii_ha_params|sii_params)
-    for col in t_params.colnames:
-        t_params.rename_column(col, col.upper())
-        
-    return (t_params)
+    return (hb_params, oiii_params, nii_ha_params, sii_params)
 
 ####################################################################################################
 ####################################################################################################
 
-def construct_fits(t, index):
+def fit_spectra_extreme(coadd_spec, lam_rest, flam_rest, ivar_rest):
     """
-    Construct fits of a particular source from the table of parameters.
+    Function to fit the given spectra with two different fitting windows - 
+    Hb+[OIII] and [NII]+Ha+[SII] --> Fitting extreme broadline sources.
+    
+    Parameters
+    ----------
+    coadd_spec : obj
+        Coadded Spectra object (coadded across the cameras) of the given target
+        
+    lam_rest : numpy array
+        Rest-frame wavelength array of the spectra
+        
+    flam_rest : numpy array
+        Rest-frame flux array of the spectra
+        
+    ivar_rest : numpy array
+        Rest-frame inverse variance of the spectra
+        
+    Returns
+    -------
+    hb_params : dict
+        List of parameters related to Hb Fitting
+        
+    oiii_params : dict
+        List of parameters related to [OIII] Fitting
+        
+    nii_ha_params : dict
+        List of parameters related to [NII]+Ha Fitting
+        
+    sii_params : dict
+        List of parameters related to [SII] Fitting
+    
+    """
+    
+    ## Fitting windows for the different emission-line regions
+    lam_nii_ha_sii, flam_nii_ha_sii, \
+    ivar_nii_ha_sii = spec_utils.get_fit_window(lam_rest, flam_rest, ivar_rest, 'nii_ha_sii')
+    
+    lam_hb_oiii, flam_hb_oiii, ivar_hb_oiii = spec_utils.get_fit_window(lam_rest, flam_rest, \
+                                                                       ivar_rest, 'hb_oiii')
+    
+    gfit_nii_ha_sii, ndof_nii_ha_sii = find_bestfit.find_nii_ha_sii_best_fit(lam_nii_ha_sii, \
+                                                                            flam_nii_ha_sii, \
+                                                                            ivar_nii_ha_sii)
+    gfit_hb_oiii, ndof_hb_oiii = find_bestfit.find_hb_oiii_bestfit(lam_hb_oiii, flam_hb_oiii, \
+                                                                  ivar_hb_oiii, gfit_nii_ha_sii)
+    
+    ## Compute reduced_chi2
+    rchi2_nii_ha_sii = mfit.calculate_chi2(flam_nii_ha_sii, gfit_nii_ha_sii(lam_nii_ha_sii), ivar_nii_ha_sii, \
+                                          ndof_nii_ha_sii, reduced_chi2 = True)
+    rchi2_hb_oiii = mfit.calculate_chi2(flam_hb_oiii, gfit_hb_oiii(lam_hb_oiii), ivar_hb_oiii, \
+                                       ndof_hb_oiii, reduced_chi2 = True)
+    
+    ## Parameters for the fit
+    hb_models = ['hb_n', 'hb_out', 'hb_b']
+    oiii_models = ['oiii4959', 'oiii4959_out', 'oiii5007', 'oiii5007_out']
+    nii_ha_models = ['nii6548', 'nii6548_out', 'nii6583', 'nii6583_out', 'ha_n', 'ha_out', 'ha_b']
+    sii_models = ['sii6716', 'sii6716_out', 'sii6731', 'sii6731_out']
+    
+    hb_params = emp.get_parameters(gfit_hb_oiii, hb_models)
+    oiii_params = emp.get_parameters(gfit_hb_oiii, oiii_models)
+    nii_ha_params = emp.get_parameters(gfit_nii_ha_sii, nii_ha_models)
+    sii_params = emp.get_parameters(gfit_nii_ha_sii, sii_models)
+    
+    ## Continuum
+    hb_params['hb_continuum'] = [gfit_hb_oiii['hb_oiii_cont'].amplitude.value]
+    oiii_params['oiii_continuum'] = [gfit_hb_oiii['hb_oiii_cont'].amplitude.value]
+    nii_ha_params['nii_ha_continuum'] = [gfit_nii_ha_sii['nii_ha_sii_cont'].amplitude.value]
+    sii_params['sii_continuum'] = [gfit_nii_ha_sii['nii_ha_sii_cont'].amplitude.value]
+    
+    ## N(DOF)
+    hb_params['hb_ndof'] = [int(0)]
+    oiii_params['oiii_ndof'] = [int(0)]
+    oiii_params['hb_oiii_ndof'] = [ndof_hb_oiii]
+    nii_ha_params['nii_ha_ndof'] = [int(0)]
+    sii_params['sii_ndof'] = [int(0)]
+    sii_params['nii_ha_sii_ndof'] = [ndof_nii_ha_sii]
+    
+    ## Reduced chi2 values
+    hb_params['hb_rchi2'] = [0.0]
+    oiii_params['oiii_rchi2'] = [0.0]
+    oiii_params['hb_oiii_rchi2'] = [rchi2_hb_oiii]
+    nii_ha_params['nii_ha_rchi2'] = [0.0]
+    sii_params['sii_rchi2'] = [0.0]
+    sii_params['nii_ha_sii_rchi2'] = [rchi2_nii_ha_sii]
+        
+    return (hb_params, oiii_params, nii_ha_params, sii_params)
+
+####################################################################################################
+####################################################################################################
+
+def construct_normal_fits(t, index):
+    """
+    Construct fits of a particular source from the table of parameters. This is for normal fitting sources.
     
     Parameters 
     ----------
@@ -219,7 +367,7 @@ def construct_fits(t, index):
 
     gfit_hb = hb_cont + gfit_hb_n
 
-    if (t['HB_OUT_FLUX'].data[index] != 0):
+    if (t['HB_OUT_MEAN'].data[index] != 0):
         ## Gaussian model for the outflow component if available
         gfit_hb_out = Gaussian1D(amplitude = t['HB_OUT_AMPLITUDE'].data[index], \
                                 mean = t['HB_OUT_MEAN'].data[index], \
@@ -227,7 +375,7 @@ def construct_fits(t, index):
         hb_models.append(gfit_hb_out)
 
 
-    if (t['HB_B_FLUX'].data[index] != 0):
+    if (t['HB_B_MEAN'].data[index] != 0):
         ## Gaussian model for the broad component if available
         gfit_hb_b = Gaussian1D(amplitude = t['HB_B_AMPLITUDE'].data[index], \
                               mean = t['HB_B_MEAN'].data[index], \
@@ -258,7 +406,7 @@ def construct_fits(t, index):
 
     oiii_models = []
 
-    if (t['OIII5007_OUT_FLUX'].data[index] != 0):
+    if (t['OIII5007_OUT_MEAN'].data[index] != 0):
         ## Gaussian model for [OIII]4959 outflow component if available
         gfit_oiii4959_out = Gaussian1D(amplitude = t['OIII4959_OUT_AMPLITUDE'].data[index], \
                                       mean = t['OIII4959_OUT_MEAN'].data[index], \
@@ -299,7 +447,7 @@ def construct_fits(t, index):
 
     nii_ha_models = []
 
-    if (t['NII6548_OUT_FLUX'].data[index] != 0):
+    if (t['NII6548_OUT_MEAN'].data[index] != 0):
         ## Gaussian model for [NII]6548 outflow component if available
         gfit_nii6548_out = Gaussian1D(amplitude = t['NII6548_OUT_AMPLITUDE'].data[index], \
                                       mean = t['NII6548_OUT_MEAN'].data[index], \
@@ -320,7 +468,7 @@ def construct_fits(t, index):
         nii_ha_models.append(gfit_nii6583_out)
         nii_ha_models.append(gfit_ha_out)
 
-    if (t['HA_B_FLUX'].data[index] != 0):
+    if (t['HA_B_MEAN'].data[index] != 0):
         ## Gaussian model for Hb broad component if available
         gfit_ha_b = Gaussian1D(amplitude = t['HA_B_AMPLITUDE'].data[index], \
                               mean = t['HA_B_MEAN'].data[index], \
@@ -351,7 +499,7 @@ def construct_fits(t, index):
 
     sii_models = []
 
-    if (t['SII6716_OUT_FLUX'].data[index] != 0):
+    if (t['SII6716_OUT_MEAN'].data[index] != 0):
         ## Gaussian model for [SII]6716 outflow component if available
         gfit_sii6716_out = Gaussian1D(amplitude = t['SII6716_OUT_AMPLITUDE'].data[index], \
                                      mean = t['SII6716_OUT_MEAN'].data[index], \
@@ -371,6 +519,124 @@ def construct_fits(t, index):
         gfit_sii = gfit_sii + model
 
     fits_tab = [gfit_hb, gfit_oiii, gfit_nii_ha, gfit_sii]
+    
+    return (fits_tab)
+
+####################################################################################################
+####################################################################################################
+
+def construct_extreme_fits(t, index):
+    """
+    Construct fits of a particular source from the table of parameters.
+    This is for extreme broadline fitting sources.
+    
+    Parameters
+    ----------
+    t : Astropy Table 
+        Table of fit parameters
+        
+    index : int
+        Index number of the source
+        
+    Returns
+    -------
+    fits : list
+        List of [Hb+[OIII] and [NII]+Ha+[SII]] fits
+    """
+    
+    ######################################################################################
+    ## Hbeta + [OIII] models
+    hb_oiii_models = []
+    
+    ## Gaussian model for the narrow component
+    gfit_hb_n = Gaussian1D(amplitude = t['HB_N_AMPLITUDE'].data[index], \
+                          mean = t['HB_N_MEAN'].data[index], \
+                          stddev = t['HB_N_STD'].data[index], name = 'hb_n')
+    
+    ## Gaussian model for the [OIII]4959,5007 narrow components
+    gfit_oiii4959 = Gaussian1D(amplitude = t['OIII4959_AMPLITUDE'].data[index], \
+                              mean = t['OIII4959_MEAN'].data[index], \
+                              stddev = t['OIII4959_STD'].data[index], name = 'oiii4959')
+    
+    gfit_oiii5007 = Gaussian1D(amplitude = t['OIII5007_AMPLITUDE'].data[index], \
+                              mean = t['OIII5007_MEAN'].data[index], \
+                              stddev = t['OIII5007_STD'].data[index], name = 'oiii5007')
+    
+    ## Continuum
+    hb_oiii_cont = Const1D(amplitude = t['HB_CONTINUUM'].data[index], \
+                           name = 'hb_oiii_cont')
+    
+    
+    gfit_hb_oiii = hb_oiii_cont + gfit_hb_n + gfit_oiii4959 + gfit_oiii5007
+        
+    if (t['HB_B_MEAN'].data[index] != 0):
+        ## Gaussian model for the broad component if available
+        gfit_hb_b = Gaussian1D(amplitude = t['HB_B_AMPLITUDE'].data[index], \
+                              mean = t['HB_B_MEAN'].data[index], \
+                              stddev = t['HB_B_STD'].data[index], name = 'hb_b')
+        hb_oiii_models.append(gfit_hb_b)
+        
+    if (t['OIII4959_OUT_MEAN'].data[index] != 0):
+        gfit_oiii4959_out = Gaussian1D(amplitude = t['OIII4959_OUT_AMPLITUDE'].data[index], \
+                                      mean = t['OIII4959_OUT_MEAN'].data[index], \
+                                      stddev = t['OIII4959_OUT_STD'].data[index], \
+                                      name = 'oiii4959_out')
+        gfit_oiii5007_out = Gaussian1D(amplitude = t['OIII5007_OUT_AMPLITUDE'].data[index], \
+                                      mean = t['OIII5007_OUT_MEAN'].data[index], \
+                                      stddev = t['OIII5007_OUT_STD'].data[index], \
+                                      name = 'oiii5007_out')
+        
+        hb_oiii_models.append(gfit_oiii4959_out)
+        hb_oiii_models.append(gfit_oiii5007_out)
+        
+    ## Total Hb+[OIII] model
+    for model in hb_oiii_models:
+        gfit_hb_oiii = gfit_hb_oiii + model
+        
+    ######################################################################################
+    ######################################################################################
+    ## [NII]+Ha+[SII] models
+    
+    ## Continuum
+    nii_ha_sii_cont = Const1D(amplitude = t['SII_CONTINUUM'].data[index], \
+                              name = 'nii_ha_sii_cont')
+    
+    ## [NII]6548,6583 models
+    gfit_nii6548 = Gaussian1D(amplitude = t['NII6548_AMPLITUDE'].data[index], \
+                              mean = t['NII6548_MEAN'].data[index], \
+                              stddev = t['NII6548_STD'].data[index], \
+                              name = 'nii6548')
+    gfit_nii6583 = Gaussian1D(amplitude = t['NII6583_AMPLITUDE'].data[index], \
+                             mean = t['NII6583_MEAN'].data[index], \
+                             stddev = t['NII6583_STD'].data[index], \
+                             name = 'nii6583')
+    
+    ## [SII]6716,6731 models
+    gfit_sii6716 = Gaussian1D(amplitude = t['SII6716_AMPLITUDE'].data[index], \
+                             mean = t['SII6716_MEAN'].data[index], \
+                             stddev = t['SII6716_STD'].data[index], \
+                             name = 'sii6716')
+    gfit_sii6731 = Gaussian1D(amplitude = t['SII6731_AMPLITUDE'].data[index], \
+                             mean = t['SII6731_MEAN'].data[index], \
+                             stddev = t['SII6716_STD'].data[index], \
+                             name = 'sii6731')
+    
+    ## Narrow and Broad Ha
+    gfit_ha_n = Gaussian1D(amplitude = t['HA_N_AMPLITUDE'].data[index], \
+                          mean = t['HA_N_MEAN'].data[index], \
+                          stddev = t['HA_N_STD'].data[index], \
+                          name = 'ha_n')
+    gfit_ha_b = Gaussian1D(amplitude = t['HA_B_AMPLITUDE'].data[index], \
+                          mean = t['HA_B_MEAN'].data[index], \
+                          stddev = t['HA_B_STD'].data[index], \
+                          name = 'ha_b')
+    
+    ## Total [NII]+Ha+[SII] model
+    gfit_nii_ha_sii = nii_ha_sii_cont + gfit_nii6548 + gfit_nii6583 + \
+    gfit_ha_n + gfit_ha_b + gfit_sii6716 + gfit_sii6731
+
+    ## Fits list
+    fits_tab = [gfit_hb_oiii, gfit_nii_ha_sii]
     
     return (fits_tab)
 
@@ -729,6 +995,142 @@ def construct_fits(t, index):
 #     return (fig)    
 
 # ####################################################################################################
+
+# def fit_spectra(specprod, survey, program, healpix, targetid, z, free_balmer = False):
+#     """
+#     Fit Hb, [OIII], [NII]+Ha, and [SII] emission lines for a given emission-line spectra
+    
+#     Parameters
+#     ----------
+#     specprod : str
+#         Spectral Production Pipeline name fuji|guadalupe|...
+        
+#     survey : str
+#         Survey name for the spectra
+        
+#     program : str
+#         Program name for the spectra
+        
+#     healpix : str
+#         Healpix number of the target
+        
+#     targetid : int64
+#         The unique TARGETID associated with the target
+        
+#     z : float
+#         Redshift of the target
+        
+#     free_balmer : bool
+#         Whether or not to let sigma of balmer lines be free for the fit
+
+#     Returns
+#     -------
+#     t_params : astropy table
+#         Table of output parameters for the fit
+#     """
+    
+#     ## Rest-frame emission-line spectra
+#     coadd_spec, lam_rest, \
+#     flam_rest, ivar_rest = spec_utils.get_emline_spectra(specprod, survey, program, \
+#                                                          healpix, targetid, z, rest_frame = True)
+    
+#     ## Fitting windows for the different emission-lines.
+    
+#     lam_hb, flam_hb, ivar_hb = spec_utils.get_fit_window(lam_rest, flam_rest, \
+#                                                          ivar_rest, em_line = 'hb')
+
+#     lam_oiii, flam_oiii, ivar_oiii = spec_utils.get_fit_window(lam_rest, flam_rest, \
+#                                                                ivar_rest, em_line = 'oiii')
+#     lam_nii_ha, flam_nii_ha, ivar_nii_ha = spec_utils.get_fit_window(lam_rest, flam_rest, \
+#                                                                      ivar_rest, em_line = 'nii_ha')
+#     lam_sii, flam_sii, ivar_sii = spec_utils.get_fit_window(lam_rest, flam_rest, \
+#                                                             ivar_rest, em_line = 'sii')
+    
+#     ## Fitting Routines
+    
+#     ## Bestfit for [SII]
+#     gfit_sii, ndof_sii = find_bestfit.find_sii_best_fit(lam_sii, flam_sii, ivar_sii)
+#     ## Bestfit for [OIII]
+#     gfit_oiii, ndof_oiii = find_bestfit.find_oiii_best_fit(lam_oiii, flam_oiii, ivar_oiii)
+
+#     if (free_balmer == True):
+#         ## Bestfit for Hb with sigma (Hb) varying freely
+#         gfit_hb, ndof_hb = find_bestfit.find_hb_free_best_fit(lam_hb, flam_hb, ivar_hb, gfit_sii)
+#         ## Bestfit for [NII]+Ha with sigma (Ha) varying freely
+#         gfit_nii_ha, ndof_nii_ha = find_bestfit.find_nii_free_ha_best_fit(lam_nii_ha, flam_nii_ha, \
+#                                                                          ivar_nii_ha, gfit_sii)
+#     else:
+#         ## Bestfit for Hb with sigma (Hb) fixed to [SII]
+#         gfit_hb, ndof_hb = find_bestfit.find_hb_fixed_best_fit(lam_hb, flam_hb, ivar_hb, gfit_sii)
+#         ## Bestfit for [NII]+Ha with sigma (Ha) fixed to [SII]
+#         gfit_nii_ha, ndof_nii_ha = find_bestfit.find_nii_ha_best_fit(lam_nii_ha, flam_nii_ha, \
+#                                                                     ivar_nii_ha, gfit_sii)
+        
+#     ## Compute reduced chi2:
+#     rchi2_sii = mfit.calculate_chi2(flam_sii, gfit_sii(lam_sii), ivar_sii, \
+#                                     ndof_sii, reduced_chi2 = True)
+#     rchi2_oiii = mfit.calculate_chi2(flam_oiii, gfit_oiii(lam_oiii), ivar_oiii, \
+#                                      ndof_oiii, reduced_chi2 = True)
+#     rchi2_hb = mfit.calculate_chi2(flam_hb, gfit_hb(lam_hb), ivar_hb, \
+#                                    ndof_hb, reduced_chi2 = True)
+#     rchi2_nii_ha = mfit.calculate_chi2(flam_nii_ha, gfit_nii_ha(lam_nii_ha), \
+#                                            ivar_nii_ha, ndof_nii_ha, reduced_chi2 = True)
+    
+#     ### Parameters for the fit
+#     hb_models = ['hb_n', 'hb_out', 'hb_b']
+#     oiii_models = ['oiii4959', 'oiii4959_out', 'oiii5007', 'oiii5007_out']
+#     nii_ha_models = ['nii6548', 'nii6548_out', 'nii6583', 'nii6583_out', 'ha_n', 'ha_out', 'ha_b']
+#     sii_models = ['sii6716', 'sii6716_out', 'sii6731', 'sii6731_out']
+    
+#     hb_params = emp.get_parameters(gfit_hb, hb_models)
+#     oiii_params = emp.get_parameters(gfit_oiii, oiii_models)
+#     nii_ha_params = emp.get_parameters(gfit_nii_ha, nii_ha_models)
+#     sii_params = emp.get_parameters(gfit_sii, sii_models)
+    
+#     ## Continuum
+#     hb_params['hb_continuum'] = [gfit_hb['hb_cont'].amplitude.value]
+#     oiii_params['oiii_continuum'] = [gfit_oiii['oiii_cont'].amplitude.value]
+#     nii_ha_params['nii_ha_continuum'] = [gfit_nii_ha['nii_ha_cont'].amplitude.value]
+#     sii_params['sii_continuum'] = [gfit_sii['sii_cont'].amplitude.value]
+    
+#     ## NOISE
+#     hb_noise = mfit.compute_noise_emline(lam_rest, flam_rest, 'hb')
+#     oiii_noise = mfit.compute_noise_emline(lam_rest, flam_rest, 'oiii')
+#     nii_ha_noise = mfit.compute_noise_emline(lam_rest, flam_rest, 'nii_ha')
+#     sii_noise = mfit.compute_noise_emline(lam_rest, flam_rest, 'sii')
+    
+#     hb_params['hb_noise'] = [hb_noise]
+#     oiii_params['oiii_noise'] = [oiii_noise]
+#     nii_ha_params['nii_ha_noise'] = [nii_ha_noise]
+#     sii_params['sii_noise'] = [sii_noise]
+    
+#     ## N(DOF)
+#     hb_params['hb_ndof'] = [ndof_hb]
+#     oiii_params['oiii_ndof'] = [ndof_oiii]
+#     nii_ha_params['nii_ha_ndof'] = [ndof_nii_ha]
+#     sii_params['sii_ndof'] = [ndof_sii]
+
+#     ## Reduced chi2
+#     hb_params['hb_rchi2'] = [rchi2_hb]
+#     oiii_params['oiii_rchi2'] = [rchi2_oiii]
+#     nii_ha_params['nii_ha_rchi2'] = [rchi2_nii_ha]
+#     sii_params['sii_rchi2'] = [rchi2_sii]
+    
+#     ######## Combine everything
+#     tgt = {}
+#     tgt['targetid'] = [targetid]
+#     tgt['specprod'] = [specprod]
+#     tgt['survey'] = [survey]
+#     tgt['program'] = [program]
+#     tgt['healpix'] = [healpix]
+#     tgt['z'] = [z]
+    
+#     t_params = Table(tgt|hb_params|oiii_params|nii_ha_params|sii_params)
+#     for col in t_params.colnames:
+#         t_params.rename_column(col, col.upper())
+        
+#     return (t_params)
+
 
 
 

@@ -2,13 +2,14 @@
 This script consists of plotting-related functions.
 The following functions are available:
     1) plot_spectra_continuum(lam, flam, total_cont, axs = None)
-    2) plot_spectra_fits(targetid, lam_rest, flam_rest, fits, rchi2s)
+    2) plot_spectra_normal_fits(lam_rest, flam_rest, fits, rchi2s)
+    3) plot_spectra_extreme_fits(lam_rest, flam_rest, fits, rchi2s)
     3) plot_emline_fit(lam_win, flam_win, emfit, narrow_components = None, \
                         broad_component = None)
     4) plot_from_params(table, index, title = None)
 
 Author : Ragadeepika Pucha
-Version : 2024, February 8
+Version : 2024, February 18
 
 """
 
@@ -89,9 +90,9 @@ def plot_spectra_continuum(lam, flam, total_cont, axs = None):
     axs.legend(fontsize = 16, loc = 'best')
     
 ###################################################################################################
+####################################################################################################
 
-
-def plot_spectra_fits(lam_rest, flam_rest, fits, rchi2s, title = None):
+def plot_spectra_normal_fits(lam_rest, flam_rest, fits, rchi2s, title = None):
     """
     Plot spectra, fits and residuals in Hb, [OIII], Ha+[NII], and [SII] regions.
     
@@ -401,6 +402,183 @@ def plot_spectra_fits(lam_rest, flam_rest, fits, rchi2s, title = None):
     return (fig)
     
 ####################################################################################################
+####################################################################################################
+
+def plot_spectra_extreme_fits(lam_rest, flam_rest, fits, rchi2s, title = None):
+    """
+    Plot spectra, fits and residuals in Hb+[OIII] and [NII]+Ha+[SII] regions.
+    
+   Parameters
+    ----------    
+    lam_rest : numpy array
+        Restframe wavelength array of the emission-line spectra
+        
+    flam_rest : numpy array
+        Restframe flux array of the emission-line spectra
+        
+    fits : list
+        List of astropy model fits in the order of increasing wavelength.
+        Hb+[OIII] fit, [NII]+Ha+[SII] fit
+        
+    rchi2 : list
+        List of reduced chi2 values for the fits in the order of increasing wavelength.
+        rchi2_hb_oiii, rchi2_nii_ha_sii
+        
+    title : str
+        Title for the plot
+    
+    Returns
+    -------
+        Figure
+    """
+    
+    ## Select Hb+[OIII] region
+    hb_oiii_lam = (lam_rest >= 4700)&(lam_rest <= 5100)
+    lam_hb_oiii = lam_rest[hb_oiii_lam]
+    flam_hb_oiii = flam_rest[hb_oiii_lam]
+    
+    ## Select [NII]+Ha+[SII] region
+    nii_ha_sii_lam = (lam_rest >= 6300)&(lam_rest <= 6800)
+    lam_nii_ha_sii = lam_rest[nii_ha_sii_lam]
+    flam_nii_ha_sii = flam_rest[nii_ha_sii_lam]
+    
+    ## Separate the fits and rchi2 values
+    hb_oiii_fit, nii_ha_sii_fit = fits
+    hb_oiii_rchi2, nii_ha_sii_rchi2 = rchi2s
+        
+    fig = plt.figure(figsize = (30, 9))
+    plt.suptitle(title, fontsize = 16)
+    gs = fig.add_gridspec(5, 16)
+    gs.update(hspace = 0.0)
+    
+    ## Subplots for Hb+[OIII]
+    hb = fig.add_subplot(gs[0:4, 0:8])
+    hb_res = fig.add_subplot(gs[4:, 0:8], sharex = hb)
+    
+    ## Subplots for [NII]+Ha+[SII]
+    ha = fig.add_subplot(gs[0:4, 8:])
+    ha_res = fig.add_subplot(gs[4:, 8:], sharex = ha)
+    
+    ############################################################################
+    ############################ Hb + [OIII] spectra and models ################
+    
+    hb.plot(lam_hb_oiii, flam_hb_oiii, color = 'k')
+    hb.plot(lam_hb_oiii, hb_oiii_fit(lam_hb_oiii), color = 'r', lw = 3.0, ls = '--')
+    hb.set(ylabel = '$F_{\lambda}$')
+    plt.setp(hb.get_xticklabels(), visible = False)
+    
+    ## Hb + [OIII] continuum
+    hb_cont = hb_oiii_fit['hb_oiii_cont'].amplitude.value
+    
+    ## Narrow components
+    hb.plot(lam_hb_oiii, hb_oiii_fit['hb_n'](lam_hb_oiii) + hb_cont, color = 'orange')
+    hb.plot(lam_hb_oiii, hb_oiii_fit['oiii4959'](lam_hb_oiii) + hb_cont, color = 'orange')
+    hb.plot(lam_hb_oiii, hb_oiii_fit['oiii5007'](lam_hb_oiii) + hb_cont, color = 'orange')
+    
+    sig_hb_n = mfit.lamspace_to_velspace(hb_oiii_fit['hb_n'].stddev.value, \
+                                        hb_oiii_fit['hb_n'].mean.value)
+    hb.annotate('$\sigma \\rm(H\\beta;n)$ = '+str(round(sig_hb_n, 1))+' km/s', \
+               xy = (4720, 0.9), xycoords = hb.get_xaxis_transform(), \
+               fontsize = 16, color = 'k')
+    
+    sig_oiii = mfit.lamspace_to_velspace(hb_oiii_fit['oiii5007'].stddev.value, \
+                                        hb_oiii_fit['oiii5007'].mean.value)
+    hb.annotate('$\sigma \\rm([OIII])$ = '+str(round(sig_oiii, 1))+' km/s', \
+               xy = (4720, 0.8), xycoords = hb.get_xaxis_transform(), \
+               fontsize = 16, color = 'k')
+    
+    ## Broad component
+    hb.plot(lam_hb_oiii, hb_oiii_fit['hb_b'](lam_hb_oiii) + hb_cont, color = 'blue')
+    sig_hb_b = mfit.lamspace_to_velspace(hb_oiii_fit['hb_b'].stddev.value, \
+                                        hb_oiii_fit['hb_b'].mean.value)
+    hb.annotate('$\sigma \\rm(H\\beta;b)$ = '+str(round(sig_hb_b, 1))+' km/s', \
+               xy = (4720, 0.7), xycoords = hb.get_xaxis_transform(), \
+               fontsize = 16, color = 'k')
+    
+    ## Outflow components, if available
+    if ('oiii5007_out' in hb_oiii_fit.submodel_names):
+        hb.plot(lam_hb_oiii, hb_oiii_fit['oiii4959_out'](lam_hb_oiii) + hb_cont, color = 'orange')
+        hb.plot(lam_hb_oiii, hb_oiii_fit['oiii5007_out'](lam_hb_oiii) + hb_cont, color = 'orange')
+        
+        sig_oiii_out = mfit.lamspace_to_velspace(hb_oiii_fit['oiii5007_out'].stddev.value, \
+                                        hb_oiii_fit['oiii5007_out'].mean.value)
+        hb.annotate('$\sigma \\rm([OIII];out)$ = '+str(round(sig_oiii_out, 1))+' km/s', \
+                   xy = (4720, 0.6), xycoords = hb.get_xaxis_transform(), \
+                   fontsize = 16, color = 'k')
+        
+    hb.annotate('$\chi^{2}_{red}$ = '+str(round(hb_oiii_rchi2, 2)), \
+               xy = (5020, 0.9), xycoords = hb.get_xaxis_transform(), \
+               fontsize = 16, color = 'k')
+        
+    ## Hb + [OIII] Fit residuals
+    res_hb_oiii = (flam_hb_oiii - hb_oiii_fit(lam_hb_oiii))
+    hb_res.scatter(lam_hb_oiii, res_hb_oiii, color = 'r', marker = '.')
+    hb_res.axhline(0.0, color = 'k', ls = ':')
+    hb_res.set(xlabel = '$\lambda$')
+    hb_res.set_ylabel('Data - Model', fontsize = 14)
+    
+    ############################################################################
+    ###################### [NII] + Ha + [SII] spectra and models ###############
+    
+    ha.plot(lam_nii_ha_sii, flam_nii_ha_sii, color = 'k')
+    ha.plot(lam_nii_ha_sii, nii_ha_sii_fit(lam_nii_ha_sii), color = 'r', lw = 3.0, ls = '--')
+    ha.set(ylabel = '$F_{\lambda}$')
+    plt.setp(ha.get_xticklabels(), visible = False)
+    
+    ## [NII]+Ha+[SII] continuum
+    ha_cont = nii_ha_sii_fit['nii_ha_sii_cont'].amplitude.value
+    
+    ## Narrow components
+    ha.plot(lam_nii_ha_sii, nii_ha_sii_fit['ha_n'](lam_nii_ha_sii) + ha_cont, color = 'orange')
+    ha.plot(lam_nii_ha_sii, nii_ha_sii_fit['nii6548'](lam_nii_ha_sii) + ha_cont, color = 'orange')
+    ha.plot(lam_nii_ha_sii, nii_ha_sii_fit['nii6583'](lam_nii_ha_sii) + ha_cont, color = 'orange')
+    ha.plot(lam_nii_ha_sii, nii_ha_sii_fit['sii6716'](lam_nii_ha_sii) + ha_cont, color = 'orange')
+    ha.plot(lam_nii_ha_sii, nii_ha_sii_fit['sii6731'](lam_nii_ha_sii) + ha_cont, color = 'orange')
+    
+    sig_ha_n = mfit.lamspace_to_velspace(nii_ha_sii_fit['ha_n'].stddev.value, \
+                                        nii_ha_sii_fit['ha_n'].mean.value)
+    ha.annotate('$\sigma \\rm(H\\alpha;n)$ = '+str(round(sig_ha_n, 1))+' km/s', \
+               xy = (6320, 0.9), xycoords = ha.get_xaxis_transform(), \
+               fontsize = 16, color = 'k')
+    sig_nii = mfit.lamspace_to_velspace(nii_ha_sii_fit['nii6583'].stddev.value, \
+                                        nii_ha_sii_fit['nii6583'].mean.value)
+    ha.annotate('$\sigma \\rm([NII])$ = '+str(round(sig_nii, 1))+' km/s', \
+               xy = (6320, 0.8), xycoords = ha.get_xaxis_transform(), \
+               fontsize = 16, color = 'k')
+    
+    sig_sii = mfit.lamspace_to_velspace(nii_ha_sii_fit['sii6716'].stddev.value, \
+                                        nii_ha_sii_fit['sii6716'].mean.value)
+    ha.annotate('$\sigma \\rm([SII])$ = '+str(round(sig_nii, 1))+' km/s', \
+               xy = (6320, 0.7), xycoords = ha.get_xaxis_transform(), \
+               fontsize = 16, color = 'k')
+    
+    ## Broad component
+    ha.plot(lam_nii_ha_sii, nii_ha_sii_fit['ha_b'](lam_nii_ha_sii) + ha_cont, color = 'blue')
+    sig_ha_b = mfit.lamspace_to_velspace(nii_ha_sii_fit['ha_b'].stddev.value, \
+                                        nii_ha_sii_fit['ha_b'].mean.value)
+    fwhm_ha_b = mfit.sigma_to_fwhm(sig_ha_b)
+    ha.annotate('$\\rm FWHM (H\\alpha;b)$ = '+str(round(fwhm_ha_b, 1))+' km/s', \
+               xy = (6320, 0.6), xycoords = ha.get_xaxis_transform(), \
+               fontsize = 16, color = 'k')
+    
+    ha.annotate('$\chi^{2}_{red}$ = '+str(round(nii_ha_sii_rchi2, 2)), \
+               xy = (6700, 0.9), xycoords = ha.get_xaxis_transform(), \
+               fontsize = 16, color = 'k')
+    
+    ## [NII]+Ha+[SII] fit residuals
+    res_nii_ha_sii = (flam_nii_ha_sii - nii_ha_sii_fit(lam_nii_ha_sii))
+    ha_res.scatter(lam_nii_ha_sii, res_nii_ha_sii, color = 'r', marker = '.')
+    ha_res.axhline(0.0, color = 'k', ls = ':')
+    ha_res.set(xlabel = '$\lambda$')
+    ha_res.set_ylabel('Data - Model', fontsize = 14)
+    
+    plt.tight_layout()
+    plt.close()
+    
+    return (fig)
+
+####################################################################################################
+####################################################################################################
 
 def plot_emline_fit(lam_win, flam_win, emfit, narrow_components = None, \
                     broad_component = None):
@@ -469,6 +647,7 @@ def plot_emline_fit(lam_win, flam_win, emfit, narrow_components = None, \
     return (fig)
     
 ####################################################################################################
+####################################################################################################
 
 def plot_from_params(table, index, title = None):
     """
@@ -503,26 +682,40 @@ def plot_from_params(table, index, title = None):
     _, lam_rest, flam_rest, ivar_rest = spec_utils.get_emline_spectra(specprod, survey, program, \
                                                                      healpix, targetid, z, \
                                                                      rest_frame = True)
-    
-    ## Constructing the fits from the table
-    fits = emfit.construct_fits(table, index)
-    
-    ## Reduced chi2 values from the table
-    hb_rchi2 = table['HB_RCHI2'].data[index]
-    oiii_rchi2 = table['OIII_RCHI2'].data[index]
-    nii_ha_rchi2 = table['NII_HA_RCHI2'].data[index]
-    sii_rchi2 = table['SII_RCHI2'].data[index]
-    
-    rchi2s = [hb_rchi2, oiii_rchi2, nii_ha_rchi2, sii_rchi2]
-    
     if (title == None):
         title = f'TARGETID: {targetid}; z : {round(z, 2)}'
+    
+    if (table['HB_OIII_RCHI2'].data[index] == 0):
+        ## Constructing the fits from the table
+        fits = emfit.construct_normal_fits(table, index)
 
-    ## Plot the figure
-    fig = plot_spectra_fits(lam_rest, flam_rest, fits, rchi2s, title = title)
+        ## Reduced chi2 values from the table
+        hb_rchi2 = table['HB_RCHI2'].data[index]
+        oiii_rchi2 = table['OIII_RCHI2'].data[index]
+        nii_ha_rchi2 = table['NII_HA_RCHI2'].data[index]
+        sii_rchi2 = table['SII_RCHI2'].data[index]
+
+        rchi2s = [hb_rchi2, oiii_rchi2, nii_ha_rchi2, sii_rchi2]
+        
+        ## Plot the figure
+        fig = plot_spectra_normal_fits(lam_rest, flam_rest, fits, rchi2s, title = title)
+        
+    else:
+        ## Constructing the fits from the table
+        fits = emfit.construct_extreme_fits(table, index)
+        
+        ## Reduced chi2 values from the table
+        hb_oiii_rchi2 = table['HB_OIII_RCHI2'].data[index]
+        nii_ha_sii_rchi2 = table['NII_HA_SII_RCHI2'].data[index]
+        
+        rchi2s = [hb_oiii_rchi2, nii_ha_sii_rchi2]
+        
+        ## Plot the figure
+        fig = plot_spectra_extreme_fits(lam_rest, flam_rest, fits, rchi2s, title = title)    
     
     return (fig)
 
+####################################################################################################
 ####################################################################################################
     
 # def plot_spectra_fastspec_model(lam_rest, flam_rest, model_rest, fspec_row, title = None):

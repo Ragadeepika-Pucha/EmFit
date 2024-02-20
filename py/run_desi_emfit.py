@@ -3,7 +3,7 @@ This script is for running the DESI EmFit Code for a given table of sources.
 It requires input and output filenames
 
 Author : Ragadeepika Pucha
-Version : 2024 February 8
+Version : 2024 February 18
 """
 
 import sys
