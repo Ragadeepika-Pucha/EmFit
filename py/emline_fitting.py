@@ -626,14 +626,19 @@ def construct_extreme_fits(t, index):
                           mean = t['HA_N_MEAN'].data[index], \
                           stddev = t['HA_N_STD'].data[index], \
                           name = 'ha_n')
-    gfit_ha_b = Gaussian1D(amplitude = t['HA_B_AMPLITUDE'].data[index], \
-                          mean = t['HA_B_MEAN'].data[index], \
-                          stddev = t['HA_B_STD'].data[index], \
-                          name = 'ha_b')
+    gfit_ha = gfit_ha_n
+    
+    if (t['HA_B_MEAN'].data[index] != 0):
+        ## Gaussian model for broad Ha, if available
+        gfit_ha_b = Gaussian1D(amplitude = t['HA_B_AMPLITUDE'].data[index], \
+                              mean = t['HA_B_MEAN'].data[index], \
+                              stddev = t['HA_B_STD'].data[index], \
+                              name = 'ha_b')
+        gfit_ha = gfit_ha + gfit_ha_b
     
     ## Total [NII]+Ha+[SII] model
     gfit_nii_ha_sii = nii_ha_sii_cont + gfit_nii6548 + gfit_nii6583 + \
-    gfit_ha_n + gfit_ha_b + gfit_sii6716 + gfit_sii6731
+    gfit_ha + gfit_sii6716 + gfit_sii6731
 
     ## Fits list
     fits_tab = [gfit_hb_oiii, gfit_nii_ha_sii]

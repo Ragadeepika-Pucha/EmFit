@@ -487,13 +487,14 @@ def plot_spectra_extreme_fits(lam_rest, flam_rest, fits, rchi2s, title = None):
                xy = (4720, 0.8), xycoords = hb.get_xaxis_transform(), \
                fontsize = 16, color = 'k')
     
-    ## Broad component
-    hb.plot(lam_hb_oiii, hb_oiii_fit['hb_b'](lam_hb_oiii) + hb_cont, color = 'blue')
-    sig_hb_b = mfit.lamspace_to_velspace(hb_oiii_fit['hb_b'].stddev.value, \
-                                        hb_oiii_fit['hb_b'].mean.value)
-    hb.annotate('$\sigma \\rm(H\\beta;b)$ = '+str(round(sig_hb_b, 1))+' km/s', \
-               xy = (4720, 0.7), xycoords = hb.get_xaxis_transform(), \
-               fontsize = 16, color = 'k')
+    if ('hb_b' in hb_oiii_fit.submodel_names):
+        ## Broad component
+        hb.plot(lam_hb_oiii, hb_oiii_fit['hb_b'](lam_hb_oiii) + hb_cont, color = 'blue')
+        sig_hb_b = mfit.lamspace_to_velspace(hb_oiii_fit['hb_b'].stddev.value, \
+                                            hb_oiii_fit['hb_b'].mean.value)
+        hb.annotate('$\sigma \\rm(H\\beta;b)$ = '+str(round(sig_hb_b, 1))+' km/s', \
+                   xy = (4720, 0.7), xycoords = hb.get_xaxis_transform(), \
+                   fontsize = 16, color = 'k')
     
     ## Outflow components, if available
     if ('oiii5007_out' in hb_oiii_fit.submodel_names):
@@ -552,14 +553,15 @@ def plot_spectra_extreme_fits(lam_rest, flam_rest, fits, rchi2s, title = None):
                xy = (6320, 0.7), xycoords = ha.get_xaxis_transform(), \
                fontsize = 16, color = 'k')
     
-    ## Broad component
-    ha.plot(lam_nii_ha_sii, nii_ha_sii_fit['ha_b'](lam_nii_ha_sii) + ha_cont, color = 'blue')
-    sig_ha_b = mfit.lamspace_to_velspace(nii_ha_sii_fit['ha_b'].stddev.value, \
-                                        nii_ha_sii_fit['ha_b'].mean.value)
-    fwhm_ha_b = mfit.sigma_to_fwhm(sig_ha_b)
-    ha.annotate('$\\rm FWHM (H\\alpha;b)$ = '+str(round(fwhm_ha_b, 1))+' km/s', \
-               xy = (6320, 0.6), xycoords = ha.get_xaxis_transform(), \
-               fontsize = 16, color = 'k')
+    if ('ha_b' in nii_ha_sii_fit.submodel_names):
+        ## Broad component
+        ha.plot(lam_nii_ha_sii, nii_ha_sii_fit['ha_b'](lam_nii_ha_sii) + ha_cont, color = 'blue')
+        sig_ha_b = mfit.lamspace_to_velspace(nii_ha_sii_fit['ha_b'].stddev.value, \
+                                            nii_ha_sii_fit['ha_b'].mean.value)
+        fwhm_ha_b = mfit.sigma_to_fwhm(sig_ha_b)
+        ha.annotate('$\\rm FWHM (H\\alpha;b)$ = '+str(round(fwhm_ha_b, 1))+' km/s', \
+                   xy = (6320, 0.6), xycoords = ha.get_xaxis_transform(), \
+                   fontsize = 16, color = 'k')
     
     ha.annotate('$\chi^{2}_{red}$ = '+str(round(nii_ha_sii_rchi2, 2)), \
                xy = (6700, 0.9), xycoords = ha.get_xaxis_transform(), \
