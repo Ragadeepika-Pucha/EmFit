@@ -3,7 +3,7 @@ This script consists of functions for fitting emission-lines.
 The different functions are divided into different classes for different emission lines.
 
 Author : Ragadeepika Pucha
-Version : 2024, February 23
+Version : 2024, February 25
 """
 
 ###################################################################################################
@@ -175,7 +175,6 @@ class nii_ha_fit:
             
         n_dof : int
             Number of degrees of freedom
-        
         """
     
         ## Single component model
@@ -185,10 +184,22 @@ class nii_ha_fit:
                                                                      broad_comp = False)
 
         ## With broad component
-        gfit_b = fl.fit_nii_ha_lines.fit_nii_free_ha_one_component(lam_nii_ha, flam_nii_ha, \
-                                                                   ivar_nii_ha, sii_bestfit, \
-                                                                   broad_comp = True)
-
+        ## Test with different priors and select the one with the least chi2
+        priors_list = [[4,5], [3,6], [5,8]]
+        gfits = []
+        chi2s = []
+        
+        for p in priors_list:
+            gfit = fl.fit_nii_ha_lines.fit_nii_free_ha_one_component(lam_nii_ha, flam_nii_ha, \
+                                                                     ivar_nii_ha, sii_bestfit, \
+                                                                     priors = p, broad_comp = True)
+            chi2_fit = mfit.calculate_chi2(flam_nii_ha, gfit(lam_nii_ha), ivar_nii_ha)
+            gfits.append(gfit)
+            chi2s.append(chi2_fit)
+            
+        ## Select the broad-component fit with the minimum chi2s
+        gfit_b = gfits[np.argmin(chi2s)]
+            
         ## Chi2 values for both the fits
         chi2_no_b = mfit.calculate_chi2(flam_nii_ha, gfit_no_b(lam_nii_ha), ivar_nii_ha)
         chi2_b = mfit.calculate_chi2(flam_nii_ha, gfit_b(lam_nii_ha), ivar_nii_ha)
@@ -212,7 +223,7 @@ class nii_ha_fit:
         else:
             nii_ha_bestfit = gfit_no_b
             n_dof = 6
-
+            
         return (nii_ha_bestfit, n_dof)
     
 ####################################################################################################
@@ -255,11 +266,23 @@ class nii_ha_fit:
         gfit_no_b = fl.fit_nii_ha_lines.fit_nii_ha_one_component(lam_nii_ha, flam_nii_ha, \
                                                                  ivar_nii_ha, sii_bestfit, \
                                                                  broad_comp = False)
-
+        
         ## With broad component
-        gfit_b = fl.fit_nii_ha_lines.fit_nii_ha_one_component(lam_nii_ha, flam_nii_ha, \
-                                                              ivar_nii_ha, sii_bestfit, \
-                                                              broad_comp = True)
+        ## Test with different priors and select the one with the least chi2
+        priors_list = [[4,5], [3,6], [5,8]]
+        gfits = []
+        chi2s = []
+        
+        for p in priors_list:
+            gfit = fl.fit_nii_ha_lines.fit_nii_ha_one_component(lam_nii_ha, flam_nii_ha, \
+                                                                     ivar_nii_ha, sii_bestfit, \
+                                                                     priors = p, broad_comp = True)
+            chi2_fit = mfit.calculate_chi2(flam_nii_ha, gfit(lam_nii_ha), ivar_nii_ha)
+            gfits.append(gfit)
+            chi2s.append(chi2_fit)
+            
+        ## Select the broad-component fit with the minimum chi2s
+        gfit_b = gfits[np.argmin(chi2s)]
 
         ## Chi2 values for both the fits
         chi2_no_b = mfit.calculate_chi2(flam_nii_ha, gfit_no_b(lam_nii_ha), ivar_nii_ha)
@@ -329,9 +352,21 @@ class nii_ha_fit:
                                                                   broad_comp = False)
 
         ## With broad component
-        gfit_b = fl.fit_nii_ha_lines.fit_nii_ha_two_components(lam_nii_ha, flam_nii_ha, \
-                                                               ivar_nii_ha, sii_bestfit, \
-                                                               broad_comp = True)
+        ## Test with different priors and select the one with the least chi2
+        priors_list = [[4,5], [3,6], [5,8]]
+        gfits = []
+        chi2s = []
+        
+        for p in priors_list:
+            gfit = fl.fit_nii_ha_lines.fit_nii_ha_two_components(lam_nii_ha, flam_nii_ha, \
+                                                                 ivar_nii_ha, sii_bestfit, \
+                                                                 priors = p, broad_comp = True)
+            chi2_fit = mfit.calculate_chi2(flam_nii_ha, gfit(lam_nii_ha), ivar_nii_ha)
+            gfits.append(gfit)
+            chi2s.append(chi2_fit)
+            
+        ## Select the broad-component fit with the minimum chi2s
+        gfit_b = gfits[np.argmin(chi2s)]
 
         ## Chi2 values for both the fits
         chi2_no_b = mfit.calculate_chi2(flam_nii_ha, gfit_no_b(lam_nii_ha), ivar_nii_ha)

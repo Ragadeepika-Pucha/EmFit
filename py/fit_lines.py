@@ -3,7 +3,7 @@ This script consists of funcitons for fitting emission-lines.
 The different functions are divided into different classes for different emission lines.
 
 Author : Ragadeepika Pucha
-Version : 2024, February 23
+Version : 2024, February 25
 """
 
 ###################################################################################################
@@ -284,7 +284,7 @@ class fit_oiii_lines:
 
     def fit_two_components(lam_oiii, flam_oiii, ivar_oiii):
         """
-        Function to fit a two components to [OIII]4959,5007 doublet.
+        Function to fit two components to [OIII]4959,5007 doublet.
         
         Parameters
         ----------
@@ -419,7 +419,7 @@ class fit_nii_ha_lines:
     """
     
     def fit_nii_free_ha_one_component(lam_nii_ha, flam_nii_ha, ivar_nii_ha, \
-                                      sii_bestfit, broad_comp = True):
+                                      sii_bestfit, priors = [4, 5], broad_comp = True):
         """
         Function to fit [NII]6548,6583 + Ha emission lines.
         The width of [NII] is kept fixed to [SII] and Ha is allowed to vary 
@@ -441,6 +441,9 @@ class fit_nii_ha_lines:
             
         sii_bestfit : Astropy model
             Best fit model for the [SII] emission-lines.
+            
+        priors : list
+            Initial priors for the amplitude and stddev of the broad component
             
         broad_comp : bool
             Whether or not to add a broad component for the fit
@@ -532,8 +535,8 @@ class fit_nii_ha_lines:
                                bounds = {'amplitude' : (0.0, None), 'stddev' : (0.0, max_std)})
 
             ## Broad component
-            g_ha_b = Gaussian1D(amplitude = amp_ha/4, mean = 6564.312, \
-                               stddev = 5.0, name = 'ha_b', \
+            g_ha_b = Gaussian1D(amplitude = amp_ha/priors[0], mean = 6564.312, \
+                               stddev = priors[1], name = 'ha_b', \
                                bounds = {'amplitude' : (0.0, None), 'stddev' : (1.0, None)})
 
             ## Initial Fit
@@ -565,7 +568,7 @@ class fit_nii_ha_lines:
 ####################################################################################################
 
     def fit_nii_ha_one_component(lam_nii_ha, flam_nii_ha, ivar_nii_ha, \
-                                sii_bestfit, broad_comp = True):
+                                sii_bestfit, priors = [4, 5], broad_comp = True):
         """
         Function to fit [NII]6548,6583 + Ha emission lines.
         The width of narrow [NII] and Ha is kept fixed to narrow [SII] 
@@ -587,6 +590,9 @@ class fit_nii_ha_lines:
 
         sii_bestfit : Astropy model
             Best fit model for the [SII] emission-lines.
+            
+        priors : list
+            Initial priors for the amplitude and stddev of the broad component
 
         broad_comp : bool
             Whether or not to add a broad component for the fit
@@ -675,8 +681,8 @@ class fit_nii_ha_lines:
             g_ha_n.stddev.fixed = True
 
             ## Broad component
-            g_ha_b = Gaussian1D(amplitude = amp_ha/4, mean = 6564.312, \
-                               stddev = 5.0, name = 'ha_b', \
+            g_ha_b = Gaussian1D(amplitude = amp_ha/priors[0], mean = 6564.312, \
+                               stddev = priors[1], name = 'ha_b', \
                                bounds = {'amplitude' : (0.0, None), 'stddev' : (1.0, None)})
 
             ## Initial Fit
@@ -716,7 +722,7 @@ class fit_nii_ha_lines:
 ####################################################################################################
 
     def fit_nii_ha_two_components(lam_nii_ha, flam_nii_ha, ivar_nii_ha, \
-                                  sii_bestfit, broad_comp = True):
+                                  sii_bestfit, priors = [4, 5], broad_comp = True):
         """
         Function to fit [NII]6548,6583 + Ha emission lines.
         The width of narrow (outflow) [NII] and Ha is kept fixed to narrow (outflow) [SII]. 
@@ -738,6 +744,9 @@ class fit_nii_ha_lines:
 
         sii_bestfit : Astropy model
             Best fit model for the [SII] emission-lines.
+            
+        priors : list
+            Initial priors for the amplitude and stddev of the broad component
 
         broad_comp : bool
             Whether or not to add a broad component for the fit
@@ -802,11 +811,11 @@ class fit_nii_ha_lines:
         g_nii6583.stddev.fixed = True
 
         ## [NII] outflow Gaussians
-        g_nii6548_out = Gaussian1D(amplitude = amp_nii6548/4, mean = 6549.852, \
+        g_nii6548_out = Gaussian1D(amplitude = amp_nii6548/3, mean = 6549.852, \
                                   stddev = std_nii6548_out, name = 'nii6548_out', \
                                   bounds = {'amplitude' : (0.0, None)})
 
-        g_nii6583_out = Gaussian1D(amplitude = amp_nii6583/4, mean = 6585.277, \
+        g_nii6583_out = Gaussian1D(amplitude = amp_nii6583/3, mean = 6585.277, \
                                   stddev = std_nii6583_out, name = 'nii6583_out', \
                                   bounds = {'amplitude' : (0.0, None)})
 
@@ -880,8 +889,8 @@ class fit_nii_ha_lines:
             g_ha_out.stddev.fixed = True
 
             ## Broad component
-            g_ha_b = Gaussian1D(amplitude = amp_ha/4, mean = 6564.312, \
-                               stddev = 5.0, name = 'ha_b', \
+            g_ha_b = Gaussian1D(amplitude = amp_ha/priors[0], mean = 6564.312, \
+                               stddev = priors[1], name = 'ha_b', \
                                bounds = {'amplitude' : (0.0, None), 'stddev' : (1.0, None)})
 
             ## Initial Fit
