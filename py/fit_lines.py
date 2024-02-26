@@ -1192,7 +1192,7 @@ class fit_extreme_broadline_sources:
         3) fit_hb_oiii_2comp(lam_hb_oiii, flam_hb_oiii, ivar_hb_oiii, nii_ha_sii_bestfit)
         
     """
-    def fit_nii_ha_sii(lam_nii_ha_sii, flam_nii_ha_sii, ivar_nii_ha_sii):
+    def fit_nii_ha_sii(lam_nii_ha_sii, flam_nii_ha_sii, ivar_nii_ha_sii, broad_comp = True):
         """
         Function to fit [NII]+Ha+[SII] together for extreme broadline (quasar-like) sources
         The widths of all the narrow-line components are tied together.
@@ -1208,12 +1208,18 @@ class fit_extreme_broadline_sources:
 
         ivar_nii_ha_sii : numpy array
             Inverse Variance array of the spectra in the [NII]+Ha+[SII] region.
+            
+        broad_comp : bool
+            Whether or not to add a broad component for the fit
+            Default is True
 
         Returns
         -------
         gfit : Astropy model
-            Best-fit model for the [NII]+Ha+[SII] region with a broad component
+            Best-fit model for the [NII]+Ha+[SII] region "without-broad" or "with-broad" component.
+            Depends on what the broad_comp is set to
         """
+        
         ############################ [SII]6716,6731 doublet ########################
         ## Initial estimate of amplitudes
         amp_sii6716 = np.max(flam_nii_ha_sii[(lam_nii_ha_sii >= 6716)&(lam_nii_ha_sii <= 6719)])
@@ -1278,6 +1284,10 @@ class fit_extreme_broadline_sources:
         g_nii6583.stddev.tied = tie_std_nii6583
 
         g_nii = g_nii6548 + g_nii6583
+        
+        ############################ Continuum #####################################
+
+        cont = Const1D(amplitude = 0.0, name = 'nii_ha_sii_cont')
 
         ############################ HALPHA ########################################
         ## Initial estimate of amplitude
@@ -1287,30 +1297,35 @@ class fit_extreme_broadline_sources:
         g_ha_n = Gaussian1D(amplitude = amp_ha, mean = 6564.312, \
                            stddev = 1.0, name = 'ha_n', \
                            bounds = {'amplitude':(0.0, None), 'stddev':(0.0, None)})
-        g_ha_b = Gaussian1D(amplitude = amp_ha/3, mean = 6564.312, \
-                           stddev = 6.0, name = 'ha_b', \
-                           bounds = {'amplitude':(0.0, None), 'stddev':(0.0, None)})
-
+        
         ## Tie sigma of narrow Ha to [SII] in velocity space
         def tie_std_ha(model):
             return ((model['sii6716'].stddev)*(model['ha_n'].mean/model['sii6716'].mean))
 
         g_ha_n.stddev.tied = tie_std_ha
-
-        g_ha = g_ha_n + g_ha_b
-
-        ############################ Continuum #####################################
-
-        cont = Const1D(amplitude = 0.0, name = 'nii_ha_sii_cont')
-
-        ## Initial Fit
-        g_init = cont + g_nii + g_ha + g_sii
-        fitter = fitting.LevMarLSQFitter()
-
-        gfit = fitter(g_init, lam_nii_ha_sii, flam_nii_ha_sii, \
-                     weights = np.sqrt(ivar_nii_ha_sii), maxiter = 1000)
-        ## Returns the best-fit model with a broad component
-        return (gfit)
+        
+        if (broad_comp == True):
+            g_ha_b = Gaussian1D(amplitude = amp_ha/3, mean = 6564.312, \
+                               stddev = 6.0, name = 'ha_b', \
+                               bounds = {'amplitude':(0.0, None), 'stddev':(0.0, None)})
+            
+            ## Initial Fit
+            g_init = cont + g_nii + g_ha_n + g_ha_b + g_sii
+            fitter_b = fitting.LevMarLSQFitter()
+            gfit_b = fitter_b(g_init, lam_nii_ha_sii, flam_nii_ha_sii, \
+                             weights = np.sqrt(ivar_nii_ha_sii), maxiter = 1000)
+            
+            ## Returns fit with broad component if broad_comp = True
+            return (gfit_b)
+        else:
+            ## Initial Fit
+            g_init = cont + g_nii + g_ha_n + g_sii
+            fitter_no_b = fitting.LevMarLSQFitter()
+            gfit_no_b = fitter_no_b(g_init, lam_nii_ha_sii, flam_nii_ha_sii, \
+                                   weights = np.sqrt(ivar_nii_ha_sii), maxiter = 1000)
+        
+            ## Returns the best-fit model without a broad component
+            return (gfit_no_b)
     
 ####################################################################################################
 
@@ -1374,25 +1389,22 @@ class fit_extreme_broadline_sources:
         g_oiii5007.stddev.tied = tie_std_oiii
 
         g_oiii = g_oiii4959 + g_oiii5007
+        
+        ############################ Continuum #####################################
+
+        cont = Const1D(amplitude = 0.0, name = 'hb_oiii_cont')
 
         ############################ HBETA #########################################
-        ha_n_std = nii_ha_sii_bestfit['ha_n'].stddev.value
-        ha_b_std = nii_ha_sii_bestfit['ha_b'].stddev.value
-
-        ## Initial estimates of standard deviation for Hb
-        std_hb_n = (4862.683/nii_ha_sii_bestfit['ha_n'].mean.value)*ha_n_std
-        std_hb_b = (4862.683/nii_ha_sii_bestfit['ha_b'].mean.value)*ha_b_std
-
         ## Initial estimate of amplitude
         amp_hb = np.max(flam_hb_oiii[(lam_hb_oiii >= 4860)&(lam_hb_oiii <= 4864)])
-
+        
+        ha_n_std = nii_ha_sii_bestfit['ha_n'].stddev.value
+        ## Initial estimates of standard deviation for Hb
+        std_hb_n = (4862.683/nii_ha_sii_bestfit['ha_n'].mean.value)*ha_n_std
+        
         ## Initial gaussian fits
         g_hb_n = Gaussian1D(amplitude = amp_hb, mean = 4862.683, \
                            stddev = std_hb_n, name = 'hb_n', \
-                           bounds = {'amplitude' : (0.0, None), 'stddev' : (0.0, None)})
-
-        g_hb_b = Gaussian1D(amplitude = amp_hb/2, mean = 4862.683, \
-                           stddev = std_hb_b, name = 'hb_b', \
                            bounds = {'amplitude' : (0.0, None), 'stddev' : (0.0, None)})
         
         ## Tie mean of Hb to Ha
@@ -1402,13 +1414,6 @@ class fit_extreme_broadline_sources:
         g_hb_n.mean.tied = tie_mean_hb
         g_hb_n.mean.fixed = True
         
-        ## Tie mean of broad Hb to broad Ha
-        def tie_mean_hb_b(model):
-            return ((4862.683/6564.312)*nii_ha_sii_bestfit['ha_b'].mean)
-
-        g_hb_b.mean.tied = tie_mean_hb_b
-        g_hb_b.mean.fixed = True
-
         ## Fix sigma of narrow Hb to narrow Ha
         def tie_std_hb_n(model):
             return ((model['hb_n'].mean/nii_ha_sii_bestfit['ha_n'].mean)*\
@@ -1416,30 +1421,45 @@ class fit_extreme_broadline_sources:
 
         g_hb_n.stddev.tied = tie_std_hb_n
         g_hb_n.stddev.fixed = True
+        
+        g_hb = cont + g_hb_n
+        
+        if ('ha_b' in nii_ha_sii_bestfit.submodel_names):
+            
+            ## Initial values 
+            ha_b_std = nii_ha_sii_bestfit['ha_b'].stddev.value
+            std_hb_b = (4862.683/nii_ha_sii_bestfit['ha_b'].mean.value)*ha_b_std
+            
+            ## Broad Hb Gaussian
+            g_hb_b = Gaussian1D(amplitude = amp_hb/2, mean = 4862.683, \
+                               stddev = std_hb_b, name = 'hb_b', \
+                               bounds = {'amplitude' : (0.0, None), 'stddev' : (0.0, None)})
+    
+            ## Tie mean of broad Hb to broad Ha
+            def tie_mean_hb_b(model):
+                return ((4862.683/6564.312)*nii_ha_sii_bestfit['ha_b'].mean)
 
-        ## Fix sigma of broad Hb to broad Ha
-        def tie_std_hb_b(model):
-            return ((model['hb_b'].mean/nii_ha_sii_bestfit['ha_b'].mean)*\
-                   nii_ha_sii_bestfit['ha_b'].stddev)
+            g_hb_b.mean.tied = tie_mean_hb_b
+            g_hb_b.mean.fixed = True
 
-        g_hb_b.stddev.tied = tie_std_hb_b
-        g_hb_b.stddev.fixed = True
+            ## Fix sigma of broad Hb to broad Ha
+            def tie_std_hb_b(model):
+                return ((model['hb_b'].mean/nii_ha_sii_bestfit['ha_b'].mean)*\
+                       nii_ha_sii_bestfit['ha_b'].stddev)
 
-        g_hb = g_hb_n + g_hb_b
+            g_hb_b.stddev.tied = tie_std_hb_b
+            g_hb_b.stddev.fixed = True
 
-        ############################ Continuum #####################################
-
-        cont = Const1D(amplitude = 0.0, name = 'hb_oiii_cont')
+            g_hb = g_hb + g_hb_b
 
         ## Initial Fit
-        g_init = cont + g_hb + g_oiii
+        g_init = g_hb + g_oiii
         fitter = fitting.LevMarLSQFitter()
 
         gfit = fitter(g_init, lam_hb_oiii, flam_hb_oiii, \
                      weights = np.sqrt(ivar_hb_oiii), maxiter = 1000)
 
         return (gfit)
-
 
 ####################################################################################################
 
@@ -1491,9 +1511,6 @@ class fit_extreme_broadline_sources:
                                    bounds = {'amplitude' : (0.0, None), 'stddev' : (0.0, None)})
 
         ## Tie means of the narrow components
-        # def tie_mean_oiii(model):
-        #     return (model['oiii4959'].mean + 47.934)
-        
         def tie_mean_oiii(model):
             return ((5008.239/4960.295)*model['oiii4959'].mean)
 
@@ -1532,25 +1549,23 @@ class fit_extreme_broadline_sources:
         g_oiii5007_out.stddev.tied = tie_std_oiii_out
 
         g_oiii = g_oiii4959 + g_oiii5007 + g_oiii4959_out + g_oiii5007_out
+        
+        ############################ Continuum #####################################
 
+        cont = Const1D(amplitude = 0.0, name = 'hb_oiii_cont')
+        
         ############################ HBETA #########################################
-        ha_n_std = nii_ha_sii_bestfit['ha_n'].stddev.value
-        ha_b_std = nii_ha_sii_bestfit['ha_b'].stddev.value
-
-        ## Initial estimates of standard deviation for Hb
-        std_hb_n = (4862.683/nii_ha_sii_bestfit['ha_n'].mean.value)*ha_n_std
-        std_hb_b = (4862.683/nii_ha_sii_bestfit['ha_b'].mean.value)*ha_b_std
 
         ## Initial estimate of amplitude
         amp_hb = np.max(flam_hb_oiii[(lam_hb_oiii >= 4860)&(lam_hb_oiii <= 4864)])
-
+        
+        ha_n_std = nii_ha_sii_bestfit['ha_n'].stddev.value
+        ## Initial estimates of standard deviation for Hb
+        std_hb_n = (4862.683/nii_ha_sii_bestfit['ha_n'].mean.value)*ha_n_std
+        
         ## Initial gaussian fits
         g_hb_n = Gaussian1D(amplitude = amp_hb, mean = 4862.683, \
                            stddev = std_hb_n, name = 'hb_n', \
-                           bounds = {'amplitude' : (0.0, None), 'stddev' : (0.0, None)})
-
-        g_hb_b = Gaussian1D(amplitude = amp_hb/2, mean = 4862.683, \
-                           stddev = std_hb_b, name = 'hb_b', \
                            bounds = {'amplitude' : (0.0, None), 'stddev' : (0.0, None)})
         
         ## Tie mean of Hb to Ha
@@ -1560,13 +1575,6 @@ class fit_extreme_broadline_sources:
         g_hb_n.mean.tied = tie_mean_hb
         g_hb_n.mean.fixed = True
         
-        ## Tie mean of broad Hb to broad Ha
-        def tie_mean_hb_b(model):
-            return ((4862.683/6564.312)*nii_ha_sii_bestfit['ha_b'].mean)
-
-        g_hb_b.mean.tied = tie_mean_hb_b
-        g_hb_b.mean.fixed = True
-
         ## Fix sigma of narrow Hb to narrow Ha
         def tie_std_hb_n(model):
             return ((model['hb_n'].mean/nii_ha_sii_bestfit['ha_n'].mean)*\
@@ -1574,23 +1582,39 @@ class fit_extreme_broadline_sources:
 
         g_hb_n.stddev.tied = tie_std_hb_n
         g_hb_n.stddev.fixed = True
+        
+        g_hb = cont + g_hb_n
+        
+        if ('ha_b' in nii_ha_sii_bestfit.submodel_names):
+            
+            ## Initial values 
+            ha_b_std = nii_ha_sii_bestfit['ha_b'].stddev.value
+            std_hb_b = (4862.683/nii_ha_sii_bestfit['ha_b'].mean.value)*ha_b_std
+            
+            ## Broad Hb Gaussian
+            g_hb_b = Gaussian1D(amplitude = amp_hb/2, mean = 4862.683, \
+                               stddev = std_hb_b, name = 'hb_b', \
+                               bounds = {'amplitude' : (0.0, None), 'stddev' : (0.0, None)})
+    
+            ## Tie mean of broad Hb to broad Ha
+            def tie_mean_hb_b(model):
+                return ((4862.683/6564.312)*nii_ha_sii_bestfit['ha_b'].mean)
 
-        ## Fix sigma of broad Hb to broad Ha
-        def tie_std_hb_b(model):
-            return ((model['hb_b'].mean/nii_ha_sii_bestfit['ha_b'].mean)*\
-                   nii_ha_sii_bestfit['ha_b'].stddev)
+            g_hb_b.mean.tied = tie_mean_hb_b
+            g_hb_b.mean.fixed = True
 
-        g_hb_b.stddev.tied = tie_std_hb_b
-        g_hb_b.stddev.fixed = True
+            ## Fix sigma of broad Hb to broad Ha
+            def tie_std_hb_b(model):
+                return ((model['hb_b'].mean/nii_ha_sii_bestfit['ha_b'].mean)*\
+                       nii_ha_sii_bestfit['ha_b'].stddev)
 
-        g_hb = g_hb_n + g_hb_b
+            g_hb_b.stddev.tied = tie_std_hb_b
+            g_hb_b.stddev.fixed = True
 
-        ############################ Continuum #####################################
-
-        cont = Const1D(amplitude = 0.0, name = 'hb_oiii_cont')
+            g_hb = g_hb + g_hb_b
 
         ## Initial Fit
-        g_init = cont + g_hb + g_oiii
+        g_init = g_hb + g_oiii
         fitter = fitting.LevMarLSQFitter()
 
         gfit = fitter(g_init, lam_hb_oiii, flam_hb_oiii, \
@@ -1620,7 +1644,12 @@ class fit_extreme_broadline_sources:
                                           stddev = gfit['oiii5007'].stddev, \
                                           name = 'oiii5007_out')
             cont = gfit['hb_oiii_cont'] 
-            gfit_hb = gfit['hb_n'] + gfit['hb_b']
+            
+            if ('hb_b' in gfit.submodel_names):
+                gfit_hb = gfit['hb_n'] + gfit['hb_b']
+            else:
+                gfit_hb = gfit['hb_n']
+                
             gfit = cont + gfit_hb + gfit_oiii4959 + gfit_oiii5007 + \
             gfit_oiii4959_out + gfit_oiii5007_out
 
