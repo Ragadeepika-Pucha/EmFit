@@ -9,7 +9,7 @@ The following functions are available:
     4) plot_from_params(table, index, title = None)
 
 Author : Ragadeepika Pucha
-Version : 2024, February 18
+Version : 2024, February 25
 
 """
 

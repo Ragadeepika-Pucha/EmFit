@@ -9,7 +9,7 @@ The script consists of following functions:
     6) measure_sii_difference(lam_sii, flam_sii)
     
 Author : Ragadeepika Pucha
-Version : 2024, February 18
+Version : 2024, February 25
 """
 
 ###################################################################################################
@@ -259,7 +259,7 @@ def measure_sii_difference(lam_sii, flam_sii):
         Fraction of median left flux and median right flux
     """
 
-    lam_left = (lam_sii <= 6670)|((lam_sii >= 6790)&(lam_sii <= 6700))
+    lam_left = (lam_sii <= 6670) #|((lam_sii >= 6790)&(lam_sii <= 6700))
     lam_right = (lam_sii >= 6700)
     
     flam_left = flam_sii[lam_left]

@@ -3,7 +3,7 @@ This script consists of functions related to fitting the emission line spectra,
 and plotting the models and residuals.
 
 Author : Ragadeepika Pucha
-Version : 2024, February 18
+Version : 2024, February 25
 """
 
 ####################################################################################################
@@ -87,7 +87,7 @@ def fit_spectra(specprod, survey, program, healpix, targetid, z):
     sii_diff, sii_frac = mfit.measure_sii_difference(lam_sii, flam_sii)
     
     ## Conditions for separating extreme broadline sources
-    sii_frac_cond = (np.abs(sii_frac) >= 2.5)
+    sii_frac_cond = (np.abs(sii_frac) >= 5.0)
     sii_diff_cond = (sii_diff >= 0.5)
         
     if ('sii6716_out' in sii_fit.submodel_names):
