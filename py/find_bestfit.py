@@ -543,7 +543,7 @@ def find_nii_ha_sii_best_fit(lam_nii_ha_sii, flam_nii_ha_sii, ivar_nii_ha_sii):
     """
     
     ## Test with different priors and select the one with the least chi2
-    priors_list = [[3,5], [5,8], [6,10]]
+    priors_list = [[3,6], [5,8]]
     gfits = []
     chi2s = []
     
