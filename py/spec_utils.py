@@ -176,6 +176,7 @@ def find_fastspec_models(specprod, survey, program, healpix, targetid, fspec = F
 
     ## Total continuum model
     total_cont = cont_model + smooth_cont_model
+    #total_cont = cont_model
     
     if (fspec == True):
          ## Fastspecfit

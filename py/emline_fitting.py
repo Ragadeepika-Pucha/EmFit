@@ -3,7 +3,7 @@ This script consists of functions related to fitting the emission line spectra,
 and plotting the models and residuals.
 
 Author : Ragadeepika Pucha
-Version : 2024, February 18
+Version : 2024, February 26
 """
 
 ####################################################################################################
@@ -87,7 +87,7 @@ def fit_spectra(specprod, survey, program, healpix, targetid, z):
     sii_diff, sii_frac = mfit.measure_sii_difference(lam_sii, flam_sii)
     
     ## Conditions for separating extreme broadline sources
-    sii_frac_cond = (np.abs(sii_frac) >= 2.5)
+    sii_frac_cond = (np.abs(sii_frac) >= 5.0)
     sii_diff_cond = (sii_diff >= 0.5)
         
     if ('sii6716_out' in sii_fit.submodel_names):
@@ -626,14 +626,19 @@ def construct_extreme_fits(t, index):
                           mean = t['HA_N_MEAN'].data[index], \
                           stddev = t['HA_N_STD'].data[index], \
                           name = 'ha_n')
-    gfit_ha_b = Gaussian1D(amplitude = t['HA_B_AMPLITUDE'].data[index], \
-                          mean = t['HA_B_MEAN'].data[index], \
-                          stddev = t['HA_B_STD'].data[index], \
-                          name = 'ha_b')
+    gfit_ha = gfit_ha_n
+    
+    if (t['HA_B_MEAN'].data[index] != 0):
+        ## Gaussian model for broad Ha, if available
+        gfit_ha_b = Gaussian1D(amplitude = t['HA_B_AMPLITUDE'].data[index], \
+                              mean = t['HA_B_MEAN'].data[index], \
+                              stddev = t['HA_B_STD'].data[index], \
+                              name = 'ha_b')
+        gfit_ha = gfit_ha + gfit_ha_b
     
     ## Total [NII]+Ha+[SII] model
     gfit_nii_ha_sii = nii_ha_sii_cont + gfit_nii6548 + gfit_nii6583 + \
-    gfit_ha_n + gfit_ha_b + gfit_sii6716 + gfit_sii6731
+    gfit_ha + gfit_sii6716 + gfit_sii6731
 
     ## Fits list
     fits_tab = [gfit_hb_oiii, gfit_nii_ha_sii]
