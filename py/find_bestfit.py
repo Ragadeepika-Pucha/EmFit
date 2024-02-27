@@ -3,7 +3,7 @@ This script consists of functions for fitting emission-lines.
 The different functions are divided into different classes for different emission lines.
 
 Author : Ragadeepika Pucha
-Version : 2024, February 25
+Version : 2024, February 26
 """
 
 ###################################################################################################
@@ -542,42 +542,23 @@ def find_nii_ha_sii_best_fit(lam_nii_ha_sii, flam_nii_ha_sii, ivar_nii_ha_sii):
         Number of degrees of freedom
     """
     
-    ## Fit without broad component
-    gfit_no_b = fl.fit_extreme_broadline_sources.fit_nii_ha_sii(lam_nii_ha_sii,\
-                                                                flam_nii_ha_sii,\
-                                                                ivar_nii_ha_sii, \
-                                                                broad_comp = False)
+    ## Test with different priors and select the one with the least chi2
+    priors_list = [[3,5], [5,8], [6,10]]
+    gfits = []
+    chi2s = []
     
-    ## With broad component
-    gfit_b = fl.fit_extreme_broadline_sources.fit_nii_ha_sii(lam_nii_ha_sii,\
-                                                             flam_nii_ha_sii, \
-                                                             ivar_nii_ha_sii, \
-                                                             broad_comp = True)
+    for p in priors_list:
+        gfit = fl.fit_extreme_broadline_sources.fit_nii_ha_sii(lam_nii_ha_sii,\
+                                                               flam_nii_ha_sii, \
+                                                               ivar_nii_ha_sii, priors = p)
+        chi2_fit = mfit.calculate_chi2(flam_nii_ha_sii, gfit(lam_nii_ha_sii), ivar_nii_ha_sii)
+        gfits.append(gfit)
+        chi2s.append(chi2_fit)
+        
+    ## Select the fit with the minimum chi2
+    nii_ha_sii_bestfit = gfits[np.argmin(chi2s)]
+    n_dof = 12
     
-    ## Chi2 values for both the fits
-    chi2_no_b = mfit.calculate_chi2(flam_nii_ha_sii, gfit_no_b(lam_nii_ha_sii), ivar_nii_ha_sii)
-    chi2_b = mfit.calculate_chi2(flam_nii_ha_sii, gfit_b(lam_nii_ha_sii), ivar_nii_ha_sii)
-    
-    ## Statistical check for a broad component
-    df = 12-9
-    del_chi2 = chi2_no_b - chi2_b
-    p_val = chi2.sf(del_chi2, df)
-    
-    ## Broad Ha width
-    ha_b_sig = mfit.lamspace_to_velspace(gfit_b['ha_b'].stddev.value, \
-                                        gfit_b['ha_b'].mean.value)
-    ha_b_fwhm = mfit.sigma_to_fwhm(ha_b_sig)
-
-    ## Conditions for selecting a broad component:
-    ## 5-sigma confidence of an extra component is satisfied
-    ## Broad component FWHM > 300 km/s
-    if ((p_val <= 3e-7)&(ha_b_fwhm >= 300)):
-        nii_ha_sii_bestfit = gfit_b
-        n_dof = 12
-    else:
-        nii_ha_sii_bestfit = gfit_no_b
-        n_dof = 9
-
     return (nii_ha_sii_bestfit, n_dof)
 
 ####################################################################################################
@@ -632,25 +613,17 @@ def find_hb_oiii_bestfit(lam_hb_oiii, flam_hb_oiii, ivar_hb_oiii, nii_ha_sii_bes
     chi2_2comp = mfit.calculate_chi2(flam_hb_oiii, gfit_2comp(lam_hb_oiii), ivar_hb_oiii)
     
     ## Statistical check for the second component
-    df = 9-6 ## Does not matter if there is a broad component or not
-    ## The calculation will be the same
+    df = 9-6 
     del_chi2 = chi2_1comp - chi2_2comp
     p_val = chi2.sf(del_chi2, df)
     
     ## 5-sigma confidence of an extra component
     if (p_val <= 3e-7):
         hb_oiii_bestfit = gfit_2comp
-        
-        if ('hb_b' not in hb_oiii_bestfit.submodel_names):
-            n_dof = 8
-        else:
-            n_dof = 9
+        n_dof = 9
     else:
         hb_oiii_bestfit = gfit_1comp
-        if ('hb_b' not in hb_oiii_bestfit.submodel_names):
-            n_dof = 5
-        else:
-            n_dof = 6
+        n_dof = 6
         
     return (hb_oiii_bestfit, n_dof)
 
