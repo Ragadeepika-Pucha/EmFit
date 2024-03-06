@@ -3,7 +3,7 @@ This script consists of functions related to fitting the emission line spectra,
 and plotting the models and residuals.
 
 Author : Ragadeepika Pucha
-Version : 2024, February 26
+Version : 2024, March 5
 """
 
 ####################################################################################################
@@ -210,16 +210,16 @@ def fit_spectra_normal(coadd_spec, lam_rest, flam_rest, ivar_rest):
     nii_ha_params['nii_ha_continuum'] = [gfit_nii_ha['nii_ha_cont'].amplitude.value]
     sii_params['sii_continuum'] = [gfit_sii['sii_cont'].amplitude.value]
     
-    # ## NOISE
-    # hb_noise = mfit.compute_noise_emline(lam_rest, flam_rest, 'hb')
-    # oiii_noise = mfit.compute_noise_emline(lam_rest, flam_rest, 'oiii')
-    # nii_ha_noise = mfit.compute_noise_emline(lam_rest, flam_rest, 'nii_ha')
-    # sii_noise = mfit.compute_noise_emline(lam_rest, flam_rest, 'sii')
+    ## NOISE
+    hb_noise = mfit.compute_noise_emline(lam_rest, flam_rest, 'hb')
+    oiii_noise = mfit.compute_noise_emline(lam_rest, flam_rest, 'oiii')
+    nii_ha_noise = mfit.compute_noise_emline(lam_rest, flam_rest, 'nii_ha')
+    sii_noise = mfit.compute_noise_emline(lam_rest, flam_rest, 'sii')
     
-    # hb_params['hb_noise'] = [hb_noise]
-    # oiii_params['oiii_noise'] = [oiii_noise]
-    # nii_ha_params['nii_ha_noise'] = [nii_ha_noise]
-    # sii_params['sii_noise'] = [sii_noise]
+    hb_params['hb_noise'] = [hb_noise]
+    oiii_params['oiii_noise'] = [oiii_noise]
+    nii_ha_params['nii_ha_noise'] = [nii_ha_noise]
+    sii_params['sii_noise'] = [sii_noise]
     
     ## N(DOF)
     hb_params['hb_ndof'] = [ndof_hb]
@@ -312,6 +312,17 @@ def fit_spectra_extreme(coadd_spec, lam_rest, flam_rest, ivar_rest):
     oiii_params['oiii_continuum'] = [gfit_hb_oiii['hb_oiii_cont'].amplitude.value]
     nii_ha_params['nii_ha_continuum'] = [gfit_nii_ha_sii['nii_ha_sii_cont'].amplitude.value]
     sii_params['sii_continuum'] = [gfit_nii_ha_sii['nii_ha_sii_cont'].amplitude.value]
+    
+    ## NOISE
+    hb_noise = mfit.compute_noise_emline(lam_rest, flam_rest, 'hb')
+    oiii_noise = mfit.compute_noise_emline(lam_rest, flam_rest, 'oiii')
+    nii_ha_noise = mfit.compute_noise_emline(lam_rest, flam_rest, 'nii_ha')
+    sii_noise = mfit.compute_noise_emline(lam_rest, flam_rest, 'sii')
+    
+    hb_params['hb_noise'] = [hb_noise]
+    oiii_params['oiii_noise'] = [oiii_noise]
+    nii_ha_params['nii_ha_noise'] = [nii_ha_noise]
+    sii_params['sii_noise'] = [sii_noise]
     
     ## N(DOF)
     hb_params['hb_ndof'] = [int(0)]
