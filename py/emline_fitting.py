@@ -3,7 +3,7 @@ This script consists of functions related to fitting the emission line spectra,
 and plotting the models and residuals.
 
 Author : Ragadeepika Pucha
-Version : 2024, March 5
+Version : 2024, March 6
 """
 
 ####################################################################################################
