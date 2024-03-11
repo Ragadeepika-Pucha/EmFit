@@ -3,7 +3,7 @@ This script consists of funcitons for fitting emission-lines.
 The different functions are divided into different classes for different emission lines.
 
 Author : Ragadeepika Pucha
-Version : 2024, March 6
+Version : 2024, March 7
 """
 
 ###################################################################################################
