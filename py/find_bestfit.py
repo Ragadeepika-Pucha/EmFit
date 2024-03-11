@@ -3,7 +3,7 @@ This script consists of functions for fitting emission-lines.
 The different functions are divided into different classes for different emission lines.
 
 Author : Ragadeepika Pucha
-Version : 2024, March 6
+Version : 2024, March 7
 """
 
 ###################################################################################################
@@ -176,6 +176,10 @@ class nii_ha_fit:
             
         n_dof : int
             Number of degrees of freedom
+            
+        psel : list
+            Selected prior if the bestmodel fit has a broad component
+            psel = [] if there is no broad component
         """
     
         ## Single component model
@@ -200,6 +204,9 @@ class nii_ha_fit:
             
         ## Select the broad-component fit with the minimum chi2s
         gfit_b = gfits[np.argmin(chi2s)]
+        
+        ## Select the prior that leads to the bestfit
+        psel = priors_list[np.argmin(chi2)]
             
         ## Chi2 values for both the fits
         chi2_no_b = mfit.calculate_chi2(flam_nii_ha, gfit_no_b(lam_nii_ha), ivar_nii_ha)
@@ -221,11 +228,13 @@ class nii_ha_fit:
         if ((p_val <= 3e-7)&(ha_b_fwhm >= 300)):
             nii_ha_bestfit = gfit_b
             n_dof = 9
+            psel = psel
         else:
             nii_ha_bestfit = gfit_no_b
             n_dof = 6
+            psel = []
             
-        return (nii_ha_bestfit, n_dof)
+        return (nii_ha_bestfit, n_dof, psel)
     
 ####################################################################################################
 
@@ -259,7 +268,10 @@ class nii_ha_fit:
             
         n_dof : int
             Number of degrees of freedom
-        
+            
+        psel : list
+            Selected prior if the bestmodel fit has a broad component
+            psel = [] if there is no broad component
         """
         
         ## Single component model
@@ -284,6 +296,9 @@ class nii_ha_fit:
             
         ## Select the broad-component fit with the minimum chi2s
         gfit_b = gfits[np.argmin(chi2s)]
+        
+        ## Select the prior that leads to the bestfit
+        psel = priors_list[np.argmin(chi2)]
 
         ## Chi2 values for both the fits
         chi2_no_b = mfit.calculate_chi2(flam_nii_ha, gfit_no_b(lam_nii_ha), ivar_nii_ha)
@@ -305,11 +320,13 @@ class nii_ha_fit:
         if ((p_val <= 3e-7)&(ha_b_fwhm >= 300)):
             nii_ha_bestfit = gfit_b
             n_dof = 8
+            psel = psel
         else:
             nii_ha_bestfit = gfit_no_b
             n_dof = 5
+            psel = []
 
-        return (nii_ha_bestfit, n_dof)
+        return (nii_ha_bestfit, n_dof, psel)
     
 ####################################################################################################
         
@@ -426,7 +443,10 @@ class nii_ha_fit:
             
         n_dof : int
             Number of degrees of freedom
-        
+            
+        psel : list
+            Selected prior if the bestmodel fit has a broad component
+            psel = [] if there is no broad component
         """
         
         ## Two component model
@@ -451,6 +471,9 @@ class nii_ha_fit:
             
         ## Select the broad-component fit with the minimum chi2s
         gfit_b = gfits[np.argmin(chi2s)]
+        
+        ## Select the prior that leads to the bestfit
+        psel = priors_list[np.argmin(chi2)]
 
         ## Chi2 values for both the fits
         chi2_no_b = mfit.calculate_chi2(flam_nii_ha, gfit_no_b(lam_nii_ha), ivar_nii_ha)
@@ -472,11 +495,13 @@ class nii_ha_fit:
         if ((p_val <= 3e-7)&(ha_b_fwhm >= 300)):
             nii_ha_bestfit = gfit_b
             n_dof = 12
+            psel = psel
         else:
             nii_ha_bestfit = gfit_no_b
             n_dof = 9
+            psel = []
 
-        return (nii_ha_bestfit, n_dof)
+        return (nii_ha_bestfit, n_dof, psel)
     
 ####################################################################################################
 ####################################################################################################
@@ -510,6 +535,10 @@ def find_nii_ha_best_fit(lam_nii_ha, flam_nii_ha, ivar_nii_ha, sii_bestfit):
 
     n_dof : int
         Number of degrees of freedom
+        
+    psel : list
+            Selected prior if the bestmodel fit has a broad component
+            psel = [] if there is no broad component
     """
     
     ## Functions change depending on the number of components in [SII]
@@ -517,8 +546,8 @@ def find_nii_ha_best_fit(lam_nii_ha, flam_nii_ha, ivar_nii_ha, sii_bestfit):
     
     if (('sii6716_out' not in sii_models)&('sii6731_out' not in sii_models)):
         ## First try free Ha version
-        nii_ha_bestfit, n_dof = nii_ha_fit.free_ha_one_component(lam_nii_ha, flam_nii_ha, ivar_nii_ha, \
-                                                     sii_bestfit)
+        nii_ha_bestfit, n_dof, psel = nii_ha_fit.free_ha_one_component(lam_nii_ha, flam_nii_ha, ivar_nii_ha, \
+                                                                       sii_bestfit)
         
         ## How does Ha width compare to [SII] width?
         sig_sii = mfit.lamspace_to_velspace(sii_bestfit['sii6716'].stddev.value, \
@@ -532,8 +561,8 @@ def find_nii_ha_best_fit(lam_nii_ha, flam_nii_ha, ivar_nii_ha, sii_bestfit):
         
         if ((per_diff < -30)|(per_diff >= 30)|(nii_ha_bestfit['ha_n'].amplitude.value == 0)):
             ## If sigma (Ha) is not within 30% of sigma ([SII]) -- used fixed Ha version
-            nii_ha_bestfit, n_dof = nii_ha_fit.fixed_ha_one_component(lam_nii_ha, flam_nii_ha, ivar_nii_ha, \
-                                                          sii_bestfit)    
+            nii_ha_bestfit, n_dof, psel = nii_ha_fit.fixed_ha_one_component(lam_nii_ha, flam_nii_ha, ivar_nii_ha, \
+                                                                            sii_bestfit)    
     else:
 #         ## First try free Ha version
 #         nii_ha_bestfit, n_dof = nii_ha_fit.free_ha_two_components(lam_nii_ha, flam_nii_ha, \
@@ -550,9 +579,9 @@ def find_nii_ha_best_fit(lam_nii_ha, flam_nii_ha, ivar_nii_ha, sii_bestfit):
 #         ## How does Ha width compare to [SII] width?
 #         if ((per_diff < -30)|(per_diff >= 30)|(nii_ha_bestfit['ha_n'].amplitude.value == 0)):
 #             ## If sigma (Ha) is not within 30% of sigma ([SII]) -- used fixed Ha version
-        nii_ha_bestfit, n_dof = nii_ha_fit.fixed_ha_two_components(lam_nii_ha, flam_nii_ha, \
-                                                                   ivar_nii_ha, sii_bestfit)
-    return (nii_ha_bestfit, n_dof)        
+        nii_ha_bestfit, n_dof, psel = nii_ha_fit.fixed_ha_two_components(lam_nii_ha, flam_nii_ha, \
+                                                                         ivar_nii_ha, sii_bestfit)
+    return (nii_ha_bestfit, n_dof, psel)        
 
 ####################################################################################################
 ####################################################################################################
@@ -637,6 +666,9 @@ def find_nii_ha_sii_best_fit(lam_nii_ha_sii, flam_nii_ha_sii, ivar_nii_ha_sii):
         
     n_dof : int
         Number of degrees of freedom
+        
+    psel : list
+            Selected prior for the broad component
     """
     
     ## Test with different priors and select the one with the least chi2
@@ -656,7 +688,10 @@ def find_nii_ha_sii_best_fit(lam_nii_ha_sii, flam_nii_ha_sii, ivar_nii_ha_sii):
     nii_ha_sii_bestfit = gfits[np.argmin(chi2s)]
     n_dof = 12
     
-    return (nii_ha_sii_bestfit, n_dof)
+    ## Select the prior that leads to the bestfit
+    psel = priors_list[np.argmin(chi2)]
+    
+    return (nii_ha_sii_bestfit, n_dof, psel)
 
 ####################################################################################################
 ####################################################################################################
