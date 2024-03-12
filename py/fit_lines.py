@@ -1306,6 +1306,12 @@ class fit_extreme_broadline_sources:
         g_nii6583 = Gaussian1D(amplitude = amp_nii6583, mean = 6585.277, \
                               stddev = 2.0, name = 'nii6583', \
                               bounds = {'amplitude':(0.0, None), 'stddev':(0.0, None)})
+        
+        ## Tie means of [NII] to [SII]
+        def tie_mean_nii_sii(model):
+            return ((6549.852/6718.294)*model['sii6716'].mean)
+        
+        g_nii6548.mean.tied = tie_mean_nii_sii 
 
         ## Tie means of the two gaussians
         def tie_mean_nii(model):
@@ -1344,6 +1350,12 @@ class fit_extreme_broadline_sources:
         g_ha_n = Gaussian1D(amplitude = amp_ha, mean = 6564.312, \
                            stddev = 2.0, name = 'ha_n', \
                            bounds = {'amplitude':(0.0, None), 'stddev':(0.0, None)})
+        
+        ## Tie mean of narrow Ha to narrow [NII]
+        def tie_mean_ha(model):
+            return ((6564.312/6549.852)*model['nii6548'].mean)
+        
+        g_ha_n.mean.tied = tie_mean_ha        
         
         ## Tie sigma of narrow Ha to [SII] in velocity space
         def tie_std_ha(model):
