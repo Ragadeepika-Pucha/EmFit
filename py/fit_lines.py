@@ -788,10 +788,12 @@ class fit_nii_ha_lines:
         amp_nii6548 = np.max(flam_nii_ha[(lam_nii_ha > 6548)&(lam_nii_ha < 6550)])
         amp_nii6583 = np.max(flam_nii_ha[(lam_nii_ha > 6583)&(lam_nii_ha < 6586)])
 
-        ## Initial estimates of standard deviation for [NII]
+        ## Information from [SII] Bestfit
         sii_std = sii_bestfit['sii6716'].stddev.value
         sii_out_std = sii_bestfit['sii6716_out'].stddev.value
+        del_lam_sii = (sii_bestfit['sii6716_out'].mean.value - sii_bestfit['sii6716'].mean.value)
 
+        ## Initial estimates of standard deviation for [NII]
         std_nii6548 = (6549.852/sii_bestfit['sii6716'].mean.value)*sii_std
         std_nii6583 = (6585.277/sii_bestfit['sii6716'].mean.value)*sii_std
 
@@ -842,6 +844,17 @@ class fit_nii_ha_lines:
         g_nii6583_out = Gaussian1D(amplitude = amp_nii6583/3, mean = 6585.277, \
                                   stddev = std_nii6583_out, name = 'nii6583_out', \
                                   bounds = {'amplitude' : (0.0, None)})
+        
+        ## Tie relative positions of narrow and outflow components
+        def tie_relmean_nii6548_out(model):
+            return (((6549.852/6718.294)*del_lam_sii) + model['nii6548'].mean)
+        
+        g_nii6548_out.mean.tied = tie_relmean_nii6548_out
+        
+        def tie_relmean_nii6583_out(model):
+            return (((6585.277/6718.294)*del_lam_sii) + model['nii6583'].mean)
+        
+        g_nii6583_out.mean.tied = tie_relmean_nii6583_out
 
         ## Tie means of [NII] doublet outflow gaussians
         def tie_mean_nii_out(model):
@@ -910,6 +923,12 @@ class fit_nii_ha_lines:
                                  stddev = std_ha_out, name = 'ha_out', \
                                  bounds = {'amplitude' : (0.0, None), 'stddev' : (0.0, None)})
             
+            ## Tie relative positions of narrow and outflow components
+            def tie_relmean_ha_out(model):
+                return (((6564.312/6718.294)*del_lam_sii) + model['ha_n'].mean)
+
+            g_ha_out.mean.tied = tie_relmean_ha_out
+            
             ## Tie mean of outflow Ha to outflow [NII]
             def tie_mean_ha_out(model):
                 return ((6564.312/6549.852)*model['nii6548_out'].mean)
@@ -963,6 +982,12 @@ class fit_nii_ha_lines:
             g_ha_out = Gaussian1D(amplitude = amp_ha/3, mean = 6564.312, \
                                  stddev = std_ha_out, name = 'ha_out', \
                                  bounds = {'amplitude' : (0.0, None), 'stddev' : (0.0, None)})
+            
+            ## Tie relative positions of narrow and outflow components
+            def tie_relmean_ha_out(model):
+                return (((6564.312/6718.294)*del_lam_sii) + model['ha_n'].mean)
+
+            g_ha_out.mean.tied = tie_relmean_ha_out
             
             ## Tie mean of outflow Ha to outflow [NII]
             def tie_mean_ha_out(model):

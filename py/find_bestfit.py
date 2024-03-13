@@ -66,8 +66,20 @@ def find_sii_best_fit(lam_sii, flam_sii, ivar_sii):
     sig_sii = mfit.lamspace_to_velspace(gfit_2comp['sii6716'].stddev.value, \
                                        gfit_2comp['sii6716'].mean.value)
     
+    ## Criterion for defaulting back to one-component model
+    ## rel-redshift > 450 km/s or < -450 km/s
+    ## [SII]outflow sigma > 800 km/s or < 1000 km/s
+    mean_sii = gfit_2comp['sii6716'].mean.value
+    mean_sii_out = gfit_2comp['sii6716_out'].mean.value
+    sig_sii_out = mfit.lamspace_to_velspace(gfit_2comp['sii6716_out'].stddev.value, \
+                                           gfit_2comp['sii6716_out'].mean.value)
+    
+    delz_sii = (mean_sii_out - mean_sii)*3e+5/6718.294
+    
+    default_cond = (delz_sii < -450)|(delz_sii > 450)|((sig_sii_out > 600)&(sig_sii_out < 1000))
+    
     ## 5-sigma confidence of an extra component
-    if ((p_val <= 3e-7)&(sig_sii >= 35)):
+    if ((p_val <= 3e-7)&(sig_sii >= 35)&(~default_cond)):
         sii_bestfit = gfit_2comp
         n_dof = 8
     else:
@@ -121,12 +133,19 @@ def find_oiii_best_fit(lam_oiii, flam_oiii, ivar_oiii):
     del_chi2 = chi2_1comp - chi2_2comp
     p_val = chi2.sf(del_chi2, df)
     
-    ## Critetion to have min([OIII]) in two-component model to be 35 km/s
+    ## Criterion to have min([OIII]) in two-component model to be 35 km/s
     sig_oiii = mfit.lamspace_to_velspace(gfit_2comp['oiii5007'].stddev.value, \
                                        gfit_2comp['oiii5007'].mean.value)
     
+    ## Criterion for defaulting back to one-component model
+    ## Sigma ([OIII]out) > 1000 km/s
+    sig_oiii_out = mfit.lamspace_to_velspace(gfit_2comp['oiii5007_out'].stddev.value, \
+                                            gfit_2comp['oiii5007_out'].mean.value)
+    
+    default_cond = (sig_oiii_out > 1000)
+    
     ## 5-sigma confidence of an extra component
-    if ((p_val <= 3e-7)&(sig_oiii >= 35)):
+    if ((p_val <= 3e-7)&(sig_oiii >= 35)&(~default_cond)):
         oiii_bestfit = gfit_2comp
         n_dof = 7
     else:
@@ -397,7 +416,7 @@ class nii_ha_fit:
         chi2_b = mfit.calculate_chi2(flam_nii_ha, gfit_b(lam_nii_ha), ivar_nii_ha)
 
         ## Statistical check for a broad component
-        df = 10-7
+        df = 9-6
         del_chi2 = chi2_no_b - chi2_b
         p_val = chi2.sf(del_chi2, df)
 
@@ -411,11 +430,11 @@ class nii_ha_fit:
         ## Broad component FWHM > 300 km/s
         if ((p_val <= 3e-7)&(ha_b_fwhm >= 300)):
             nii_ha_bestfit = gfit_b
-            n_dof = 10
+            n_dof = 9
             psel = psel
         else:
             nii_ha_bestfit = gfit_no_b
-            n_dof = 7
+            n_dof = 6
             psel = []
 
         return (nii_ha_bestfit, n_dof, psel)
@@ -481,21 +500,6 @@ def find_nii_ha_best_fit(lam_nii_ha, flam_nii_ha, ivar_nii_ha, sii_bestfit):
             nii_ha_bestfit, n_dof, psel = nii_ha_fit.fixed_ha_one_component(lam_nii_ha, flam_nii_ha, ivar_nii_ha, \
                                                                             sii_bestfit)    
     else:
-#         ## First try free Ha version
-#         nii_ha_bestfit, n_dof = nii_ha_fit.free_ha_two_components(lam_nii_ha, flam_nii_ha, \
-#                                                                   ivar_nii_ha, sii_bestfit)
-
-#         sig_sii = mfit.lamspace_to_velspace(sii_bestfit['sii6716'].stddev.value, \
-#                                            sii_bestfit['sii6716'].mean.value)
-
-#         sig_ha = mfit.lamspace_to_velspace(nii_ha_bestfit['ha_n'].stddev.value, \
-#                                          nii_ha_bestfit['ha_n'].mean.value)
-
-#         per_diff = (sig_ha - sig_sii)*100/sig_sii
-
-#         ## How does Ha width compare to [SII] width?
-#         if ((per_diff < -30)|(per_diff >= 30)|(nii_ha_bestfit['ha_n'].amplitude.value == 0)):
-#             ## If sigma (Ha) is not within 30% of sigma ([SII]) -- used fixed Ha version
         nii_ha_bestfit, n_dof, psel = nii_ha_fit.fixed_ha_two_components(lam_nii_ha, flam_nii_ha, \
                                                                          ivar_nii_ha, sii_bestfit)
     return (nii_ha_bestfit, n_dof, psel)        
@@ -603,7 +607,7 @@ def find_nii_ha_sii_best_fit(lam_nii_ha_sii, flam_nii_ha_sii, ivar_nii_ha_sii):
         
     ## Select the fit with the minimum chi2
     nii_ha_sii_bestfit = gfits[np.argmin(chi2s)]
-    n_dof = 12
+    n_dof = 10
     
     ## Select the prior that leads to the bestfit
     psel = priors_list[np.argmin(chi2)]
@@ -666,8 +670,15 @@ def find_hb_oiii_bestfit(lam_hb_oiii, flam_hb_oiii, ivar_hb_oiii, nii_ha_sii_bes
     del_chi2 = chi2_1comp - chi2_2comp
     p_val = chi2.sf(del_chi2, df)
     
+    ## Criterion for defaulting back to one-component model
+    ## Sigma ([OIII]out) > 1000 km/s
+    sig_oiii_out = mfit.lamspace_to_velspace(gfit_2comp['oiii5007_out'].stddev.value, \
+                                            gfit_2comp['oiii5007_out'].mean.value)
+    
+    default_cond = (sig_oiii_out > 1000)
+    
     ## 5-sigma confidence of an extra component
-    if (p_val <= 3e-7):
+    if ((p_val <= 3e-7)&(~default_cond)):
         hb_oiii_bestfit = gfit_2comp
         n_dof = 9
     else:
