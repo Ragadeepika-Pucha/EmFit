@@ -3,14 +3,14 @@ This script consists of functions related to fitting the emission line spectra,
 and plotting the models and residuals.
 
 Author : Ragadeepika Pucha
-Version : 2024, March 10
+Version : 2024, March 14
 """
 
 ####################################################################################################
 
 import numpy as np
 
-from astropy.table import Table, vstack
+from astropy.table import Table, vstack, hstack
 from astropy.modeling.models import Gaussian1D, Const1D
 
 import spec_utils, plot_utils
@@ -45,6 +45,106 @@ settings = {
 }
 
 plt.rcParams.update(**settings)
+
+####################################################################################################
+
+def fit_spectra(specprod, survey, program, healpix, targetid, z):
+    
+    ## Rest-frame emission-line spectra
+    coadd_spec, lam_rest, \
+    flam_rest, ivar_rest = spec_utils.get_emline_spectra(specprod, survey, program, \
+                                                         healpix, targetid, z, rest_frame = True)
+    
+    ## Fit [SII] lines first
+    lam_sii, flam_sii, ivar_sii = spec_utils.get_fit_window(lam_rest, flam_rest, \
+                                                            ivar_rest, em_line = 'sii')
+    sii_fit, _, _ = find_bestfit.find_sii_best_fit(lam_sii, flam_sii, ivar_sii)
+    sii_diff, sii_frac = mfit.measure_sii_difference(lam_sii, flam_sii)
+    
+    ## Conditions for separating extreme broadline sources
+    sii_frac_cond = (np.abs(sii_frac) >= 5.0)
+    sii_diff_cond = (sii_diff >= 0.5)
+        
+    if ('sii6716_out' in sii_fit.submodel_names):
+        sii_out_sig = mfit.lamspace_to_velspace(sii_fit['sii6716_out'].stddev.value, \
+                                               sii_fit['sii6716_out'].mean.value)
+    else:
+        sii_out_sig = 0.0
+        
+    sii_out_cond = (sii_out_sig >= 1000)
+    
+    ext_cond = ((sii_frac_cond)&(sii_diff_cond))|(sii_out_cond)
+    
+    ## Original Fits
+    if ext_cond:
+        ## Fit using extreme-line fitting code
+        t_orig, fits_orig, \
+        ndofs_orig, psel = fit_original_spectra.extreme_fit(lam_rest, flam_rest, ivar_rest)
+    else:
+        ## Fit using the normal source fitting code
+        t_orig, fits_orig, \
+        ndofs_orig, psel = fit_original_spectra.normal_fit(lam_rest, flam_rest, ivar_rest)
+        
+    ## Error spectra
+    err_rest = 1/np.sqrt(ivar_rest) 
+    err_rest[~np.isfinite(err_rest)] = 0.0
+    res_matrix = coadd_spec.R['brz'][0]
+
+    tables = []
+    tables.append(t_orig)
+
+    for kk in range(100):
+        noise_spec = random.gauss(0, err_rest)
+        to_add_spec = res_matrix.dot(noise_spec)
+        flam_new = flam_rest + to_add_spec
+        
+        if ext_cond:
+            ## Extreme-line fitting code
+            t_params = fit_spectra_iteration.extreme_fit(lam_rest, flam_new, ivar_rest, \
+                                                         fits_orig, psel)
+        else:
+            ## Normal source fitting code
+            t_params = fit_spectra_iteration.normal_fit(lam_rest, flam_new, ivar_rest, \
+                                                        fits_orig, psel)
+            
+        tables.append(t_params)
+        
+    t_fits = vstack(tables)
+    
+    per_ha = len(t_fits[t_fits['ha_b_flux'].data != 0])*100/len(t_fits)
+    
+    tgt = {}
+    tgt['targetid'] = [targetid]
+    tgt['specprod'] = [specprod]
+    tgt['survey'] = [survey]
+    tgt['program'] = [program]
+    tgt['healpix'] = [healpix]
+    tgt['z'] = [z]
+    tgt['per_broad'] = [per_ha]
+
+    ## Get bestfit parameters
+    if ext_cond:
+        ## Extreme-line fitting
+        hb_params, oiii_params, \
+        nii_ha_params, sii_params = emp.get_allbestfit_params.extreme_fit(t_fits, ndofs_orig, \
+                                                                          lam_rest, flam_rest, \
+                                                                          ivar_rest)
+    else:
+        ## Normal source fitting
+        hb_params, oiii_params, \
+        nii_ha_params, sii_params = emp.get_allbestfit_params.normal_fit(t_fits, ndofs_orig, \
+                                                                         lam_rest, flam_rest, \
+                                                                         ivar_rest)
+    
+    nii_ha_params['nii_ha_flag'] = [t_orig['nii_ha_flag'].data[0]]
+    sii_params['sii_flag'] = [t_orig['sii_flag'].data[0]]
+    
+    t_final = Table(tgt|hb_params|oiii_params|nii_ha_params|sii_params)
+    
+    for col in t_final.colnames:
+        t_final.rename_column(col, col.upper())
+    
+    return (t_final)
 
 ####################################################################################################
 
@@ -98,13 +198,13 @@ class fit_original_spectra:
                                                                 ivar_rest, em_line = 'sii')
 
         ## Fits
-        gfit_sii, ndof_sii = find_bestfit.find_sii_best_fit(lam_sii, \
-                                                            flam_sii, \
-                                                            ivar_sii)
+        gfit_sii, ndof_sii, sii_flag = find_bestfit.find_sii_best_fit(lam_sii, \
+                                                                      flam_sii, \
+                                                                      ivar_sii)
         gfit_oiii, ndof_oiii = find_bestfit.find_oiii_best_fit(lam_oiii, \
                                                                flam_oiii, \
                                                                ivar_oiii)
-        gfit_nii_ha, ndof_nii_ha, prior_sel = find_bestfit.find_nii_ha_best_fit(lam_nii_ha, \
+        gfit_nii_ha, ndof_nii_ha, prior_sel, nii_ha_flag = find_bestfit.find_nii_ha_best_fit(lam_nii_ha, \
                                                                                 flam_nii_ha, \
                                                                                 ivar_nii_ha, \
                                                                                 gfit_sii)
@@ -116,9 +216,30 @@ class fit_original_spectra:
 
         fits = [gfit_hb, gfit_oiii, gfit_nii_ha, gfit_sii]
         ndofs = [ndof_hb, ndof_oiii, ndof_nii_ha, ndof_sii]
-
+        
+        ## Compute reduced chi2:
+        rchi2_sii = mfit.calculate_chi2(flam_sii, gfit_sii(lam_sii), ivar_sii, \
+                                        ndof_sii, reduced_chi2 = True)
+        rchi2_oiii = mfit.calculate_chi2(flam_oiii, gfit_oiii(lam_oiii), ivar_oiii, \
+                                         ndof_oiii, reduced_chi2 = True)
+        rchi2_hb = mfit.calculate_chi2(flam_hb, gfit_hb(lam_hb), ivar_hb, \
+                                       ndof_hb, reduced_chi2 = True)
+        rchi2_nii_ha = mfit.calculate_chi2(flam_nii_ha, gfit_nii_ha(lam_nii_ha), \
+                                               ivar_nii_ha, ndof_nii_ha, reduced_chi2 = True)
+        
         hb_params, oiii_params, \
         nii_ha_params, sii_params = emp.get_allfit_params.normal_fit(fits, lam_rest, flam_rest)
+        
+        hb_params['hb_rchi2'] = [rchi2_hb]
+        oiii_params['oiii_rchi2'] = [rchi2_oiii]
+        nii_ha_params['nii_ha_rchi2'] = [rchi2_nii_ha]
+        sii_params['sii_rchi2'] = [rchi2_sii]
+        
+        oiii_params['hb_oiii_rchi2'] = [0.0]
+        sii_params['nii_ha_sii_rchi2'] = [0.0]
+        
+        nii_ha_params['nii_ha_flag'] = [int(nii_ha_flag)]
+        sii_params['sii_flag'] = [int(sii_flag)]
 
         t_params = Table(hb_params|oiii_params|nii_ha_params|sii_params)
 
@@ -175,9 +296,27 @@ class fit_original_spectra:
 
         fits = [gfit_hb_oiii, gfit_nii_ha_sii]
         ndofs = [ndof_hb_oiii, ndof_nii_ha_sii]
+        
+        ## Compute reduced chi2
+        rchi2_nii_ha_sii = mfit.calculate_chi2(flam_nii_ha_sii, gfit_nii_ha_sii(lam_nii_ha_sii), \
+                                              ivar_nii_ha_sii, ndof_nii_ha_sii, reduced_chi2 = True)
+        rchi2_hb_oiii = mfit.calculate_chi2(flam_hb_oiii, gfit_hb_oiii(lam_hb_oiii), \
+                                           ivar_hb_oiii, ndof_hb_oiii, reduced_chi2 = True)
 
         hb_params, oiii_params, \
         nii_ha_params, sii_params = emp.get_allfit_params.extreme_fit(fits, lam_rest, flam_rest)
+        
+        
+        hb_params['hb_rchi2'] = [0.0]
+        oiii_params['oiii_rchi2'] = [0.0]
+        nii_ha_params['nii_ha_rchi2'] = [0.0]
+        sii_params['sii_rchi2'] = [0.0]
+        
+        oiii_params['hb_oiii_rchi2'] = [rchi2_hb_oiii]
+        sii_params['nii_ha_sii_rchi2'] = [rchi2_nii_ha_sii]
+        
+        nii_ha_params['nii_ha_flag'] = [int(0)]
+        sii_params['sii_flag'] = [int(0)]
 
         t_params = Table(hb_params|oiii_params|nii_ha_params|sii_params)
 

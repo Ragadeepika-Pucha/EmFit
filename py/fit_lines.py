@@ -954,6 +954,7 @@ class fit_nii_ha_lines:
 
             gfit_b = fitter_b(g_init, lam_nii_ha, flam_nii_ha, \
                              weights = np.sqrt(ivar_nii_ha), maxiter = 1000)
+            
 
             ## Returns fit with broad component if broad_comp = True
             return (gfit_b)
