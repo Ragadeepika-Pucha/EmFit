@@ -3,7 +3,7 @@ This script consists of functions for fitting emission-lines.
 The different functions are divided into different classes for different emission lines.
 
 Author : Ragadeepika Pucha
-Version : 2024, March 14
+Version : 2024, March 21
 """
 
 ###################################################################################################
@@ -71,7 +71,7 @@ def find_sii_best_fit(lam_sii, flam_sii, ivar_sii):
     
     ## Criterion for defaulting back to one-component model
     ## rel-redshift > 450 km/s or < -450 km/s
-    ## [SII]outflow sigma > 800 km/s or < 1000 km/s
+    ## [SII]outflow sigma > 600 km/s or < 1000 km/s
     mean_sii = gfit_2comp['sii6716'].mean.value
     mean_sii_out = gfit_2comp['sii6716_out'].mean.value
     sig_sii_out = mfit.lamspace_to_velspace(gfit_2comp['sii6716_out'].stddev.value, \
@@ -86,24 +86,6 @@ def find_sii_best_fit(lam_sii, flam_sii, ivar_sii):
     sig_sii_1comp = mfit.lamspace_to_velspace(gfit_1comp['sii6716'].stddev.value, \
                                              gfit_1comp['sii6716'].mean.value)
     
-    ### Set [SII] Flags
-    sii_flags = []
-    if (sig_sii < 35):
-        sii_flags.append(0)
-    if ((delz_sii < -450)|(delz_sii > 450)):
-        sii_flags.append(1)
-    if ((sig_sii_out > 600)&(sig_sii_out < 1000)):
-        sii_flags.append(2)
-    if (sig_sii_1comp > 450):
-        sii_flags.append(3)
-        
-    sii_flags = np.array(sii_flags)
-    
-    if (len(sii_flags) == 0):
-        sii_flag = 0
-    else:
-        sii_flag = sum(2**sii_flags)
-    
     ## 5-sigma confidence of an extra component
     if ((p_val <= 3e-7)&(sig_sii >= 35)&(~default_cond|(sig_sii_1comp > 450))):
         sii_bestfit = gfit_2comp
@@ -112,7 +94,7 @@ def find_sii_best_fit(lam_sii, flam_sii, ivar_sii):
         sii_bestfit = gfit_1comp
         n_dof = 5
         
-    return (sii_bestfit, n_dof, sii_flag)
+    return (sii_bestfit, n_dof)
 
 ####################################################################################################
 ####################################################################################################
@@ -250,8 +232,8 @@ class nii_ha_fit:
         gfit_b = gfits[np.argmin(chi2s)]
         
         ## Select the prior that leads to the bestfit
-        psel = priors_list[np.argmin(chi2)]
-            
+        psel = priors_list[np.argmin(chi2s)]
+        
         ## Chi2 values for both the fits
         chi2_no_b = mfit.calculate_chi2(flam_nii_ha, gfit_no_b(lam_nii_ha), ivar_nii_ha)
         chi2_b = mfit.calculate_chi2(flam_nii_ha, gfit_b(lam_nii_ha), ivar_nii_ha)
@@ -260,25 +242,21 @@ class nii_ha_fit:
         df = 8-5
         del_chi2 = chi2_no_b - chi2_b
         p_val = chi2.sf(del_chi2, df)
-
+    
         ## Broad Ha width
         ha_b_sig = mfit.lamspace_to_velspace(gfit_b['ha_b'].stddev.value, \
                                             gfit_b['ha_b'].mean.value)
         ha_b_fwhm = mfit.sigma_to_fwhm(ha_b_sig)
         
         ## If narrow Ha flux is zero, but broad Ha flux is not zero
+        ## If broad Hb flux = 0, then also default to no broad fit
         ## Default to no broad fit
         ha_b_flux = mfit.compute_emline_flux(gfit_b['ha_b'].amplitude.value, \
                                             gfit_b['ha_b'].stddev.value)
         ha_n_flux = mfit.compute_emline_flux(gfit_b['ha_n'].amplitude.value, \
                                             gfit_b['ha_n'].stddev.value)
         
-        default_cond = (ha_n_flux == 0)&(ha_b_flux != 0)
-        
-        if (default_cond):
-            nii_ha_flag = 1
-        else:
-            nii_ha_flag = 0
+        default_cond = ((ha_n_flux == 0)&(ha_b_flux != 0))|(ha_b_flux == 0)
 
         ## Conditions for selecting a broad component:
         ## 5-sigma confidence of an extra component is satisfied
@@ -292,7 +270,7 @@ class nii_ha_fit:
             n_dof = 5
             psel = []
             
-        return (nii_ha_bestfit, n_dof, psel, nii_ha_flag)
+        return (nii_ha_bestfit, n_dof, psel)
     
 ####################################################################################################
 
@@ -356,7 +334,7 @@ class nii_ha_fit:
         gfit_b = gfits[np.argmin(chi2s)]
         
         ## Select the prior that leads to the bestfit
-        psel = priors_list[np.argmin(chi2)]
+        psel = priors_list[np.argmin(chi2s)]
 
         ## Chi2 values for both the fits
         chi2_no_b = mfit.calculate_chi2(flam_nii_ha, gfit_no_b(lam_nii_ha), ivar_nii_ha)
@@ -373,18 +351,14 @@ class nii_ha_fit:
         ha_b_fwhm = mfit.sigma_to_fwhm(ha_b_sig)
         
         ## If narrow Ha flux is zero, but broad Ha flux is not zero
+        ## If broad Hb flux = 0, then also default to no broad fit
         ## Default to no broad fit
         ha_b_flux = mfit.compute_emline_flux(gfit_b['ha_b'].amplitude.value, \
                                             gfit_b['ha_b'].stddev.value)
         ha_n_flux = mfit.compute_emline_flux(gfit_b['ha_n'].amplitude.value, \
                                             gfit_b['ha_n'].stddev.value)
         
-        default_cond = (ha_n_flux == 0)&(ha_b_flux != 0)
-        
-        if (default_cond):
-            nii_ha_flag = 1
-        else:
-            nii_ha_flag = 0
+        default_cond = ((ha_n_flux == 0)&(ha_b_flux != 0))|(ha_b_flux == 0)
 
         ## Conditions for selecting a broad component:
         ## 5-sigma confidence of an extra component is satisfied
@@ -398,7 +372,7 @@ class nii_ha_fit:
             n_dof = 4
             psel = []
 
-        return (nii_ha_bestfit, n_dof, psel, nii_ha_flag)
+        return (nii_ha_bestfit, n_dof, psel)
     
 ####################################################################################################
     
@@ -462,7 +436,7 @@ class nii_ha_fit:
         gfit_b = gfits[np.argmin(chi2s)]
         
         ## Select the prior that leads to the bestfit
-        psel = priors_list[np.argmin(chi2)]
+        psel = priors_list[np.argmin(chi2s)]
 
         ## Chi2 values for both the fits
         chi2_no_b = mfit.calculate_chi2(flam_nii_ha, gfit_no_b(lam_nii_ha), ivar_nii_ha)
@@ -479,6 +453,7 @@ class nii_ha_fit:
         ha_b_fwhm = mfit.sigma_to_fwhm(ha_b_sig)
         
         ## If narrow/outflow Ha flux is zero, but broad Ha flux is not zero
+        ## If broad Hb flux = 0, then also default to no broad fit
         ## Default to no broad fit
         ha_b_flux = mfit.compute_emline_flux(gfit_b['ha_b'].amplitude.value, \
                                             gfit_b['ha_b'].stddev.value)
@@ -487,12 +462,7 @@ class nii_ha_fit:
         ha_out_flux = mfit.compute_emline_flux(gfit_b['ha_out'].amplitude.value, \
                                               gfit_b['ha_out'].stddev.value)
         
-        default_cond = ((ha_n_flux == 0)|(ha_out_flux == 0))&(ha_b_flux != 0)
-        
-        if (default_cond):
-            nii_ha_flag = 1
-        else:
-            nii_ha_flag = 0
+        default_cond = (((ha_n_flux == 0)|(ha_out_flux == 0))&(ha_b_flux != 0))|(ha_b_flux == 0)
 
         ## Conditions for selecting a broad component:
         ## 5-sigma confidence of an extra component is satisfied
@@ -506,7 +476,7 @@ class nii_ha_fit:
             n_dof = 6
             psel = []
 
-        return (nii_ha_bestfit, n_dof, psel, nii_ha_flag)
+        return (nii_ha_bestfit, n_dof, psel)
     
 ####################################################################################################
 ####################################################################################################
@@ -551,8 +521,8 @@ def find_nii_ha_best_fit(lam_nii_ha, flam_nii_ha, ivar_nii_ha, sii_bestfit):
     
     if (('sii6716_out' not in sii_models)&('sii6731_out' not in sii_models)):
         ## First try free Ha version
-        nii_ha_bestfit, n_dof, psel, nii_ha_flag = nii_ha_fit.free_ha_one_component(lam_nii_ha, flam_nii_ha, ivar_nii_ha, \
-                                                                       sii_bestfit)
+        nii_ha_bestfit, n_dof, psel = nii_ha_fit.free_ha_one_component(lam_nii_ha, flam_nii_ha, \
+                                                                       ivar_nii_ha, sii_bestfit)
         
         ## How does Ha width compare to [SII] width?
         sig_sii = mfit.lamspace_to_velspace(sii_bestfit['sii6716'].stddev.value, \
@@ -562,16 +532,20 @@ def find_nii_ha_best_fit(lam_nii_ha, flam_nii_ha, ivar_nii_ha, sii_bestfit):
                                          nii_ha_bestfit['ha_n'].mean.value)
         
         per_diff = (sig_ha - sig_sii)*100/sig_sii
-        
-        
-        if ((per_diff < -30)|(per_diff >= 30)|(nii_ha_bestfit['ha_n'].amplitude.value == 0)):
-            ## If sigma (Ha) is not within 30% of sigma ([SII]) -- used fixed Ha version
-            nii_ha_bestfit, n_dof, psel, nii_ha_flag = nii_ha_fit.fixed_ha_one_component(lam_nii_ha, flam_nii_ha, ivar_nii_ha, \
+                
+        if ((per_diff < 0)|(per_diff >= 30)|(nii_ha_bestfit['ha_n'].amplitude.value == 0)):
+            ## If sigma (Ha) is less than sigma ([SII]) or increases more then 30% of sigma ([SII])
+            ## Use fixed version
+            nii_ha_bestfit, n_dof, psel = nii_ha_fit.fixed_ha_one_component(lam_nii_ha, \
+                                                                            flam_nii_ha, \
+                                                                            ivar_nii_ha, \
                                                                             sii_bestfit)    
     else:
-        nii_ha_bestfit, n_dof, psel, nii_ha_flag = nii_ha_fit.fixed_ha_two_components(lam_nii_ha, flam_nii_ha, \
-                                                                         ivar_nii_ha, sii_bestfit)
-    return (nii_ha_bestfit, n_dof, psel, nii_ha_flag)        
+        nii_ha_bestfit, n_dof, psel = nii_ha_fit.fixed_ha_two_components(lam_nii_ha, \
+                                                                         flam_nii_ha, \
+                                                                         ivar_nii_ha, \
+                                                                         sii_bestfit)
+    return (nii_ha_bestfit, n_dof, psel)        
 
 ####################################################################################################
 ####################################################################################################
@@ -679,7 +653,7 @@ def find_nii_ha_sii_best_fit(lam_nii_ha_sii, flam_nii_ha_sii, ivar_nii_ha_sii):
     n_dof = 10
     
     ## Select the prior that leads to the bestfit
-    psel = priors_list[np.argmin(chi2)]
+    psel = priors_list[np.argmin(chi2s)]
     
     return (nii_ha_sii_bestfit, n_dof, psel)
 

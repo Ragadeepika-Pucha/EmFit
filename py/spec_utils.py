@@ -9,7 +9,7 @@ The following functions are available:
     5) compute_resolution_sigma(coadd_spec)
 
 Author : Ragadeepika Pucha
-Version : 2024, February 18
+Version : 2024, March 21
 """
 ###################################################################################################
 
@@ -117,8 +117,11 @@ def find_fastspec_models(specprod, survey, program, healpix, targetid, fspec = F
     modelwave : numpy array
         Model wavelength array
         
-    total_cont : numpy array
-        Total continuum array including stellar continuum + smooth continuum models
+    cont_model : numpy array
+        Stellar continuum model
+        
+    smooth_cont_model : numpy array
+        Smooth Continuum model
         
     em_model : numpy array
         Emission-line model array
@@ -176,7 +179,6 @@ def find_fastspec_models(specprod, survey, program, healpix, targetid, fspec = F
 
     ## Total continuum model
     total_cont = cont_model + smooth_cont_model
-    #total_cont = cont_model
     
     if (fspec == True):
          ## Fastspecfit
@@ -184,10 +186,10 @@ def find_fastspec_models(specprod, survey, program, healpix, targetid, fspec = F
         tgt = (fspec['TARGETID'] == targetid)
         fspec_row = fspec[tgt]
         
-        return (modelwave, total_cont, em_model, fspec_row)
+        return (modelwave, cont_model, smooth_cont_model, em_model, fspec_row)
 
     else:
-        return (modelwave, total_cont, em_model)
+        return (modelwave, cont_model, smooth_cont_model, em_model)
 
 ###################################################################################################
 
@@ -263,7 +265,9 @@ def get_emline_spectra(specprod, survey, program, healpix, targetid, \
     ivar = coadd_spec.ivar[bands].flatten()
     
     ## Stellar continuum model
-    modelwave, total_cont, _ = find_fastspec_models(specprod, survey, program, healpix, targetid)
+    modelwave, cont_model, smooth_cont_model, _ = find_fastspec_models(specprod, survey, \
+                                                                       program, healpix, targetid)
+    total_cont = cont_model + smooth_cont_model
     
     ## Subtract the continuum from the flux
     ## Emission-line spectra

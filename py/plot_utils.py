@@ -9,7 +9,7 @@ The following functions are available:
     5) plot_from_params(table, index, title = None)
 
 Author : Ragadeepika Pucha
-Version : 2024, March 12
+Version : 2024, March 21
 
 """
 
@@ -168,7 +168,8 @@ class plot_spectra_fits:
         2) extreme_fit(lam_rest, flam_rest, fits, rchi2s, title = None)
     """
 
-    def normal_fit(lam_rest, flam_rest, fits, rchi2s, title = None):
+    def normal_fit(lam_rest, flam_rest, fits, rchi2s, title = None, \
+                   smooth_cont = None, plot_smooth_cont = False):
         """
         Plot spectra, fits and residuals in Hb, [OIII], Ha+[NII], and [SII] regions.
 
@@ -190,6 +191,14 @@ class plot_spectra_fits:
 
         title : str
             Title for the plot
+            
+        smooth_cont : numpy array
+            Restframe smooth continuum array of the spectra.
+            Only needed if plot_smooth_cont = True
+            Default is None.
+            
+        plot_smooth_cont : bool
+            Whether or not to overplot smooth continuum from fastspecfit
 
         Returns
         -------
@@ -215,6 +224,14 @@ class plot_spectra_fits:
         sii_lam = (lam_rest >= 6650)&(lam_rest <= 6800)
         lam_sii = lam_rest[sii_lam]
         flam_sii = flam_rest[sii_lam]
+        
+        ## If plot_smooth_cont = True
+        ## Divide into different windows
+        if (plot_smooth_cont == True):
+            cont_hb = smooth_cont[hb_lam]
+            cont_oiii = smooth_cont[oiii_lam]
+            cont_nii = smooth_cont[nii_lam]
+            cont_sii = smooth_cont[sii_lam]
 
         ## Separate the fits and rchi2 values
         hb_fit, oiii_fit, nii_ha_fit, sii_fit = fits
@@ -282,6 +299,10 @@ class plot_spectra_fits:
             hb.annotate('$\sigma \\rm(H\\beta;b)$ = '+str(round(sig_hb_b, 1))+' km/s',\
                         xy = (4870, 0.7), xycoords = hb.get_xaxis_transform(), \
                         fontsize = 16, color = 'k')
+            
+        ## Plot smooth continuum if plot_smooth_cont = True
+        if (plot_smooth_cont == True):
+            hb.plot(lam_hb, cont_hb, color = 'grey')
 
         ## Rchi2 value
         hb.annotate('$H\\beta$', xy = (4800, 0.9), \
@@ -297,6 +318,7 @@ class plot_spectra_fits:
         hb_res.axhline(0.0, color = 'k', ls = ':')
         hb_res.set(xlabel = '$\lambda$')
         hb_res.set_ylabel('Data - Model', fontsize = 14)
+        
 
         ############################################################################################
         ############################## [OIII] spectra + models #####################################
@@ -330,6 +352,11 @@ class plot_spectra_fits:
             oiii.annotate('$\sigma$ ([OIII];out) = '+str(round(sig_oiii_out, 1))+ ' km/s', \
                           xy = (4900, 0.6), xycoords = oiii.get_xaxis_transform(), \
                           fontsize = 16, color = 'k')
+            
+        ## Plot smooth continuum if plot_smooth_cont = True
+        if (plot_smooth_cont == True):
+            oiii.plot(lam_oiii, cont_oiii, color = 'grey')
+            
         ## Rchi2 value
         oiii.annotate('[OIII]4959,5007', xy = (4900, 0.9), \
                       xycoords = oiii.get_xaxis_transform(),\
@@ -405,7 +432,10 @@ class plot_spectra_fits:
             ha.annotate('FWHM $\\rm(H\\alpha;b)$ = '+str(round(fwhm_ha_b, 1))+' km/s', \
                         xy = (6400, 0.7), xycoords = ha.get_xaxis_transform(), \
                         fontsize = 14, color = 'k')
-
+            
+        ## Plot smooth continuum if plot_smooth_cont = True
+        if (plot_smooth_cont == True):
+            ha.plot(lam_nii, cont_nii, color = 'grey')
 
         ## Rchi2 value
         ha.annotate('$H\\alpha$ + [NII]6548,6583', xy = (6400, 0.9),\
@@ -456,6 +486,10 @@ class plot_spectra_fits:
             sii.annotate('$\sigma$ ([SII];out) = '+str(round(sig_sii_out, 1))+' km/s', \
                          xy = (6650, 0.6), xycoords = sii.get_xaxis_transform(), \
                          fontsize = 16, color = 'k')
+            
+        ## Plot smooth continuum if plot_smooth_cont = True
+        if (plot_smooth_cont == True):
+            sii.plot(lam_sii, cont_sii, color = 'grey')
 
         ## Rchi2 value
         sii.annotate('[SII]6716, 6731', xy = (6650, 0.9),\
@@ -479,7 +513,8 @@ class plot_spectra_fits:
     
 ####################################################################################################
 
-    def extreme_fit(lam_rest, flam_rest, fits, rchi2s, title = None):
+    def extreme_fit(lam_rest, flam_rest, fits, rchi2s, title = None, \
+                   smooth_cont = None, plot_smooth_cont = False):
         """
         Plot spectra, fits and residuals in Hb+[OIII] and [NII]+Ha+[SII] regions.
 
@@ -501,6 +536,14 @@ class plot_spectra_fits:
 
         title : str
             Title for the plot
+            
+        smooth_cont : numpy array
+            Restframe smooth continuum array of the spectra.
+            Only needed if plot_smooth_cont = True
+            Default is None.
+            
+        plot_smooth_cont : bool
+            Whether or not to overplot smooth continuum from fastspecfit
 
         Returns
         -------
@@ -520,7 +563,13 @@ class plot_spectra_fits:
         ## Separate the fits and rchi2 values
         hb_oiii_fit, nii_ha_sii_fit = fits
         hb_oiii_rchi2, nii_ha_sii_rchi2 = rchi2s
-
+        
+        ## If plot_smooth_cont = True
+        ## Divide into different windows
+        if (plot_smooth_cont == True):
+            cont_hb_oiii = smooth_cont[hb_oiii_lam]
+            cont_nii_ha_sii = smooth_cont[nii_ha_sii_lam]
+            
         fig = plt.figure(figsize = (30, 9))
         plt.suptitle(title, fontsize = 16)
         gs = fig.add_gridspec(5, 16)
@@ -583,6 +632,10 @@ class plot_spectra_fits:
             hb.annotate('$\sigma \\rm([OIII];out)$ = '+str(round(sig_oiii_out, 1))+' km/s', \
                        xy = (4720, 0.6), xycoords = hb.get_xaxis_transform(), \
                        fontsize = 16, color = 'k')
+            
+        ## Plot smooth continuum if plot_smooth_cont = True
+        if (plot_smooth_cont == True):
+            hb.plot(lam_hb_oiii, cont_hb_oiii, color = 'grey')
 
         hb.annotate('$\chi^{2}_{red}$ = '+str(round(hb_oiii_rchi2, 2)), \
                    xy = (5020, 0.9), xycoords = hb.get_xaxis_transform(), \
@@ -644,6 +697,10 @@ class plot_spectra_fits:
             ha.annotate('$\\rm FWHM (H\\alpha;b)$ = '+str(round(fwhm_ha_b, 1))+' km/s', \
                        xy = (6320, 0.6), xycoords = ha.get_xaxis_transform(), \
                        fontsize = 16, color = 'k')
+            
+        ## Plot smooth continuum if plot_smooth_cont = True
+        if (plot_smooth_cont == True):
+            ha.plot(lam_nii_ha_sii, cont_nii_ha_sii, color = 'grey')
 
         ha.annotate('$\chi^{2}_{red}$ = '+str(round(nii_ha_sii_rchi2, 2)), \
                    xy = (6700, 0.9), xycoords = ha.get_xaxis_transform(), \
@@ -697,6 +754,11 @@ def plot_from_params(table, index, title = None):
     _, lam_rest, flam_rest, ivar_rest = spec_utils.get_emline_spectra(specprod, survey, program, \
                                                                      healpix, targetid, z, \
                                                                      rest_frame = True)
+    ## Get the smooth continuum
+    _, _, smooth_cont,_ = spec_utils.find_fastspec_models(specprod, survey, \
+                                                          program, healpix, targetid)
+    smooth_cont_rest = smooth_cont*(1+z)
+    
     if (title == None):
         title = f'TARGETID: {targetid}; z : {round(z, 2)}'
     
@@ -713,7 +775,8 @@ def plot_from_params(table, index, title = None):
         rchi2s = [hb_rchi2, oiii_rchi2, nii_ha_rchi2, sii_rchi2]
         
         ## Plot the figure
-        fig = plot_spectra_fits.normal_fit(lam_rest, flam_rest, fits, rchi2s, title = title)
+        fig = plot_spectra_fits.normal_fit(lam_rest, flam_rest, fits, rchi2s, title = title, \
+                                          smooth_cont = smooth_cont_rest, plot_smooth_cont = True)
         
     else:
         ## Constructing the fits from the table
@@ -726,7 +789,8 @@ def plot_from_params(table, index, title = None):
         rchi2s = [hb_oiii_rchi2, nii_ha_sii_rchi2]
         
         ## Plot the figure
-        fig = plot_spectra_fits.extreme_fit(lam_rest, flam_rest, fits, rchi2s, title = title)    
+        fig = plot_spectra_fits.extreme_fit(lam_rest, flam_rest, fits, rchi2s, title = title, \
+                                          smooth_cont = smooth_cont_rest, plot_smooth_cont = True)    
     
     return (fig)
 

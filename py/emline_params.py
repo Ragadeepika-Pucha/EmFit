@@ -7,7 +7,7 @@ It consists of the following functions:
     4) get_allfit_params.extreme_fit(fits, lam, flam)
     
 Author : Ragadeepika Pucha
-Version : 2024, March 14
+Version : 2024, March 21
 """
 
 ###################################################################################################
@@ -131,35 +131,21 @@ def get_bestfit_parameters(table, models, emline):
             sigma_err_fits = 0.0
             
         else:
-            ## Sigma-clipped stats
-            # _, amp, amp_err = sigma_clipped_stats(amplitude_arr)
-            # _, mean, mean_err = sigma_clipped_stats(mean_arr)
-            # _, std, std_err = np.sqrt(sigma_clipped_stats(var_arr))
-            # _, flux_fits, flux_err_fits = sigma_clipped_stats(flux_arr)
-            # _, sigma_fits, sigma_err_fits = sigma_clipped_stats(sigma_arr)
+            amp, amp_err = np.median(amplitude_arr), np.std(amplitude_arr)
+            mean, mean_err = np.median(mean_arr), np.std(mean_arr)
+            std, std_err = np.sqrt(np.median(var_arr)), np.sqrt(np.std(var_arr))
             
-            ## Version 2 
-            cond = (amplitude_arr > 0)&(mean_arr > 0)&(std_arr > 0)
+            ## Flux and Sigma from random Fits
+            flux_fits, flux_err_fits = np.median(flux_arr), np.std(flux_arr)
+            sigma_fits, sigma_err_fits = np.median(sigma_arr), np.std(sigma_arr)
             
-            amp = np.nanmean(np.where(~cond, np.nan, amplitude_arr))
-            amp_err = np.std(amplitude_arr)
-            mean = np.nanmean(np.where(~cond, np.nan, mean_arr))
-            mean_err = np.std(mean_arr)
-            std = np.sqrt(np.nanmean(np.where(~cond, np.nan, var_arr)))
-            std_err = np.std(std_arr)
-            flux_fits = np.nanmean(np.where(~cond, np.nan, flux_arr))
-            flux_err_fits = np.std(flux_arr)
-            sigma_fits = np.nanmean(np.where(~cond, np.nan, sigma_arr))
-            sigma_err_fits = np.std(sigma_arr)
+            ## Flux and Sigma from Final Combined Fit
             flux, flux_err = mfit.compute_emline_flux(amp, std, amp_err, std_err)
             sigma, sigma_err = mfit.compute_emline_flux(std, mean, std_err, mean_err)
-            
-            # if ((amp == 0)|(std == 0)):
-            #     flux, flux_err = 0.0, 0.0
-            #     sigma, sigma_err = 0.0, 0.0
-            # else:
-            #     flux, flux_err = mfit.compute_emline_flux(amp, std, amp_err, std_err)
-            #     sigma, sigma_err = mfit.lamspace_to_velspace(std, mean, std_err, mean_err)
+
+            ## 16th and 84th Percentile of Flux and Sigma values
+            flux16, flux84 = np.percentile(flux_arr, 16), np.percentile(flux_arr, 84)
+            sigma16, sigma84 = np.percentile(sigma_arr, 16), np.percentile(sigma_arr, 84)
                         
         params[f'{model}_amplitude'] = [amp]
         params[f'{model}_amplitude_err'] = [amp_err]
@@ -173,8 +159,19 @@ def get_bestfit_parameters(table, models, emline):
         params[f'{model}_sigma_err'] = [sigma_err]
         params[f'{model}_flux_fits'] = [flux_fits]
         params[f'{model}_flux_fits_err'] = [flux_err_fits]
+        params[f'{model}_flux_fits_lerr'] = [flux16]
+        params[f'{model}_flux_fits_uerr'] = [flux84]
         params[f'{model}_sigma_fits'] = [sigma_fits]
         params[f'{model}_sigma_fits_err'] = [sigma_err_fits]
+        params[f'{model}_sigma_fits_lerr'] = [sigma16]
+        params[f'{model}_sigma_fits_uerr'] = [sigma84]
+        
+        ## Original Flux and Sigma Values
+        params[f'{model}_amplitude_orig'] = [amplitude_arr[0]]
+        params[f'{model}_mean_orig'] = [mean_arr[0]]
+        params[f'{model}_std_orig'] = [std_arr[0]]
+        params[f'{model}_flux_orig'] = [flux_arr[0]]
+        params[f'{model}_sigma_orig'] = [sigma_arr[0]]
     
     ## Continuum computation
     cont_col = table[f'{emline}_continuum'].data
@@ -182,10 +179,12 @@ def get_bestfit_parameters(table, models, emline):
         cont = 0.0
         cont_err = 0.0
     else:
-        _, cont, cont_err = sigma_clipped_stats(cont_col)
+        cont, cont_err = np.median(cont_col), np.std(cont_col)
         
     params[f'{emline}_continuum'] = [cont]
     params[f'{emline}_continuum_err'] = [cont_err]
+    
+    params[f'{emline}_continuum_orig'] = [cont_col[0]]
     
     ## Noise computation
     noise_col = table[f'{emline}_noise'].data

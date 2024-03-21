@@ -3,7 +3,7 @@ This script consists of funcitons for fitting emission-lines.
 The different functions are divided into different classes for different emission lines.
 
 Author : Ragadeepika Pucha
-Version : 2024, March 12
+Version : 2024, March 21
 """
 
 ###################################################################################################
@@ -551,7 +551,27 @@ class fit_nii_ha_lines:
 
             gfit_b = fitter_b(g_init, lam_nii_ha, flam_nii_ha, \
                              weights = np.sqrt(ivar_nii_ha), maxiter = 1000)
+            
+            ## Exchange broad and narrow Ha components 
+            ## if narrow Ha component has lower amplitude and broader sigma
+            ha_b_amp = gfit_b['ha_b'].amplitude.value
+            ha_n_amp = gfit_b['ha_n'].amplitude.value
+            ha_b_sig = mfit.lamspace_to_velspace(gfit_b['ha_b'].stddev.value, \
+                                                gfit_b['ha_b'].mean.value)
+            ha_n_sig = mfit.lamspace_to_velspace(gfit_b['ha_n'].stddev.value, \
+                                                gfit_b['ha_n'].mean.value)
 
+            if ((ha_b_amp > ha_n_amp)&(ha_b_sig < ha_n_sig)):
+                g_ha_n = Gaussian1D(amplitude = gfit_b['ha_b'].amplitude, \
+                                   mean = gfit_b['ha_b'].mean, \
+                                   stddev = gfit_b['ha_b'].stddev, \
+                                   name = 'ha_n')
+                g_ha_b = Gaussian1D(amplitude = gfit_b['ha_n'].amplitude, \
+                                   mean = gfit_b['ha_n'].mean, \
+                                   stddev = gfit_b['ha_n'].stddev, \
+                                   name = 'ha_b')
+                gfit_b = gfit_b['nii_ha_cont'] + gfit_b['nii6548'] + gfit_b['nii6583']+\
+                g_ha_n + g_ha_b
             ## Returns fit with broad component if broad_comp = True
             return (gfit_b)
 
@@ -708,6 +728,27 @@ class fit_nii_ha_lines:
             fitter_b = fitting.LevMarLSQFitter()
             gfit_b = fitter_b(g_init, lam_nii_ha, flam_nii_ha, \
                              weights = np.sqrt(ivar_nii_ha), maxiter = 1000)
+            
+            ## Exchange broad and narrow Ha components 
+            ## if narrow Ha component has lower amplitude and broader sigma
+            ha_b_amp = gfit_b['ha_b'].amplitude.value
+            ha_n_amp = gfit_b['ha_n'].amplitude.value
+            ha_b_sig = mfit.lamspace_to_velspace(gfit_b['ha_b'].stddev.value, \
+                                                gfit_b['ha_b'].mean.value)
+            ha_n_sig = mfit.lamspace_to_velspace(gfit_b['ha_n'].stddev.value, \
+                                                gfit_b['ha_n'].mean.value)
+
+            if ((ha_b_amp > ha_n_amp)&(ha_b_sig < ha_n_sig)):
+                g_ha_n = Gaussian1D(amplitude = gfit_b['ha_b'].amplitude, \
+                                   mean = gfit_b['ha_b'].mean, \
+                                   stddev = gfit_b['ha_b'].stddev, \
+                                   name = 'ha_n')
+                g_ha_b = Gaussian1D(amplitude = gfit_b['ha_n'].amplitude, \
+                                   mean = gfit_b['ha_n'].mean, \
+                                   stddev = gfit_b['ha_n'].stddev, \
+                                   name = 'ha_b')
+                gfit_b = gfit_b['nii_ha_cont'] + gfit_b['nii6548'] + gfit_b['nii6583']+\
+                g_ha_n + g_ha_b
 
 
             ## Returns fit with broad component if broad_comp = True
@@ -955,7 +996,27 @@ class fit_nii_ha_lines:
             gfit_b = fitter_b(g_init, lam_nii_ha, flam_nii_ha, \
                              weights = np.sqrt(ivar_nii_ha), maxiter = 1000)
             
-
+            ## Exchange broad and outflow Ha components
+            ## If outflow Ha component has lower amplitude and broad sigma
+            ha_b_amp = gfit_b['ha_b'].amplitude.value
+            ha_out_amp = gfit_b['ha_out'].amplitude.value
+            ha_b_sig = mfit.lamspace_to_velspace(gfit_b['ha_b'].stddev.value, \
+                                                gfit_b['ha_b'].mean.value)
+            ha_out_sig = mfit.lamspace_to_velspace(gfit_b['ha_out'].stddev.value, \
+                                                  gfit_b['ha_out'].mean.value)
+            
+            if ((ha_b_amp > ha_out_amp)&(ha_b_sig < ha_out_sig)):
+                g_ha_out = Gaussian1D(amplitude = gfit_b['ha_b'].amplitude, \
+                                     mean = gfit_b['ha_b'].mean, \
+                                     stddev = gfit_b['ha_b'].stddev, \
+                                     name = 'ha_out')
+                g_ha_b = Gaussian1D(amplitude = gfit_b['ha_out'].amplitude, \
+                                   mean = gfit_b['ha_out'].mean, \
+                                   stddev = gfit_b['ha_out'].stddev, \
+                                   name = 'ha_b')
+                gfit_b = gfit_b['nii_ha_cont'] + gfit_b['nii6548'] + gfit_b['nii6548_out'] +\
+                gfit_b['nii6583'] + gfit_b['nii6583_out'] + gfit_b['ha_n'] + g_ha_out + g_ha_b
+            
             ## Returns fit with broad component if broad_comp = True
             return (gfit_b)
 

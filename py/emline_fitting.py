@@ -3,7 +3,7 @@ This script consists of functions related to fitting the emission line spectra,
 and plotting the models and residuals.
 
 Author : Ragadeepika Pucha
-Version : 2024, March 14
+Version : 2024, March 21
 """
 
 ####################################################################################################
@@ -58,7 +58,7 @@ def fit_spectra(specprod, survey, program, healpix, targetid, z):
     ## Fit [SII] lines first
     lam_sii, flam_sii, ivar_sii = spec_utils.get_fit_window(lam_rest, flam_rest, \
                                                             ivar_rest, em_line = 'sii')
-    sii_fit, _, _ = find_bestfit.find_sii_best_fit(lam_sii, flam_sii, ivar_sii)
+    sii_fit, _ = find_bestfit.find_sii_best_fit(lam_sii, flam_sii, ivar_sii)
     sii_diff, sii_frac = mfit.measure_sii_difference(lam_sii, flam_sii)
     
     ## Conditions for separating extreme broadline sources
@@ -92,7 +92,7 @@ def fit_spectra(specprod, survey, program, healpix, targetid, z):
 
     tables = []
     tables.append(t_orig)
-
+    
     for kk in range(100):
         noise_spec = random.gauss(0, err_rest)
         to_add_spec = res_matrix.dot(noise_spec)
@@ -135,9 +135,6 @@ def fit_spectra(specprod, survey, program, healpix, targetid, z):
         nii_ha_params, sii_params = emp.get_allbestfit_params.normal_fit(t_fits, ndofs_orig, \
                                                                          lam_rest, flam_rest, \
                                                                          ivar_rest)
-    
-    nii_ha_params['nii_ha_flag'] = [t_orig['nii_ha_flag'].data[0]]
-    sii_params['sii_flag'] = [t_orig['sii_flag'].data[0]]
     
     t_final = Table(tgt|hb_params|oiii_params|nii_ha_params|sii_params)
     
@@ -198,13 +195,9 @@ class fit_original_spectra:
                                                                 ivar_rest, em_line = 'sii')
 
         ## Fits
-        gfit_sii, ndof_sii, sii_flag = find_bestfit.find_sii_best_fit(lam_sii, \
-                                                                      flam_sii, \
-                                                                      ivar_sii)
-        gfit_oiii, ndof_oiii = find_bestfit.find_oiii_best_fit(lam_oiii, \
-                                                               flam_oiii, \
-                                                               ivar_oiii)
-        gfit_nii_ha, ndof_nii_ha, prior_sel, nii_ha_flag = find_bestfit.find_nii_ha_best_fit(lam_nii_ha, \
+        gfit_sii, ndof_sii = find_bestfit.find_sii_best_fit(lam_sii, flam_sii, ivar_sii)
+        gfit_oiii, ndof_oiii = find_bestfit.find_oiii_best_fit(lam_oiii, flam_oiii, ivar_oiii)
+        gfit_nii_ha, ndof_nii_ha, prior_sel = find_bestfit.find_nii_ha_best_fit(lam_nii_ha, \
                                                                                 flam_nii_ha, \
                                                                                 ivar_nii_ha, \
                                                                                 gfit_sii)
@@ -212,7 +205,6 @@ class fit_original_spectra:
                                                          flam_hb, \
                                                          ivar_hb, \
                                                          gfit_nii_ha)
-
 
         fits = [gfit_hb, gfit_oiii, gfit_nii_ha, gfit_sii]
         ndofs = [ndof_hb, ndof_oiii, ndof_nii_ha, ndof_sii]
@@ -237,9 +229,6 @@ class fit_original_spectra:
         
         oiii_params['hb_oiii_rchi2'] = [0.0]
         sii_params['nii_ha_sii_rchi2'] = [0.0]
-        
-        nii_ha_params['nii_ha_flag'] = [int(nii_ha_flag)]
-        sii_params['sii_flag'] = [int(sii_flag)]
 
         t_params = Table(hb_params|oiii_params|nii_ha_params|sii_params)
 
@@ -314,9 +303,6 @@ class fit_original_spectra:
         
         oiii_params['hb_oiii_rchi2'] = [rchi2_hb_oiii]
         sii_params['nii_ha_sii_rchi2'] = [rchi2_nii_ha_sii]
-        
-        nii_ha_params['nii_ha_flag'] = [int(0)]
-        sii_params['sii_flag'] = [int(0)]
 
         t_params = Table(hb_params|oiii_params|nii_ha_params|sii_params)
 
@@ -406,8 +392,8 @@ class fit_spectra_iteration:
         ## Fit [NII]+Ha
         ## If [SII] has two components -- two component model
         ## If [SII] has one component -- one component model
-        ## If sig([Ha]) != sig([SII]) -- free version
-        ## If sig([Ha]) == sig([SII]) -- fixed version
+        ## If sig (Ha) and sig([SII]) are not close or sig (Ha) < sig ([SII]) -- fixed version
+        ## If sig([Ha]) and sig([SII]) are close -- fixed version
         ## If 'ha_b' in submodels -- broad_comp = True
 
         if ('sii6716_out' not in sii_models):
@@ -417,7 +403,7 @@ class fit_spectra_iteration:
             sig_sii = mfit.lamspace_to_velspace(sii_orig['sii6716'].stddev.value, \
                                                 sii_orig['sii6716'].mean.value)
 
-            if (sig_ha != sig_sii):
+            if ((sig_ha > sig_sii)&(~np.isclose(sig_ha, sig_sii))):
                 ## Free version
                 if ('ha_b' in nii_ha_orig.submodel_names):
                     ## Broad component exists
