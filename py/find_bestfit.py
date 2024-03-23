@@ -85,7 +85,7 @@ def find_sii_best_fit(lam_sii, flam_sii, ivar_sii):
     ## Default back to two-component model
     sig_sii_1comp = mfit.lamspace_to_velspace(gfit_1comp['sii6716'].stddev.value, \
                                              gfit_1comp['sii6716'].mean.value)
-    
+        
     ## 5-sigma confidence of an extra component
     if ((p_val <= 3e-7)&(sig_sii >= 35)&(~default_cond|(sig_sii_1comp > 450))):
         sii_bestfit = gfit_2comp
