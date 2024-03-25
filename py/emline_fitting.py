@@ -3,7 +3,7 @@ This script consists of functions related to fitting the emission line spectra,
 and plotting the models and residuals.
 
 Author : Ragadeepika Pucha
-Version : 2024, March 21
+Version : 2024, March 24
 """
 
 ####################################################################################################
@@ -121,6 +121,9 @@ def fit_spectra(specprod, survey, program, healpix, targetid, z):
     tgt['healpix'] = [healpix]
     tgt['z'] = [z]
     tgt['per_broad'] = [per_ha]
+    
+    ## 1-D Resolution array
+    rsigma = spec_utils.compute_resolution_sigma(coadd_spec)[0]
 
     ## Get bestfit parameters
     if ext_cond:
@@ -128,13 +131,13 @@ def fit_spectra(specprod, survey, program, healpix, targetid, z):
         hb_params, oiii_params, \
         nii_ha_params, sii_params = emp.get_allbestfit_params.extreme_fit(t_fits, ndofs_orig, \
                                                                           lam_rest, flam_rest, \
-                                                                          ivar_rest)
+                                                                          ivar_rest, rsigma)
     else:
         ## Normal source fitting
         hb_params, oiii_params, \
         nii_ha_params, sii_params = emp.get_allbestfit_params.normal_fit(t_fits, ndofs_orig, \
                                                                          lam_rest, flam_rest, \
-                                                                         ivar_rest)
+                                                                         ivar_rest, rsigma)
     
     t_final = Table(tgt|hb_params|oiii_params|nii_ha_params|sii_params)
     
