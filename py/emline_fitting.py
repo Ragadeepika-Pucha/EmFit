@@ -3,7 +3,7 @@ This script consists of functions related to fitting the emission line spectra,
 and plotting the models and residuals.
 
 Author : Ragadeepika Pucha
-Version : 2024, March 24
+Version : 2024, March 26
 """
 
 ####################################################################################################
@@ -18,6 +18,8 @@ import fit_lines as fl
 import measure_fits as mfit
 import emline_params as emp
 import find_bestfit
+
+from desiutil.dust import dust_transmission
 
 import matplotlib.pyplot as plt
 import random
@@ -48,12 +50,145 @@ plt.rcParams.update(**settings)
 
 ####################################################################################################
 
-def fit_spectra(specprod, survey, program, healpix, targetid, z):
+def fit_spectra(table):
+    """
+    Function to fit a list of sources for a given SPECPROD, SURVEY, PROGRAM, HEALPIX.
+    Only valid for sources with the same SPECPROD, SURVEY, PROGRAM, and HEALPIX
     
-    ## Rest-frame emission-line spectra
-    coadd_spec, lam_rest, \
-    flam_rest, ivar_rest = spec_utils.get_emline_spectra(specprod, survey, program, \
-                                                         healpix, targetid, z, rest_frame = True)
+    Parameters
+    ----------
+    table : astropy table
+        Table of sources for a given SPECPROD, SURVEY, PROGRAM, and HEALPIX.
+        
+    Returns
+    -------
+    t_final : astropy table
+        Table of fit parameters
+    
+    """
+    specprod = table['SPECPROD'].astype(str).data[0]
+    survey = table['SURVEY'].astype(str).data[0]
+    program = table['PROGRAM'].astype(str).data[0]
+    healpix = table['HEALPIX'].data[0]
+    targets = table['TARGETID'].data
+    
+    ## Coadded spectra for the given specprod/survey/program/healpix
+    coadd_specs = spec_utils.find_coadded_spectra(specprod, survey, program, healpix, targets)
+    
+    ## Fastspecfit models for the given specprod/survey/program/healpix
+    meta, models = spec_utils.get_fastspec_files(specprod, survey, program, healpix, targets)
+    
+    ## Number of targets
+    n = len(targets)
+    
+    ## Different spectra information
+    lam = coadd_specs.wave['brz']
+    flams = coadd_specs.flux['brz']
+    ivars = coadd_specs.ivar['brz']
+    ebvs = coadd_specs.fibermap['EBV'].data
+    tgt_ids = coadd_specs.target_ids().data
+        
+    ## Resolution elements
+    rsigma = spec_utils.compute_resolution_sigma(coadd_specs)
+    Rs = coadd_specs.R['brz']
+    
+    tables = []
+    
+    for ii in range(n):
+        ## Targetid of the particular target
+        tgt = tgt_ids[ii]
+        ## Redshift of the particular target
+        z_ii = (table['TARGETID'].data == tgt)
+        z = table['Z'].data[z_ii][0]
+
+        ## MW Transmission
+        mw_trans_spec = dust_transmission(lam, ebvs[0])
+        ## Flux array of the individual target
+        flam = flams[ii].flatten()/mw_trans_spec
+        ## Inverse Variance array of the individual target
+        ivar = ivars[ii].flatten()
+
+        ## Fastspecfit model of the individual target
+        row = meta['TARGETID'] == tgt
+        model = models[row]
+        total_cont = model[0,0,:] + model[0,1,:]
+
+        ## Emission-line spectrum
+        emline_spec = flam - total_cont
+        
+        ## Rest-frame spectra
+        lam_rest = lam/(1+z)
+        flam_rest = emline_spec*(1+z)
+        ivar_rest = ivar/((1+z)**2)
+        
+        ## Resolution elements
+        rsig = rsigma[ii]
+        R = Rs[ii]
+        
+        ## Emission-line Fitting
+        t_fit = fit_single_spectrum(lam_rest, flam_rest, ivar_rest, rsig, R, \
+                                    specprod, survey, program, healpix, tgt, z)
+        
+        
+        tables.append(t_fit)
+    
+    ## Combining all the tables
+    t_final = vstack(tables)
+    
+    for col in t_final.colnames:
+        t_final.rename_column(col, col.upper())
+    
+    return (t_final)
+
+####################################################################################################
+
+def fit_single_spectrum(lam_rest, flam_rest, ivar_rest, rsigma, R, \
+               specprod, survey, program, healpix, targetid, z):
+    """
+    Function to fit a single spectrum.
+    
+    Parameters 
+    ----------
+    lam_rest : numpy array
+        Rest-frame Wavelength array of the spectra
+        
+    flam_rest : numpy array
+        Rest-frame Flux array of the spectra
+        
+    ivar_rest : numpy array
+        Rest-frame Inverse Variance array of the spectra
+        
+    rsigma : numpy array
+        1-D Instrumental Resolution array
+        
+    R : matrix
+        Resolution matrix related to the spectrum
+        
+    specprod : str
+        Spectral Production Pipeline name 
+        fuji|guadalupe|...
+        
+    survey : str
+        Survey name for the spectrum
+        
+    program : str
+        Program name for the spectrum
+        
+    healpix : str
+        Healpix number of the target
+        
+    targets : int64
+        Unique TARGETID of the target
+        
+    z : float
+        Redshift of the target
+        
+    Returns
+    -------
+    t_final : astropy table
+        Table of fit parameters
+    
+    """
     
     ## Fit [SII] lines first
     lam_sii, flam_sii, ivar_sii = spec_utils.get_fit_window(lam_rest, flam_rest, \
@@ -88,7 +223,7 @@ def fit_spectra(specprod, survey, program, healpix, targetid, z):
     ## Error spectra
     err_rest = 1/np.sqrt(ivar_rest) 
     err_rest[~np.isfinite(err_rest)] = 0.0
-    res_matrix = coadd_spec.R['brz'][0]
+    res_matrix = R
 
     tables = []
     tables.append(t_orig)
@@ -110,20 +245,7 @@ def fit_spectra(specprod, survey, program, healpix, targetid, z):
         tables.append(t_params)
         
     t_fits = vstack(tables)
-    
     per_ha = len(t_fits[t_fits['ha_b_flux'].data != 0])*100/len(t_fits)
-    
-    tgt = {}
-    tgt['targetid'] = [targetid]
-    tgt['specprod'] = [specprod]
-    tgt['survey'] = [survey]
-    tgt['program'] = [program]
-    tgt['healpix'] = [healpix]
-    tgt['z'] = [z]
-    tgt['per_broad'] = [per_ha]
-    
-    ## 1-D Resolution array
-    rsigma = spec_utils.compute_resolution_sigma(coadd_spec)[0]
 
     ## Get bestfit parameters
     if ext_cond:
@@ -138,11 +260,17 @@ def fit_spectra(specprod, survey, program, healpix, targetid, z):
         nii_ha_params, sii_params = emp.get_allbestfit_params.normal_fit(t_fits, ndofs_orig, \
                                                                          lam_rest, flam_rest, \
                                                                          ivar_rest, rsigma)
+    ## TARGET Information
+    tgt = {}
+    tgt['targetid'] = [targetid]
+    tgt['specprod'] = [specprod]
+    tgt['survey'] = [survey]
+    tgt['program'] = [program]
+    tgt['healpix'] = [healpix]
+    tgt['z'] = [z]
+    tgt['per_broad'] = [per_ha]
     
     t_final = Table(tgt|hb_params|oiii_params|nii_ha_params|sii_params)
-    
-    for col in t_final.colnames:
-        t_final.rename_column(col, col.upper())
     
     return (t_final)
 
