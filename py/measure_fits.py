@@ -7,9 +7,10 @@ The script consists of following functions:
     4) compute_noise_emline(lam_rest, flam_rest, model, em_line)
     5) compute_emline_flux(amplitude, stddev, amplitude_err, stddev_err)
     6) measure_sii_difference(lam_sii, flam_sii)
+    7) correct_for_rsigma(lam_rest, rsigma, mean, std, std_err)
     
 Author : Ragadeepika Pucha
-Version : 2024, February 25
+Version : 2024, March 28
 """
 
 ###################################################################################################
@@ -192,10 +193,6 @@ def compute_noise_emline(lam_rest, flam_rest, em_line):
     
     lam_region = lam_rest[lam_ii]
     flam_region = flam_rest[lam_ii]
-#     model_region = model(lam_region)
-
-#     res = flam_region - model_region
-#     noise = np.std(res)
 
     noise = np.sqrt(sum(flam_region**2)/len(flam_region))
     
@@ -269,5 +266,55 @@ def measure_sii_difference(lam_sii, flam_sii):
     frac = np.median(flam_left)/np.median(flam_right)
     
     return (diff, frac)
+
+####################################################################################################
+
+def correct_for_rsigma(lam_rest, rsigma, mean, std, std_err):
+    """
+    Function to correct the sigma values for instrumental resolution.
+    
+    Parameters
+    ----------
+    lam_rest : numpy array
+        Rest-Frame Wavelength array
+        
+    rsigma : numpy array
+        1D-Instrumental Resolution 
+        
+    mean : float
+        Mean of the Gaussian
+        
+    std : float
+        Standard-deviation of the Gaussian
+        
+    std_err : float
+        Error in the standard-deviation of the Gaussian
+        
+    Returns
+    -------
+    std_corr : float
+        Correct standard deviation in pixels
+        
+    flag : int
+        Flag for resolved/unresolved.
+        Flag = 0 --> Resolved
+        Flag = 1 --> std > res, but within 1-sigma of res
+        Flag = 2 --> Unresolved
+    """
+    
+    lam_ii = (lam_rest >= (mean - (3*std)))&(lam_rest <= (mean + (3*std)))  
+    res = np.median(rsigma[lam_ii])
+    
+    if (std > res):
+        std_corr = np.sqrt((std**2) - (res**2))
+        if (std_corr <= (res + std_err)):
+            flag = 1
+        else:
+            flag = 0
+    else:
+        std_corr = (3*std_err)
+        flag = 2
+        
+    return (std_corr, flag)    
 
 ####################################################################################################

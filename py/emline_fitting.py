@@ -3,7 +3,7 @@ This script consists of functions related to fitting the emission line spectra,
 and plotting the models and residuals.
 
 Author : Ragadeepika Pucha
-Version : 2024, March 21
+Version : 2024, March 28
 """
 
 ####################################################################################################
@@ -18,6 +18,8 @@ import fit_lines as fl
 import measure_fits as mfit
 import emline_params as emp
 import find_bestfit
+
+from desiutil.dust import dust_transmission
 
 import matplotlib.pyplot as plt
 import random
@@ -49,6 +51,36 @@ plt.rcParams.update(**settings)
 ####################################################################################################
 
 def fit_spectra(specprod, survey, program, healpix, targetid, z):
+    """
+    Function to fit a single spectrum.
+    
+    Parameters 
+    ----------
+    specprod : str
+        Spectral Production Pipeline name 
+        fuji|guadalupe|...
+        
+    survey : str
+        Survey name for the spectrum
+        
+    program : str
+        Program name for the spectrum
+        
+    healpix : str
+        Healpix number of the target
+        
+    targets : int64
+        Unique TARGETID of the target
+        
+    z : float
+        Redshift of the target
+        
+    Returns
+    -------
+    t_final : astropy table
+        Table of fit parameters
+    
+    """
     
     ## Rest-frame emission-line spectra
     coadd_spec, lam_rest, \
@@ -110,9 +142,25 @@ def fit_spectra(specprod, survey, program, healpix, targetid, z):
         tables.append(t_params)
         
     t_fits = vstack(tables)
-    
     per_ha = len(t_fits[t_fits['ha_b_flux'].data != 0])*100/len(t_fits)
     
+    ## 1D resolution array
+    rsigma = spec_utils.compute_resolution_sigma(coadd_spec)[0]
+
+    ## Get bestfit parameters
+    if ext_cond:
+        ## Extreme-line fitting
+        hb_params, oiii_params, \
+        nii_ha_params, sii_params = emp.get_allbestfit_params.extreme_fit(t_fits, ndofs_orig, \
+                                                                          lam_rest, flam_rest, \
+                                                                          ivar_rest, rsigma)
+    else:
+        ## Normal source fitting
+        hb_params, oiii_params, \
+        nii_ha_params, sii_params = emp.get_allbestfit_params.normal_fit(t_fits, ndofs_orig, \
+                                                                         lam_rest, flam_rest, \
+                                                                         ivar_rest, rsigma)
+    ## TARGET Information
     tgt = {}
     tgt['targetid'] = [targetid]
     tgt['specprod'] = [specprod]
@@ -121,20 +169,6 @@ def fit_spectra(specprod, survey, program, healpix, targetid, z):
     tgt['healpix'] = [healpix]
     tgt['z'] = [z]
     tgt['per_broad'] = [per_ha]
-
-    ## Get bestfit parameters
-    if ext_cond:
-        ## Extreme-line fitting
-        hb_params, oiii_params, \
-        nii_ha_params, sii_params = emp.get_allbestfit_params.extreme_fit(t_fits, ndofs_orig, \
-                                                                          lam_rest, flam_rest, \
-                                                                          ivar_rest)
-    else:
-        ## Normal source fitting
-        hb_params, oiii_params, \
-        nii_ha_params, sii_params = emp.get_allbestfit_params.normal_fit(t_fits, ndofs_orig, \
-                                                                         lam_rest, flam_rest, \
-                                                                         ivar_rest)
     
     t_final = Table(tgt|hb_params|oiii_params|nii_ha_params|sii_params)
     

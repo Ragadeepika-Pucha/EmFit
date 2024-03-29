@@ -7,7 +7,7 @@ It consists of the following functions:
     4) get_allfit_params.extreme_fit(fits, lam, flam)
     
 Author : Ragadeepika Pucha
-Version : 2024, March 23
+Version : 2024, March 24
 """
 
 ###################################################################################################
@@ -73,7 +73,7 @@ def get_parameters(gfit, models):
 ###################################################################################################
 ###################################################################################################
 
-def get_bestfit_parameters(table, models, emline):
+def get_bestfit_parameters(table, lam_rest, rsigma, models, emline):
     """
     Function to get the bestfit parameters from the table of iterations.
     If the model component is not available, then the bestfit parameters is set to zero.
@@ -84,6 +84,12 @@ def get_bestfit_parameters(table, models, emline):
     ----------
     table : Astropy Table
         Table of iteration parameters
+        
+    lam_rest : numpy array
+        Rest-frame Wavelength array
+        
+    rsigma : numpy array
+        1-D Instrumental Resolution Array
         
     models : list
         List of Gaussian models for a given emission-line fit
@@ -129,6 +135,8 @@ def get_bestfit_parameters(table, models, emline):
             flux_err_fits = 0.0
             sigma_fits = 0.0
             sigma_err_fits = 0.0
+            sigma_corr = 0.0
+            flag = -1
             
         else:
             amp, amp_err = amplitude_arr[0], np.std(amplitude_arr)
@@ -142,6 +150,10 @@ def get_bestfit_parameters(table, models, emline):
             ## 16th and 84th Percentile of Flux and Sigma values
             flux16, flux84 = np.percentile(flux_arr, 16), np.percentile(flux_arr, 84)
             sigma16, sigma84 = np.percentile(sigma_arr, 16), np.percentile(sigma_arr, 84)
+            
+            ## Correct for Instrumental resolution
+            std_corr, flag = mfit.correct_for_rsigma(lam_rest, rsigma, mean, std, std_err)
+            sigma_corr = mfit.lamspace_to_velspace(std_corr, mean)
                         
         params[f'{model}_amplitude'] = [amp]
         params[f'{model}_amplitude_err'] = [amp_err]
@@ -157,6 +169,8 @@ def get_bestfit_parameters(table, models, emline):
         params[f'{model}_sigma_err'] = [sigma_err]
         params[f'{model}_sigma_lerr'] = [sigma16]
         params[f'{model}_sigma_uerr'] = [sigma84]
+        params[f'{model}_sigma_corr'] = [sigma_corr]
+        params[f'{model}_sigma_flag'] = [flag]
     
     ## Continuum computation
     cont_col = table[f'{emline}_continuum'].data
@@ -335,7 +349,7 @@ class get_allbestfit_params:
         2) extreme_fit(t_fits, ndofs_list, lam_rest, flam_rest, ivar_rest)
     """
     
-    def normal_fit(t_fits, ndofs_list, lam_rest, flam_rest, ivar_rest):
+    def normal_fit(t_fits, ndofs_list, lam_rest, flam_rest, ivar_rest, rsigma):
         """
         Function to get all the required parameters for the Hb, [OIII], [NII]+Ha, and [SII] 
         bestfits from the table of parameters of iterations.
@@ -357,6 +371,9 @@ class get_allbestfit_params:
             
         ivar_rest : numpy array
             Rest-Frame Inverse Variance array of the spectra
+            
+        rsigma : numpy array
+            1-D Instrumental Resolution array
         
         Returns
         -------
@@ -385,10 +402,10 @@ class get_allbestfit_params:
                          'ha_n', 'ha_out', 'ha_b']
         sii_models = ['sii6716', 'sii6716_out', 'sii6731', 'sii6731_out']
 
-        hb_params = get_bestfit_parameters(t_fits, hb_models, 'hb')
-        oiii_params = get_bestfit_parameters(t_fits, oiii_models, 'oiii')
-        nii_ha_params = get_bestfit_parameters(t_fits, nii_ha_models, 'nii_ha')
-        sii_params = get_bestfit_parameters(t_fits, sii_models, 'sii')
+        hb_params = get_bestfit_parameters(t_fits, lam_rest, rsigma, hb_models, 'hb')
+        oiii_params = get_bestfit_parameters(t_fits, lam_rest, rsigma, oiii_models, 'oiii')
+        nii_ha_params = get_bestfit_parameters(t_fits, lam_rest, rsigma, nii_ha_models, 'nii_ha')
+        sii_params = get_bestfit_parameters(t_fits, lam_rest, rsigma, sii_models, 'sii')
         
         ## Join into a table
         t_params = Table(hb_params|oiii_params|nii_ha_params|sii_params)
@@ -413,7 +430,6 @@ class get_allbestfit_params:
                                                 ivar_rest, em_line = 'nii_ha')
         lam_sii, flam_sii, ivar_sii = spec_utils.get_fit_window(lam_rest, flam_rest, \
                                                                 ivar_rest, em_line = 'sii')
-        
         
         
         rchi2_hb = mfit.calculate_chi2(flam_hb, gfit_hb(lam_hb), ivar_hb, ndof_hb, \
@@ -449,7 +465,7 @@ class get_allbestfit_params:
     
 ###################################################################################################
 
-    def extreme_fit(t_fits, ndofs_list, lam_rest, flam_rest, ivar_rest):
+    def extreme_fit(t_fits, ndofs_list, lam_rest, flam_rest, ivar_rest, rsigma):
         """
         Function to get all the required parameters for the Hb, [OIII], [NII]+Ha, and [SII] 
         bestfits from the table of parameters of iterations.
@@ -471,6 +487,9 @@ class get_allbestfit_params:
             
         ivar_rest : numpy array
             Rest-Frame Inverse Variance array of the spectra
+            
+        rsigma : numpy array
+            1-D Instrumental Resolution array
         
         Returns
         -------
@@ -499,10 +518,10 @@ class get_allbestfit_params:
                          'ha_n', 'ha_out', 'ha_b']
         sii_models = ['sii6716', 'sii6716_out', 'sii6731', 'sii6731_out']
 
-        hb_params = get_bestfit_parameters(t_fits, hb_models, 'hb')
-        oiii_params = get_bestfit_parameters(t_fits, oiii_models, 'oiii')
-        nii_ha_params = get_bestfit_parameters(t_fits, nii_ha_models, 'nii_ha')
-        sii_params = get_bestfit_parameters(t_fits, sii_models, 'sii')
+        hb_params = get_bestfit_parameters(t_fits, lam_rest, rsigma, hb_models, 'hb')
+        oiii_params = get_bestfit_parameters(t_fits, lam_rest, rsigma, oiii_models, 'oiii')
+        nii_ha_params = get_bestfit_parameters(t_fits, lam_rest, rsigma, nii_ha_models, 'nii_ha')
+        sii_params = get_bestfit_parameters(t_fits, lam_rest, rsigma, sii_models, 'sii')
         
         ## Join into a table
         t_params = Table(hb_params|oiii_params|nii_ha_params|sii_params)

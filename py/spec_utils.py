@@ -1,7 +1,8 @@
 """
 This script consists of spectra-related utility functions.
 The following functions are available:
-    1) find_coadded_spectra(specprod, survey, program, healpix, targetid)
+    1) find_coadded_spectra(specprod, survey, program, healpix, targets)
+    2) get_fastspec_files(specprod, survey, program, healpix, targets)
     2) find_fastspec_models(specprod, survey, program, healpix, targetid, ver)
     3) get_emline_spectra(specprod, survey, program, healpix, targetid, \
                           z, rest_frame = False, plot_continuum = False)
@@ -9,7 +10,7 @@ The following functions are available:
     5) compute_resolution_sigma(coadd_spec)
 
 Author : Ragadeepika Pucha
-Version : 2024, March 21
+Version : 2024, March 26
 """
 ###################################################################################################
 
@@ -26,7 +27,7 @@ import plot_utils
 
 ###################################################################################################
 
-def find_coadded_spectra(specprod, survey, program, healpix, targetid):
+def find_coadded_spectra(specprod, survey, program, healpix, targets):
     """
     This function finds the coadded spectra of a given target and returns the spectra that is 
     coadded across cameras.
@@ -44,10 +45,10 @@ def find_coadded_spectra(specprod, survey, program, healpix, targetid):
         Program name for the spectra
         
     healpix : str
-        Healpix number of the target
+        Healpix number of the targets
         
-    targetid : int64
-        The unique TARGETID associated with the target
+    targets : numpy array
+        List of required TARGETIDs
         
     Returns
     -------
@@ -66,21 +67,79 @@ def find_coadded_spectra(specprod, survey, program, healpix, targetid):
     coadd_file = f'{coadd_dir}/coadd-{survey}-{program}-{healpix}.fits'
     
     ## Get spectra
-    ## Skipping HDUs that are not required for optimization 
-    ## This is not working for DESI 22.5 
-    ## Might update it later
-    ## MASK and RESOLUTION hdus are needed
-    # spec = read_spectra(coadd_file, \
-    #                     skip_hdus = ('EXP_FIBERMAP', 'SCORES', \
-    #                                  'EXTRA_CATALOG')).select(targets = targetid)
-    
-    ## Get spectra
-    spec = read_spectra(coadd_file).select(targets = targetid)
+    spec = read_spectra(coadd_file).select(targets = targets)
     
     ## Coadd the spectra across cameras
     coadd_spec = coadd_cameras(spec)
     
     return (coadd_spec)
+
+###################################################################################################
+
+def get_fastspec_files(specprod, survey, program, healpix, targets):
+    """
+    Get the required metadata-rows and models of the fastspecfit files 
+    for a given list of targets.
+    The version depends on the "specprod"
+    
+    Parameters
+    ----------
+    specprod : str
+        Spectral Production Pipeline name 
+        fuji|guadalupe|...
+        
+    survey : str
+        Survey name for the spectra
+        
+    program : str
+        Program name for the spectra
+        
+    healpix : str
+        Healpix number of the targets
+        
+    targets : int64
+        List of required TARGETIDs
+        
+    Returns
+    -------
+    meta_sel : astropy table
+        Metadata of the targets
+        
+    models_sel : list
+        Fastspecfit models for the targets
+    """
+    
+    if (specprod == 'fuji'):
+        ver = 'v3.2'
+    elif (specprod == 'guadalupe'):
+        ver = 'v3.1'
+    elif (specprod == 'iron'):
+        ver = 'v2.1'
+
+    ## Fastspecfit healpix directory
+    ## Read-only file - using /dvs_ro/cfs/.. directory
+    fastspec_dir = f'/dvs_ro/cfs/cdirs/desi/spectro/fastspecfit/{specprod}/{ver}/healpix'
+    ## Specific healpix directory of the target
+    target_dir = f'{survey}/{program}/{healpix//100}/{healpix}'
+    ## Fastspecfit file directory of the target
+    target_fast_dir = f'{fastspec_dir}/{target_dir}'
+    ## Fastspecfit data file associated with the target
+    fastfile = f'{target_fast_dir}/fastspec-{survey}-{program}-{healpix}.fits.gz'
+    
+    ## Metadata 
+    meta = Table(fitsio.read(fastfile, 'METADATA'))
+   
+    ## Models
+    models = fitsio.read(fastfile, 'MODELS')
+    
+    ## The specific rows of the targets
+    rows = np.isin(meta['TARGETID'].data, targets)
+    
+    ## Selected meta and models data
+    meta_sel = meta[rows]
+    models_sel = models[rows]
+    
+    return (meta_sel, models_sel)
 
 ###################################################################################################
 
@@ -133,10 +192,10 @@ def find_fastspec_models(specprod, survey, program, healpix, targetid, fspec = F
     """
     
     # ver : str
-    #     Version of the fastspecfit. Default is v3.2
-    #     Latest Fuji version: v3.2
-    #     Latest Guadalupe version: v3.1
-    #     Latest Iron version: v2.1
+    # Version of the fastspecfit. Default is v3.2
+    # Latest Fuji version: v3.2
+    # Latest Guadalupe version: v3.1
+    # Latest Iron version: v2.1
     
     if (specprod == 'fuji'):
         ver = 'v3.2'
