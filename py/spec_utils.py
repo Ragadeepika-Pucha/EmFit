@@ -192,10 +192,10 @@ def find_fastspec_models(specprod, survey, program, healpix, targetid, fspec = F
     """
     
     # ver : str
-    #     Version of the fastspecfit. Default is v3.2
-    #     Latest Fuji version: v3.2
-    #     Latest Guadalupe version: v3.1
-    #     Latest Iron version: v2.1
+    # Version of the fastspecfit. Default is v3.2
+    # Latest Fuji version: v3.2
+    # Latest Guadalupe version: v3.1
+    # Latest Iron version: v2.1
     
     if (specprod == 'fuji'):
         ver = 'v3.2'

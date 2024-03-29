@@ -7,9 +7,10 @@ The script consists of following functions:
     4) compute_noise_emline(lam_rest, flam_rest, model, em_line)
     5) compute_emline_flux(amplitude, stddev, amplitude_err, stddev_err)
     6) measure_sii_difference(lam_sii, flam_sii)
+    7) correct_for_rsigma(lam_rest, rsigma, mean, std, std_err)
     
 Author : Ragadeepika Pucha
-Version : 2024, March 24
+Version : 2024, March 28
 """
 
 ###################################################################################################
