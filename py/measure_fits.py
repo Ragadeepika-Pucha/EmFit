@@ -308,7 +308,6 @@ def correct_for_rsigma(lam_rest, rsigma, mean, std, std_err):
     if (std > res):
         std_corr = np.sqrt((std**2) - (res**2))
         if (std_corr <= (res + std_err)):
-            std_corr = (3*std_err)
             flag = 1
         else:
             flag = 0
