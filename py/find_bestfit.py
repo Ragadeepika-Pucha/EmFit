@@ -3,7 +3,7 @@ This script consists of functions for fitting emission-lines.
 The different functions are divided into different classes for different emission lines.
 
 Author : Ragadeepika Pucha
-Version : 2024, March 21
+Version : 2024, April 8
 """
 
 ###################################################################################################
@@ -20,7 +20,7 @@ from scipy.stats import chi2
 
 ###################################################################################################
 
-def find_sii_best_fit(lam_sii, flam_sii, ivar_sii):
+def find_sii_best_fit(lam_sii, flam_sii, ivar_sii, rsig_sii):
     """
     Find the best fit for [SII]6716,6731 doublet.
     The code fits both one-component and two-component fits and picks the best version.
@@ -37,6 +37,9 @@ def find_sii_best_fit(lam_sii, flam_sii, ivar_sii):
 
     ivar_sii : numpy array
         Inverse variance array of the spectra in the [SII] region.
+        
+    rsig_sii : float
+        Median Resolution element in the [SII] region.
 
     Returns
     -------
@@ -51,10 +54,10 @@ def find_sii_best_fit(lam_sii, flam_sii, ivar_sii):
     """
     
     ## Single component fit
-    gfit_1comp = fl.fit_sii_lines.fit_one_component(lam_sii, flam_sii, ivar_sii)
+    gfit_1comp = fl.fit_sii_lines.fit_one_component(lam_sii, flam_sii, ivar_sii, rsig_sii)
     
     ## Two-component fit
-    gfit_2comp = fl.fit_sii_lines.fit_two_components(lam_sii, flam_sii, ivar_sii)
+    gfit_2comp = fl.fit_sii_lines.fit_two_components(lam_sii, flam_sii, ivar_sii, rsig_sii)
     
     ## Chi2 values for both the fits
     chi2_1comp = mfit.calculate_chi2(flam_sii, gfit_1comp(lam_sii), ivar_sii)
@@ -65,9 +68,9 @@ def find_sii_best_fit(lam_sii, flam_sii, ivar_sii):
     del_chi2 = chi2_1comp - chi2_2comp
     p_val = chi2.sf(del_chi2, df)
     
-    ## Critetion to have min([SII]) in two-component model to be 35 km/s
-    sig_sii = mfit.lamspace_to_velspace(gfit_2comp['sii6716'].stddev.value, \
-                                       gfit_2comp['sii6716'].mean.value)
+    ## Criterion for two-component model --> narrow [SII] is resolved
+    res_cond = (gfit_2comp['sii6716'].stddev.value > rsig_sii)&\
+    (gfit_2comp['sii6731'].stddev.value > rsig_sii)
     
     ## Criterion for defaulting back to one-component model
     ## rel-redshift > 450 km/s or < -450 km/s
@@ -87,7 +90,7 @@ def find_sii_best_fit(lam_sii, flam_sii, ivar_sii):
                                              gfit_1comp['sii6716'].mean.value)
         
     ## 5-sigma confidence of an extra component
-    if ((p_val <= 3e-7)&(sig_sii >= 35)&(~default_cond|(sig_sii_1comp > 450))):
+    if ((p_val <= 3e-7)&(res_cond)&(~default_cond|(sig_sii_1comp > 450))):
         sii_bestfit = gfit_2comp
         n_dof = 8
     else:

@@ -3,7 +3,7 @@ This script consists of funcitons for fitting emission-lines.
 The different functions are divided into different classes for different emission lines.
 
 Author : Ragadeepika Pucha
-Version : 2024, March 21
+Version : 2024, April 8
 """
 
 ###################################################################################################
@@ -26,7 +26,7 @@ class fit_sii_lines:
         2) fit_two_components(lam_sii, flam_sii, ivar_sii)
     """
     
-    def fit_one_component(lam_sii, flam_sii, ivar_sii):
+    def fit_one_component(lam_sii, flam_sii, ivar_sii, rsig_sii):
         """
         Function to fit a single component to [SII]6716, 6731 doublet.
         
@@ -40,6 +40,9 @@ class fit_sii_lines:
 
         ivar_sii : numpy array
             Inverse variance array of the spectra in the [SII] region.
+            
+        rsig_sii : float
+            Median Resolution element in the [SII] region.
 
         Returns
         -------
@@ -67,8 +70,13 @@ class fit_sii_lines:
         g_sii6731.mean.tied = tie_mean_sii
 
         ## Tie standard deviations of the two gaussians
+        ## Intrinsic sigma of the two components should be equal
         def tie_std_sii(model):
-            return ((model['sii6716'].stddev)*(model['sii6731'].mean/model['sii6716'].mean))
+            term1 = (model['sii6731'].mean/model['sii6716'].mean)**2
+            term2 = ((model['sii6716'].stddev)**2) - (rsig_sii**2)
+            term3 = (term1*term2)+(rsig_sii**2)
+            
+            return (np.sqrt(term3))
 
         g_sii6731.stddev.tied = tie_std_sii
         
@@ -87,7 +95,7 @@ class fit_sii_lines:
     
 ####################################################################################################
     
-    def fit_two_components(lam_sii, flam_sii, ivar_sii):
+    def fit_two_components(lam_sii, flam_sii, ivar_sii, rsig_sii):
         """
         Function to fit two components to [SII]6716, 6731 doublet.
         
@@ -101,6 +109,9 @@ class fit_sii_lines:
 
         ivar_sii : numpy array
             Inverse variance array of the spectra in the [SII] region.
+            
+        rsig_sii : float
+            Median Resolution element in the [SII] region.
 
         Returns
         -------
@@ -136,9 +147,13 @@ class fit_sii_lines:
         g_sii6731.mean.tied = tie_mean_sii
 
         ## Tie standard deviations of the main gaussian components
+        ## The intrinsic sigma values of the two components should be equal
         def tie_std_sii(model):
-            return ((model['sii6716'].stddev)*\
-                    (model['sii6731'].mean/model['sii6716'].mean))
+            term1 = (model['sii6731'].mean/model['sii6716'].mean)**2
+            term2 = ((model['sii6716'].stddev)**2) - (rsig_sii**2)
+            term3 = (term1*term2)+(rsig_sii**2)
+            
+            return (np.sqrt(term3))
 
         g_sii6731.stddev.tied = tie_std_sii
         
@@ -149,9 +164,13 @@ class fit_sii_lines:
         g_sii6731_out.mean.tied = tie_mean_sii_out
 
         ## Tie standard deviations of the outflow components
+        ## The intrinsic sigma values of the two components should be equal
         def tie_std_sii_out(model):
-            return ((model['sii6716_out'].stddev)*\
-                    (model['sii6731_out'].mean/model['sii6716_out'].mean))
+            term1 = (model['sii6731_out'].mean/model['sii6716_out'].mean)**2
+            term2 = ((model['sii6716_out'].stddev)**2) - (rsig_sii**2)
+            term3 = (term1*term2)+(rsig_sii**2)
+            
+            return (np.sqrt(term3))
 
         g_sii6731_out.stddev.tied = tie_std_sii_out
 
@@ -562,6 +581,7 @@ class fit_nii_ha_lines:
                                                 gfit_b['ha_n'].mean.value)
 
             if ((ha_b_amp > ha_n_amp)&(ha_b_sig < ha_n_sig)):
+                print (1)
                 g_ha_n = Gaussian1D(amplitude = gfit_b['ha_b'].amplitude, \
                                    mean = gfit_b['ha_b'].mean, \
                                    stddev = gfit_b['ha_b'].stddev, \
@@ -739,6 +759,7 @@ class fit_nii_ha_lines:
                                                 gfit_b['ha_n'].mean.value)
 
             if ((ha_b_amp > ha_n_amp)&(ha_b_sig < ha_n_sig)):
+                print (2)
                 g_ha_n = Gaussian1D(amplitude = gfit_b['ha_b'].amplitude, \
                                    mean = gfit_b['ha_b'].mean, \
                                    stddev = gfit_b['ha_b'].stddev, \
@@ -1006,6 +1027,7 @@ class fit_nii_ha_lines:
                                                   gfit_b['ha_out'].mean.value)
             
             if ((ha_b_amp > ha_out_amp)&(ha_b_sig < ha_out_sig)):
+                print (3)
                 g_ha_out = Gaussian1D(amplitude = gfit_b['ha_b'].amplitude, \
                                      mean = gfit_b['ha_b'].mean, \
                                      stddev = gfit_b['ha_b'].stddev, \
