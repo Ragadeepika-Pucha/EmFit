@@ -22,8 +22,8 @@ from scipy.stats import chi2
 class fit_sii_lines:
     """
     Different functions associated with [SII]6716, 6731 doublet fitting:
-        1) fit_one_component(lam_sii, flam_sii, ivar_sii)
-        2) fit_two_components(lam_sii, flam_sii, ivar_sii)
+        1) fit_one_component(lam_sii, flam_sii, ivar_sii, rsig_sii)
+        2) fit_two_components(lam_sii, flam_sii, ivar_sii, rsig_sii)
     """
     
     def fit_one_component(lam_sii, flam_sii, ivar_sii, rsig_sii):
@@ -226,11 +226,11 @@ class fit_sii_lines:
 class fit_oiii_lines:
     """
     Different functions associated with [OIII]4959, 5007 doublet fitting:
-        1) fit_one_component(lam_oiii, flam_oiii, ivar_oiii)
-        2) fit_two_components(lam_oiii, flam_oiii, ivar_oiii)
+        1) fit_one_component(lam_oiii, flam_oiii, ivar_oiii, rsig_oiii)
+        2) fit_two_components(lam_oiii, flam_oiii, ivar_oiii, rsig_oiii)
     """
 
-    def fit_one_component(lam_oiii, flam_oiii, ivar_oiii):
+    def fit_one_component(lam_oiii, flam_oiii, ivar_oiii, rsig_oiii):
         """
         Function to fit a single component to [OIII]4959,5007 doublet.
         
@@ -244,6 +244,9 @@ class fit_oiii_lines:
 
         ivar_oiii : numpy array
             Inverse variance array of the spectra in the [OIII] region.
+            
+        rsig_oiii : float
+            Median Resolution element in the [SII] region.
 
         Returns
         -------
@@ -278,9 +281,13 @@ class fit_oiii_lines:
         g_oiii5007.amplitude.tied = tie_amp_oiii
 
         ## Tie standard deviations in velocity space
+        ## Intrinsic sigma of the two components should be equal
         def tie_std_oiii(model):
-            return ((model['oiii4959'].stddev)*\
-                    (model['oiii5007'].mean/model['oiii4959'].mean))
+            term1 = (model['oiii5007'].mean/model['oiii4959'].mean)**2
+            term2 = ((model['oiii4959'].stddev)**2) - (rsig_oiii**2)
+            term3 = (term1*term2)+(rsig_oiii**2)
+            
+            return (np.sqrt(term3))
 
         g_oiii5007.stddev.tied = tie_std_oiii
         
@@ -301,7 +308,7 @@ class fit_oiii_lines:
     
 ####################################################################################################
 
-    def fit_two_components(lam_oiii, flam_oiii, ivar_oiii):
+    def fit_two_components(lam_oiii, flam_oiii, ivar_oiii, rsig_oiii):
         """
         Function to fit two components to [OIII]4959,5007 doublet.
         
@@ -315,6 +322,9 @@ class fit_oiii_lines:
 
         ivar_oiii : numpy array
             Inverse variance array of the spectra in the [OIII] region.
+            
+        rsig_oiii : float
+            Median Resolution element in the [OIII] region.
 
         Returns
         -------
@@ -357,9 +367,13 @@ class fit_oiii_lines:
         g_oiii5007.amplitude.tied = tie_amp_oiii
 
         ## Tie standard deviations in velocity space
+        ## Intrinsic sigma of the two components should be equal
         def tie_std_oiii(model):
-            return ((model['oiii4959'].stddev)*\
-                    (model['oiii5007'].mean/model['oiii4959'].mean))
+            term1 = (model['oiii5007'].mean/model['oiii4959'].mean)**2
+            term2 = ((model['oiii4959'].stddev)**2) - (rsig_oiii**2)
+            term3 = (term1*term2)+(rsig_oiii**2)
+            
+            return (np.sqrt(term3))
 
         g_oiii5007.stddev.tied = tie_std_oiii
 
@@ -376,9 +390,13 @@ class fit_oiii_lines:
         g_oiii5007_out.amplitude.tied = tie_amp_oiii_out
 
         ## Tie standard deviations of the outflow components in the velocity space
+        ## Intrinsic sigma of the two components should be equal
         def tie_std_oiii_out(model):
-            return ((model['oiii4959_out'].stddev)*\
-        (model['oiii5007_out'].mean/model['oiii4959_out'].mean))
+            term1 = (model['oiii5007_out'].mean/model['oiii4959_out'].mean)**2
+            term2 = ((model['oiii4959_out'].stddev)**2) - (rsig_oiii**2)
+            term3 = (term1*term2)+(rsig_oiii**2)
+            
+            return (np.sqrt(term3))
 
         g_oiii5007_out.stddev.tied = tie_std_oiii_out
         

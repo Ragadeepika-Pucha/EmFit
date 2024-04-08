@@ -102,7 +102,7 @@ def find_sii_best_fit(lam_sii, flam_sii, ivar_sii, rsig_sii):
 ####################################################################################################
 ####################################################################################################
 
-def find_oiii_best_fit(lam_oiii, flam_oiii, ivar_oiii):
+def find_oiii_best_fit(lam_oiii, flam_oiii, ivar_oiii, rsig_oiii):
     """
     Find the best fit for [OIII]4959,5007 doublet.
     The code fits both one-component and two-component fits and picks the best version.
@@ -119,6 +119,9 @@ def find_oiii_best_fit(lam_oiii, flam_oiii, ivar_oiii):
 
     ivar_oiii : numpy array
         Inverse variance array of the spectra in the [OIII] region.
+        
+    rsig_oiii : float
+        Median Resolution element in the [OIII] region.
 
     Returns
     -------
@@ -130,10 +133,10 @@ def find_oiii_best_fit(lam_oiii, flam_oiii, ivar_oiii):
     """
     
     ## Single component fit
-    gfit_1comp = fl.fit_oiii_lines.fit_one_component(lam_oiii, flam_oiii, ivar_oiii)
+    gfit_1comp = fl.fit_oiii_lines.fit_one_component(lam_oiii, flam_oiii, ivar_oiii, rsig_oiii)
     
     ## Two component fit
-    gfit_2comp = fl.fit_oiii_lines.fit_two_components(lam_oiii, flam_oiii, ivar_oiii)
+    gfit_2comp = fl.fit_oiii_lines.fit_two_components(lam_oiii, flam_oiii, ivar_oiii, rsig_oiii)
     
     ## Chi2 values for both the fits
     chi2_1comp = mfit.calculate_chi2(flam_oiii, gfit_1comp(lam_oiii), ivar_oiii)
@@ -144,9 +147,9 @@ def find_oiii_best_fit(lam_oiii, flam_oiii, ivar_oiii):
     del_chi2 = chi2_1comp - chi2_2comp
     p_val = chi2.sf(del_chi2, df)
     
-    ## Criterion to have min([OIII]) in two-component model to be 35 km/s
-    sig_oiii = mfit.lamspace_to_velspace(gfit_2comp['oiii5007'].stddev.value, \
-                                       gfit_2comp['oiii5007'].mean.value)
+    ## Criterion for two-component model --> narrow [OIII] is resolved
+    res_cond = (gfit_2comp['oiii4959'].stddev.value > rsig_oiii)&\
+    (gfit_2comp['oiii5007'].stddev.value > rsig_oiii)
     
     ## Criterion for defaulting back to one-component model
     ## Sigma ([OIII]out) > 1000 km/s
@@ -156,7 +159,7 @@ def find_oiii_best_fit(lam_oiii, flam_oiii, ivar_oiii):
     default_cond = (sig_oiii_out > 1000)
     
     ## 5-sigma confidence of an extra component
-    if ((p_val <= 3e-7)&(sig_oiii >= 35)&(~default_cond)):
+    if ((p_val <= 3e-7)&(res_cond)&(~default_cond)):
         oiii_bestfit = gfit_2comp
         n_dof = 7
     else:
