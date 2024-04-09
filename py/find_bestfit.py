@@ -774,7 +774,8 @@ def find_nii_ha_sii_best_fit(lam_nii_ha_sii, flam_nii_ha_sii, ivar_nii_ha_sii, \
 ####################################################################################################
 ####################################################################################################
 
-def find_hb_oiii_bestfit(lam_hb_oiii, flam_hb_oiii, ivar_hb_oiii, nii_ha_sii_bestfit):
+def find_hb_oiii_best_fit(lam_hb_oiii, flam_hb_oiii, ivar_hb_oiii, rsig_hb_oiii, \
+                         nii_ha_sii_bestfit, rsig_nii_ha_sii):
     """
     Find the bestfit for the Hb+[OIII] region. This is for the case of 
     extreme broadline (quasar-like) sources.
@@ -793,9 +794,15 @@ def find_hb_oiii_bestfit(lam_hb_oiii, flam_hb_oiii, ivar_hb_oiii, nii_ha_sii_bes
 
     ivar_hb_oiii : numpy array
         Inverse variance array of the spectra in the Hb+[OIII] region.
+        
+    rsig_hb_oiii : float
+        Median resolution element in the Hb+[OIII] region.
 
     nii_ha_sii_bestfit : Astropy model
         Best fit model for the [NII]+Ha+[SII] emission-lines.
+        
+    rsig_nii_ha_sii : float
+        Median resolution element in the [NII]+Ha+[SII] region.
 
     Returns
     -------
@@ -810,13 +817,17 @@ def find_hb_oiii_bestfit(lam_hb_oiii, flam_hb_oiii, ivar_hb_oiii, nii_ha_sii_bes
     gfit_1comp = fl.fit_extreme_broadline_sources.fit_hb_oiii_1comp(lam_hb_oiii, \
                                                                     flam_hb_oiii, \
                                                                     ivar_hb_oiii, \
-                                                                    nii_ha_sii_bestfit)
+                                                                    rsig_hb_oiii, \
+                                                                    nii_ha_sii_bestfit, \
+                                                                    rsig_nii_ha_sii)
     
     ## Two component fit
     gfit_2comp = fl.fit_extreme_broadline_sources.fit_hb_oiii_2comp(lam_hb_oiii, \
                                                                     flam_hb_oiii, \
                                                                     ivar_hb_oiii, \
-                                                                    nii_ha_sii_bestfit)
+                                                                    rsig_hb_oiii, \
+                                                                    nii_ha_sii_bestfit, \
+                                                                    rsig_nii_ha_sii)
     
     ## Chi2 values for both the fits
     chi2_1comp = mfit.calculate_chi2(flam_hb_oiii, gfit_1comp(lam_hb_oiii), ivar_hb_oiii)

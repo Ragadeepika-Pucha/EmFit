@@ -1462,8 +1462,10 @@ class fit_extreme_broadline_sources:
     """
     Different functions associated with fitting extreme broadline sources:
         1) fit_nii_ha_sii(lam_nii_ha_sii, flam_nii_ha_sii, ivar_nii_ha_sii, rsig_nii_ha_sii)
-        2) fit_hb_oiii_1comp(lam_hb_oiii, flam_hb_oiii, ivar_hb_oiii, nii_ha_sii_bestfit)
-        3) fit_hb_oiii_2comp(lam_hb_oiii, flam_hb_oiii, ivar_hb_oiii, nii_ha_sii_bestfit)
+        2) fit_hb_oiii_1comp(lam_hb_oiii, flam_hb_oiii, ivar_hb_oiii, rsig_hb_oiii, \
+                            nii_ha_sii_bestfit, rsig_nii_ha_sii)
+        3) fit_hb_oiii_2comp(lam_hb_oiii, flam_hb_oiii, ivar_hb_oiii, rsig_hb_oiii, \
+                            nii_ha_sii_bestfit, rsig_nii_ha_sii)
         
     """
     def fit_nii_ha_sii(lam_nii_ha_sii, flam_nii_ha_sii, ivar_nii_ha_sii, \
@@ -1625,7 +1627,8 @@ class fit_extreme_broadline_sources:
 
 ####################################################################################################
 
-    def fit_hb_oiii_1comp(lam_hb_oiii, flam_hb_oiii, ivar_hb_oiii, nii_ha_sii_bestfit):
+    def fit_hb_oiii_1comp(lam_hb_oiii, flam_hb_oiii, ivar_hb_oiii, rsig_hb_oiii, \
+                          nii_ha_sii_bestfit, rsig_nii_ha_sii):
         """
         Function to fit Hb+[OIII] together for extreme broadline (quasar-like) sources
         The widths of [OIII] are tied together and the widths of narrow and broad Hb components 
@@ -1644,8 +1647,14 @@ class fit_extreme_broadline_sources:
         ivar_hb_oiii : numpy array
             Inverse variance array of the spectra in the Hb+[OIII] region.
             
+        rsig_hb_oiii : float
+            Median resolution element in the Hb+[OIII] region.
+            
         nii_ha_sii_bestfit : Astropy model
             Best fit model for the [NII]+Ha+[SII] emission-lines.
+            
+        rsig_nii_ha_sii : float
+            Median resolution element in the [NII]+Ha+[SII] region.
 
         Returns
         -------
@@ -1678,9 +1687,13 @@ class fit_extreme_broadline_sources:
         g_oiii5007.amplitude.tied = tie_amp_oiii
 
         ## Tie standard deviations in velocity space
+        ## Intrinsic sigma of the two components should be equal
         def tie_std_oiii(model):
-            return ((model['oiii4959'].stddev)*\
-                   (model['oiii5007'].mean/model['oiii4959'].mean))
+            term1 = (model['oiii5007'].mean/model['oiii4959'].mean)**2
+            term2 = ((model['oiii4959'].stddev)**2) - (rsig_hb_oiii**2)
+            term3 = (term1*term2) + (rsig_hb_oiii**2)
+            
+            return (np.sqrt(term3))
 
         g_oiii5007.stddev.tied = tie_std_oiii
 
@@ -1711,9 +1724,13 @@ class fit_extreme_broadline_sources:
         g_hb_n.mean.fixed = True
         
         ## Fix sigma of narrow Hb to narrow Ha
+        ## Intrinsic sigma of Hb equal to Ha
         def tie_std_hb_n(model):
-            return ((model['hb_n'].mean/nii_ha_sii_bestfit['ha_n'].mean)*\
-                   nii_ha_sii_bestfit['ha_n'].stddev)
+            term1 = (model['hb_n'].mean/nii_ha_sii_bestfit['ha_n'].mean)**2
+            term2 = ((nii_ha_sii_bestfit['ha_n'].stddev)**2) - (rsig_nii_ha_sii**2)
+            term3 = (term1*term2) + (rsig_hb_oiii**2)
+            
+            return (np.sqrt(term3))
 
         g_hb_n.stddev.tied = tie_std_hb_n
         g_hb_n.stddev.fixed = True
@@ -1736,9 +1753,13 @@ class fit_extreme_broadline_sources:
         g_hb_b.mean.fixed = True
 
         ## Fix sigma of broad Hb to broad Ha
+        ## Intrinsic sigma of Hb equal to Ha
         def tie_std_hb_b(model):
-            return ((model['hb_b'].mean/nii_ha_sii_bestfit['ha_b'].mean)*\
-                   nii_ha_sii_bestfit['ha_b'].stddev)
+            term1 = (model['hb_b'].mean/nii_ha_sii_bestfit['ha_b'].mean)**2
+            term2 = ((nii_ha_sii_bestfit['ha_b'].stddev)**2) - (rsig_nii_ha_sii**2)
+            term3 = (term1*term2) + (rsig_hb_oiii**2)
+            
+            return (np.sqrt(term3))
 
         g_hb_b.stddev.tied = tie_std_hb_b
         g_hb_b.stddev.fixed = True
@@ -1756,7 +1777,8 @@ class fit_extreme_broadline_sources:
 
 ####################################################################################################
 
-    def fit_hb_oiii_2comp(lam_hb_oiii, flam_hb_oiii, ivar_hb_oiii, nii_ha_sii_bestfit):
+    def fit_hb_oiii_2comp(lam_hb_oiii, flam_hb_oiii, ivar_hb_oiii, rsig_hb_oiii, \
+                          nii_ha_sii_bestfit, rsig_nii_ha_sii):
         """
         Function to fit Hb+[OIII] together for extreme broadline (quasar-like) sources
         The widths of [OIII] are tied together and the widths of narrow and broad Hb components 
@@ -1775,8 +1797,14 @@ class fit_extreme_broadline_sources:
         ivar_hb_oiii : numpy array
             Inverse variance array of the spectra in the Hb+[OIII] region.
             
+        rsig_hb_oiii : float
+            Median resolution element in the Hb+[OIII] region.
+            
         nii_ha_sii_bestfit : Astropy model
             Best fit model for the [NII]+Ha+[SII] emission-lines.
+            
+        rsig_nii_ha_sii : float
+            Median resolution element in the [NII]+Ha+[SII] region.
 
         Returns
         -------
@@ -1816,9 +1844,13 @@ class fit_extreme_broadline_sources:
         g_oiii5007.amplitude.tied = tie_amp_oiii
 
         ## Tie standard deviations of narrow components in velocity space
+        ## Intrinsic sigma of the components is equal
         def tie_std_oiii(model):
-            return ((model['oiii4959'].stddev)*\
-                   (model['oiii5007'].mean/model['oiii4959'].mean))
+            term1 = (model['oiii5007'].mean/model['oiii4959'].mean)**2
+            term2 = ((model['oiii4959'].stddev)**2) - (rsig_hb_oiii**2)
+            term3 = (term1*term2) + (rsig_hb_oiii**2)
+            
+            return (np.sqrt(term3))
 
         g_oiii5007.stddev.tied = tie_std_oiii
 
@@ -1835,9 +1867,13 @@ class fit_extreme_broadline_sources:
         g_oiii5007_out.amplitude.tied = tie_amp_oiii_out
 
         ## Tie standard deviations of outflow components in velocity space
+        ## Intrinsic sigma of the components is equal
         def tie_std_oiii_out(model):
-            return ((model['oiii4959_out'].stddev)*\
-                   (model['oiii5007_out'].mean/model['oiii4959_out'].mean))
+            term1 = (model['oiii5007_out'].mean/model['oiii4959_out'].mean)**2
+            term2 = ((model['oiii4959_out'].stddev)**2) - (rsig_hb_oiii**2)
+            term3 = (term1*term2) + (rsig_hb_oiii**2)
+            
+            return (np.sqrt(term3))
 
         g_oiii5007_out.stddev.tied = tie_std_oiii_out
 
@@ -1869,9 +1905,13 @@ class fit_extreme_broadline_sources:
         g_hb_n.mean.fixed = True
         
         ## Fix sigma of narrow Hb to narrow Ha
+        ## Intrinsic sigma of Hb equal to Ha
         def tie_std_hb_n(model):
-            return ((model['hb_n'].mean/nii_ha_sii_bestfit['ha_n'].mean)*\
-                   nii_ha_sii_bestfit['ha_n'].stddev)
+            term1 = (model['hb_n'].mean/nii_ha_sii_bestfit['ha_n'].mean)**2
+            term2 = ((nii_ha_sii_bestfit['ha_n'].stddev)**2) - (rsig_nii_ha_sii**2)
+            term3 = (term1*term2) + (rsig_hb_oiii**2)
+            
+            return (np.sqrt(term3))
 
         g_hb_n.stddev.tied = tie_std_hb_n
         g_hb_n.stddev.fixed = True
@@ -1894,9 +1934,13 @@ class fit_extreme_broadline_sources:
         g_hb_b.mean.fixed = True
 
         ## Fix sigma of broad Hb to broad Ha
+        ## Intrinsic sigma of Hb equal to Ha
         def tie_std_hb_b(model):
-            return ((model['hb_b'].mean/nii_ha_sii_bestfit['ha_b'].mean)*\
-                   nii_ha_sii_bestfit['ha_b'].stddev)
+            term1 = (model['hb_b'].mean/nii_ha_sii_bestfit['ha_b'].mean)**2
+            term2 = ((nii_ha_sii_bestfit['ha_b'].stddev)**2) - (rsig_nii_ha_sii**2)
+            term3 = (term1*term2) + (rsig_hb_oiii**2)
+            
+            return (np.sqrt(term3))
 
         g_hb_b.stddev.tied = tie_std_hb_b
         g_hb_b.stddev.fixed = True
