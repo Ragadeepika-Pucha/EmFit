@@ -649,7 +649,8 @@ def find_nii_ha_best_fit(lam_nii_ha, flam_nii_ha, ivar_nii_ha, rsig_nii_ha, \
 ####################################################################################################
 ####################################################################################################
 
-def find_hb_best_fit(lam_hb, flam_hb, ivar_hb, nii_ha_bestfit):
+def find_hb_best_fit(lam_hb, flam_hb, ivar_hb, rsig_hb, \
+                     nii_ha_bestfit, rsig_nii_ha):
     """
     Find the best fit for Hb emission-line. The number of components of Hb is same as Ha.
     The width of narrow/outflow/broad component of Hb is fixed to the 
@@ -666,8 +667,14 @@ def find_hb_best_fit(lam_hb, flam_hb, ivar_hb, nii_ha_bestfit):
     ivar_hb : numpy array
         Inverse variance array of the spectra in the Hb region
         
+    rsig_hb : float
+        Median resolution element in the Hb region
+        
     nii_ha_bestfit : Astropy model
         Best fit model for the [NII]+Ha region
+        
+    rsig_nii_ha : float
+        Median resolution element in the [NII]+Ha region.
         
     Returns
     -------
@@ -683,7 +690,8 @@ def find_hb_best_fit(lam_hb, flam_hb, ivar_hb, nii_ha_bestfit):
     if ('ha_out' not in ha_models):
         ## Single component Fit
         hb_bestfit = fl.fit_hb_line.fit_hb_one_component(lam_hb, flam_hb, \
-                                                        ivar_hb, nii_ha_bestfit)
+                                                         ivar_hb, rsig_hb, \
+                                                         nii_ha_bestfit, rsig_nii_ha)
         
         if ('hb_b' not in hb_bestfit.submodel_names):
             n_dof = 2
@@ -693,7 +701,8 @@ def find_hb_best_fit(lam_hb, flam_hb, ivar_hb, nii_ha_bestfit):
     else:
         ## Two components fit
         hb_bestfit = fl.fit_hb_line.fit_hb_two_components(lam_hb, flam_hb, \
-                                                         ivar_hb, nii_ha_bestfit)
+                                                          ivar_hb, rsig_hb, \
+                                                          nii_ha_bestfit, rsig_nii_ha)
         
         if ('hb_b' not in hb_bestfit.submodel_names):
             n_dof = 3

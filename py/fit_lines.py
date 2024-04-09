@@ -1184,11 +1184,14 @@ class fit_nii_ha_lines:
 class fit_hb_line:
     """
     Different functions associated with fitting Hb emission line:
-        1) fit_hb_one_component(lam_hb, flam_hb, ivar_hb, nii_ha_bestfit)
-        2) fit_hb_two_components(lam_hb, flam_hb, ivar_hb, nii_ha_bestfit)
+        1) fit_hb_one_component(lam_hb, flam_hb, ivar_hb, rsig_hb, \
+                                nii_ha_bestfit, rsig_nii_ha)
+        2) fit_hb_two_components(lam_hb, flam_hb, ivar_hb, rsig_hb, \
+                                nii_ha_bestfit, rsig_nii_ha)
     """
     
-    def fit_hb_one_component(lam_hb, flam_hb, ivar_hb, nii_ha_bestfit):
+    def fit_hb_one_component(lam_hb, flam_hb, ivar_hb, rsig_hb, \
+                             nii_ha_bestfit, rsig_nii_ha):
         """
         Function to fit Hb emission-line, when [SII] has one component.
         The width of narrow Hb line is fixed to narrow Ha component.
@@ -1204,11 +1207,17 @@ class fit_hb_line:
 
         ivar_hb : numpy array
             Inverse variance array of the spectra in the Hb region.
+            
+        rsig_hb : float
+            Median resolution element in the Hb region.
 
         nii_ha_bestfit : astropy model fit
             Best fit for [NII]+Ha emission lines.
             Sigma of narrow Hb is fixed to narrow Ha
             Sigma of broad Hb is fixed to broad Ha (if available)
+            
+        rsig_nii_ha : float
+            Median resolution element in the [NII]+Ha region.
 
         Returns
         -------
@@ -1239,9 +1248,13 @@ class fit_hb_line:
         g_hb_n.mean.fixed = True
 
         ## Tie standard deviation of Hb to Ha in velocity space
+        ## Intrinsic sigma of Hb is equal to Ha
         def tie_std_hb(model):
-            return ((model['hb_n'].mean/nii_ha_bestfit['ha_n'].mean)*\
-                   nii_ha_bestfit['ha_n'].stddev)
+            term1 = (model['hb_n'].mean/nii_ha_bestfit['ha_n'].mean)**2
+            term2 = ((nii_ha_bestfit['ha_n'].stddev)**2) - (rsig_nii_ha**2)
+            term3 = (term1*term2) + (rsig_hb**2)
+            
+            return (np.sqrt(term3))
 
         g_hb_n.stddev.tied = tie_std_hb
         g_hb_n.stddev.fixed = True
@@ -1271,9 +1284,13 @@ class fit_hb_line:
             g_hb_b.mean.fixed = True
 
             ## Tie standard deviation of Hb to Ha in velocity space
+            ## Intrinsic sigma of Hb equal to Ha
             def tie_std_hb_b(model):
-                return ((model['hb_b'].mean/nii_ha_bestfit['ha_b'].mean)*\
-                       nii_ha_bestfit['ha_b'].stddev)
+                term1 = (model['hb_b'].mean/nii_ha_bestfit['ha_b'].mean)**2
+                term2 = ((nii_ha_bestfit['ha_b'].stddev)**2) - (rsig_nii_ha**2)
+                term3 = (term1*term2) + (rsig_hb**2)
+
+                return (np.sqrt(term3))
 
             g_hb_b.stddev.tied = tie_std_hb_b
             g_hb_b.stddev.fixed = True
@@ -1291,7 +1308,8 @@ class fit_hb_line:
 
 ####################################################################################################
     
-    def fit_hb_two_components(lam_hb, flam_hb, ivar_hb, nii_ha_bestfit):
+    def fit_hb_two_components(lam_hb, flam_hb, ivar_hb, rsig_hb, \
+                              nii_ha_bestfit, rsig_nii_ha):
         """
         Function to fit Hb emission-line, when [SII] has two components.
         The width of narrow (outflow) Hb line is fixed to narrow (outflow) Ha component.
@@ -1307,12 +1325,18 @@ class fit_hb_line:
 
         ivar_hb : numpy array
             Inverse variance array of the spectra in the Hb region.
+            
+        rsig_hb : float
+            Median resolution element in the Hb region.
 
         nii_ha_bestfit : astropy model fit
             Best fit for [NII]+Ha emission lines.
             Sigma of narrow Hb is fixed to narrow Ha
             Sigma of outflow Hb is fixed to outflow Hb
             Sigma of broad Hb is fixed to broad Ha (if available)
+            
+        rsig_nii_ha : float
+            Median resolution element in the [NII]+Ha region.
 
         Returns
         -------
@@ -1343,9 +1367,13 @@ class fit_hb_line:
         g_hb_n.mean.fixed = True
 
         ## Tie standard deviation of Hb to Ha in velocity space
+        ## Intrinsic sigma of Hb equal to Ha
         def tie_std_hb(model):
-            return ((model['hb_n'].mean/nii_ha_bestfit['ha_n'].mean)*\
-                   nii_ha_bestfit['ha_n'].stddev)
+            term1 = (model['hb_n'].mean/nii_ha_bestfit['ha_n'].mean)**2
+            term2 = ((nii_ha_bestfit['ha_n'].stddev)**2) - (rsig_nii_ha**2)
+            term3 = (term1*term2) + (rsig_hb**2)
+            
+            return (np.sqrt(term3))
 
         g_hb_n.stddev.tied = tie_std_hb
         g_hb_n.stddev.fixed = True
@@ -1369,9 +1397,13 @@ class fit_hb_line:
         g_hb_out.mean.fixed = True
 
         ## Tie standard deviation of outflow Hb to outflow Ha in velocity space
+        ## Intrinsic sigma of Hb equal to Ha
         def tie_std_hb_out(model):
-            return ((model['hb_out'].mean/nii_ha_bestfit['ha_out'].mean)*\
-                   nii_ha_bestfit['ha_out'].stddev)
+            term1 = (model['hb_out'].mean/nii_ha_bestfit['ha_out'].mean)**2
+            term2 = ((nii_ha_bestfit['ha_out'].stddev)**2) - (rsig_nii_ha**2)
+            term3 = (term1*term2) + (rsig_hb**2)
+            
+            return (np.sqrt(term3))
 
         g_hb_out.stddev.tied = tie_std_hb_out
         g_hb_out.stddev.fixed = True
@@ -1401,9 +1433,13 @@ class fit_hb_line:
             g_hb_b.mean.fixed = True
             
             ## Tie standard deviation of broad Hb to broad Ha in velocity space
+            ## Intrinsic sigma of Hb equal to Ha
             def tie_std_hb_b(model):
-                return ((model['hb_b'].mean/nii_ha_bestfit['ha_b'].mean)*\
-                       nii_ha_bestfit['ha_b'].stddev)
+                term1 = (model['hb_b'].mean/nii_ha_bestfit['ha_b'].mean)**2
+                term2 = ((nii_ha_bestfit['ha_b'].stddev)**2) - (rsig_nii_ha**2)
+                term3 = (term1*term2) + (rsig_hb**2)
+
+                return (np.sqrt(term3))
 
             g_hb_b.stddev.tied = tie_std_hb_b
             g_hb_b.stddev.fixed = True
