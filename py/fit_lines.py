@@ -447,16 +447,19 @@ class fit_oiii_lines:
 class fit_nii_ha_lines:
     """
     Different functions associated with fitting [NII]+Ha emission-lines:
-        1) fit_nii_free_ha_one_component(lam_nii_ha, flam_nii_ha, ivar_nii_ha, sii_bestfit, 
+        1) fit_nii_free_ha_one_component(lam_nii_ha, flam_nii_ha, ivar_nii_ha, rsig_nii_ha, 
+                                         sii_bestfit, rsig_sii,
                                          priors = [4,5], broad_comp = True)
-        2) fit_nii_ha_one_component(lam_nii_ha, flam_nii_ha, ivar_nii_ha, sii_bestfit, 
+        2) fit_nii_ha_one_component(lam_nii_ha, flam_nii_ha, ivar_nii_ha, rsig_nii_ha, 
+                                    sii_bestfit, rsig_sii, 
                                     priors = [4,5], broad_comp = True)
-        3) fit_nii_ha_two_components(lam_nii_ha, flam_nii_ha, ivar_nii_ha, sii_bestfit, 
+        3) fit_nii_ha_two_components(lam_nii_ha, flam_nii_ha, ivar_nii_ha, rsig_nii_ha, 
+                                    sii_bestfit, rsig_sii,
                                     priors = [4,5], broad_comp = True)                                 
     """
     
-    def fit_nii_free_ha_one_component(lam_nii_ha, flam_nii_ha, ivar_nii_ha, \
-                                      sii_bestfit, priors = [4, 5], broad_comp = True):
+    def fit_nii_free_ha_one_component(lam_nii_ha, flam_nii_ha, ivar_nii_ha, rsig_nii_ha, \
+                                      sii_bestfit, rsig_sii, priors = [4, 5], broad_comp = True):
         """
         Function to fit [NII]6548,6583 + Ha emission lines.
         The width of [NII] is kept fixed to [SII] and Ha is allowed to vary 
@@ -476,8 +479,14 @@ class fit_nii_ha_lines:
         ivar_nii_ha : numpy array
             Inverse variance array of the spectra in the [NII]+Ha region.
             
+        rsig_nii_ha : float
+            Median resolution element in the [NII]+Ha region.
+            
         sii_bestfit : Astropy model
             Best fit model for the [SII] emission-lines.
+            
+        rsig_sii : float
+            Median resolution element in the [SII] region.
             
         priors : list
             Initial priors for the amplitude and stddev of the broad component
@@ -526,16 +535,23 @@ class fit_nii_ha_lines:
         g_nii6583.amplitude.tied = tie_amp_nii
 
         ## Tie standard deviations of all the narrow components
+        ## Intrinsic sigma values match with [SII]
         def tie_std_nii6548(model):
-            return ((model['nii6548'].mean/sii_bestfit['sii6716'].mean)*\
-                    sii_bestfit['sii6716'].stddev)
-
+            term1 = (model['nii6548'].mean/sii_bestfit['sii6716'].mean)**2
+            term2 = ((sii_bestfit['sii6716'].stddev)**2) - (rsig_sii**2)
+            term3 = (term1*term2)+(rsig_nii_ha**2)
+            
+            return (np.sqrt(term3))
+            
         g_nii6548.stddev.tied = tie_std_nii6548
         g_nii6548.stddev.fixed = True
 
         def tie_std_nii6583(model):
-            return ((model['nii6583'].mean/sii_bestfit['sii6716'].mean)*\
-                    sii_bestfit['sii6716'].stddev)
+            term1 = (model['nii6583'].mean/sii_bestfit['sii6716'].mean)**2
+            term2 = ((sii_bestfit['sii6716'].stddev)**2) - (rsig_sii**2)
+            term3 = (term1*term2)+(rsig_nii_ha**2)
+            
+            return (np.sqrt(term3))
 
         g_nii6583.stddev.tied = tie_std_nii6583
         g_nii6583.stddev.fixed = True
@@ -599,7 +615,6 @@ class fit_nii_ha_lines:
                                                 gfit_b['ha_n'].mean.value)
 
             if ((ha_b_amp > ha_n_amp)&(ha_b_sig < ha_n_sig)):
-                print (1)
                 g_ha_n = Gaussian1D(amplitude = gfit_b['ha_b'].amplitude, \
                                    mean = gfit_b['ha_b'].mean, \
                                    stddev = gfit_b['ha_b'].stddev, \
@@ -637,8 +652,8 @@ class fit_nii_ha_lines:
         
 ####################################################################################################
 
-    def fit_nii_ha_one_component(lam_nii_ha, flam_nii_ha, ivar_nii_ha, \
-                                sii_bestfit, priors = [4, 5], broad_comp = True):
+    def fit_nii_ha_one_component(lam_nii_ha, flam_nii_ha, ivar_nii_ha, rsig_nii_ha, \
+                                sii_bestfit, rsig_sii, priors = [4, 5], broad_comp = True):
         """
         Function to fit [NII]6548,6583 + Ha emission lines.
         The width of narrow [NII] and Ha is kept fixed to narrow [SII] 
@@ -657,9 +672,15 @@ class fit_nii_ha_lines:
 
         ivar_nii_ha : numpy array
             Inverse variance array of the spectra in the [NII]+Ha region.
+            
+        rsig_nii_ha : float
+            Median resolution element in the [NII]+Ha region
 
         sii_bestfit : Astropy model
             Best fit model for the [SII] emission-lines.
+            
+        rsig_sii : float
+            Median resolution element in the [SII] region.
             
         priors : list
             Initial priors for the amplitude and stddev of the broad component
@@ -708,16 +729,23 @@ class fit_nii_ha_lines:
         g_nii6583.amplitude.tied = tie_amp_nii
 
         ## Tie standard deviations of all the narrow components
+        ## Intrinsic sigma values match with [SII]
         def tie_std_nii6548(model):
-            return ((model['nii6548'].mean/sii_bestfit['sii6716'].mean)*\
-                    sii_bestfit['sii6716'].stddev)
-
+            term1 = (model['nii6548'].mean/sii_bestfit['sii6716'].mean)**2
+            term2 = ((sii_bestfit['sii6716'].stddev)**2) - (rsig_sii**2)
+            term3 = (term1*term2)+(rsig_nii_ha**2)
+            
+            return (np.sqrt(term3))
+            
         g_nii6548.stddev.tied = tie_std_nii6548
         g_nii6548.stddev.fixed = True
 
         def tie_std_nii6583(model):
-            return ((model['nii6583'].mean/sii_bestfit['sii6716'].mean)*\
-                    sii_bestfit['sii6716'].stddev)
+            term1 = (model['nii6583'].mean/sii_bestfit['sii6716'].mean)**2
+            term2 = ((sii_bestfit['sii6716'].stddev)**2) - (rsig_sii**2)
+            term3 = (term1*term2)+(rsig_nii_ha**2)
+            
+            return (np.sqrt(term3))
 
         g_nii6583.stddev.tied = tie_std_nii6583
         g_nii6583.stddev.fixed = True
@@ -748,10 +776,13 @@ class fit_nii_ha_lines:
             
             g_ha_n.mean.tied = tie_mean_ha
 
-            ## Fix sigma of narrow Ha to [SII]
+            ## Fix intrinsic sigma of narrow Ha to [SII]
             def tie_std_ha(model):
-                return ((model['ha_n'].mean/sii_bestfit['sii6716'].mean)*\
-                       sii_bestfit['sii6716'].stddev)
+                term1 = (model['ha_n'].mean/sii_bestfit['sii6716'].mean)**2
+                term2 = ((sii_bestfit['sii6716'].stddev)**2) - (rsig_sii**2)
+                term3 = (term1*term2)+(rsig_nii_ha**2)
+                
+                return (np.sqrt(term3))
 
             g_ha_n.stddev.tied = tie_std_ha
             g_ha_n.stddev.fixed = True
@@ -777,7 +808,6 @@ class fit_nii_ha_lines:
                                                 gfit_b['ha_n'].mean.value)
 
             if ((ha_b_amp > ha_n_amp)&(ha_b_sig < ha_n_sig)):
-                print (2)
                 g_ha_n = Gaussian1D(amplitude = gfit_b['ha_b'].amplitude, \
                                    mean = gfit_b['ha_b'].mean, \
                                    stddev = gfit_b['ha_b'].stddev, \
@@ -788,7 +818,6 @@ class fit_nii_ha_lines:
                                    name = 'ha_b')
                 gfit_b = gfit_b['nii_ha_cont'] + gfit_b['nii6548'] + gfit_b['nii6583']+\
                 g_ha_n + g_ha_b
-
 
             ## Returns fit with broad component if broad_comp = True
             return (gfit_b)
@@ -805,10 +834,13 @@ class fit_nii_ha_lines:
             
             g_ha_n.mean.tied = tie_mean_ha
 
-            ## Fix sigma of narrow Ha to [SII]
+            ## Fix intrinsic sigma of narrow Ha to [SII]
             def tie_std_ha(model):
-                return ((model['ha_n'].mean/sii_bestfit['sii6716'].mean)*\
-                       sii_bestfit['sii6716'].stddev)
+                term1 = (model['ha_n'].mean/sii_bestfit['sii6716'].mean)**2
+                term2 = ((sii_bestfit['sii6716'].stddev)**2) - (rsig_sii**2)
+                term3 = (term1*term2)+(rsig_nii_ha**2)
+                
+                return (np.sqrt(term3))
 
             g_ha_n.stddev.tied = tie_std_ha
             g_ha_n.stddev.fixed = True
@@ -825,8 +857,8 @@ class fit_nii_ha_lines:
         
 ####################################################################################################
      
-    def fit_nii_ha_two_components(lam_nii_ha, flam_nii_ha, ivar_nii_ha, \
-                                  sii_bestfit, priors = [4, 5], broad_comp = True):
+    def fit_nii_ha_two_components(lam_nii_ha, flam_nii_ha, ivar_nii_ha, rsig_nii_ha, \
+                                  sii_bestfit, rsig_sii, priors = [4, 5], broad_comp = True):
         """
         Function to fit [NII]6548,6583 + Ha emission lines.
         The width of narrow (outflow) [NII] and Ha is kept fixed to narrow (outflow) [SII]. 
@@ -845,9 +877,15 @@ class fit_nii_ha_lines:
 
         ivar_nii_ha : numpy array
             Inverse variance array of the spectra in the [NII]+Ha region.
+            
+        rsig_nii_ha : float
+            Median resolution element in the [NII]+Ha region.
 
         sii_bestfit : Astropy model
             Best fit model for the [SII] emission-lines.
+            
+        rsig_sii : float
+            Median resolution element in the [SII] region.
             
         priors : list
             Initial priors for the amplitude and stddev of the broad component
@@ -902,16 +940,23 @@ class fit_nii_ha_lines:
         g_nii6583.amplitude.tied = tie_amp_nii
 
         ## Tie standard deviations of all the narrow components
+        ## Intrinsic sigma values match with [SII]
         def tie_std_nii6548(model):
-            return ((model['nii6548'].mean/sii_bestfit['sii6716'].mean)*\
-                    sii_bestfit['sii6716'].stddev)
-
+            term1 = (model['nii6548'].mean/sii_bestfit['sii6716'].mean)**2
+            term2 = ((sii_bestfit['sii6716'].stddev)**2) - (rsig_sii**2)
+            term3 = (term1*term2)+(rsig_nii_ha**2)
+            
+            return (np.sqrt(term3))
+            
         g_nii6548.stddev.tied = tie_std_nii6548
         g_nii6548.stddev.fixed = True
 
         def tie_std_nii6583(model):
-            return ((model['nii6583'].mean/sii_bestfit['sii6716'].mean)*\
-                    sii_bestfit['sii6716'].stddev)
+            term1 = (model['nii6583'].mean/sii_bestfit['sii6716'].mean)**2
+            term2 = ((sii_bestfit['sii6716'].stddev)**2) - (rsig_sii**2)
+            term3 = (term1*term2)+(rsig_nii_ha**2)
+            
+            return (np.sqrt(term3))
 
         g_nii6583.stddev.tied = tie_std_nii6583
         g_nii6583.stddev.fixed = True
@@ -949,16 +994,23 @@ class fit_nii_ha_lines:
         g_nii6583_out.amplitude.tied = tie_amp_nii_out
         
         ## Tie standard deviations of the outflow components
+        ## Intrinsic sigma values match with [SII]out
         def tie_std_nii6548_out(model):
-            return ((model['nii6548_out'].mean/sii_bestfit['sii6716_out'].mean)*\
-                   sii_bestfit['sii6716_out'].stddev)
+            term1 = (model['nii6548_out'].mean/sii_bestfit['sii6716_out'].mean)**2
+            term2 = ((sii_bestfit['sii6716_out'].stddev)**2) - (rsig_sii**2)
+            term3 = (term1*term2)+(rsig_nii_ha**2)
+            
+            return (np.sqrt(term3))
 
         g_nii6548_out.stddev.tied = tie_std_nii6548_out
         g_nii6548_out.stddev.fixed = True
 
         def tie_std_nii6583_out(model):
-            return ((model['nii6583_out'].mean/sii_bestfit['sii6716_out'].mean)*\
-                   sii_bestfit['sii6716_out'].stddev)
+            term1 = (model['nii6583_out'].mean/sii_bestfit['sii6716_out'].mean)**2
+            term2 = ((sii_bestfit['sii6716_out'].stddev)**2) - (rsig_sii**2)
+            term3 = (term1*term2)+(rsig_nii_ha**2)
+            
+            return (np.sqrt(term3))
 
         g_nii6583_out.stddev.tied = tie_std_nii6583_out
         g_nii6583_out.stddev.fixed = True
@@ -990,10 +1042,13 @@ class fit_nii_ha_lines:
             
             g_ha_n.mean.tied = tie_mean_ha
 
-            ## Fix sigma of narrow Ha to narrow [SII]
+            ## Fix intrinsic sigma of narrow Ha to narrow [SII]
             def tie_std_ha(model):
-                return ((model['ha_n'].mean/sii_bestfit['sii6716'].mean)*\
-                       sii_bestfit['sii6716'].stddev)
+                term1 = (model['ha_n'].mean/sii_bestfit['sii6716'].mean)**2
+                term2 = ((sii_bestfit['sii6716'].stddev)**2) - (rsig_sii**2)
+                term3 = (term1*term2) + (rsig_nii_ha**2)
+                
+                return (np.sqrt(term3))
 
             g_ha_n.stddev.tied = tie_std_ha
             g_ha_n.stddev.fixed = True
@@ -1015,10 +1070,13 @@ class fit_nii_ha_lines:
             
             g_ha_out.mean.tied = tie_mean_ha_out
 
-            ## Fix sigma of outflow Ha to outflow [SII]
+            ## Fix intrinsic sigma of outflow Ha to outflow [SII]
             def tie_std_ha_out(model):
-                return ((model['ha_out'].mean/sii_bestfit['sii6716_out'].mean)*\
-                       sii_bestfit['sii6716_out'].stddev)
+                term1 = (model['ha_out'].mean/sii_bestfit['sii6716_out'].mean)**2
+                term2 = ((sii_bestfit['sii6716_out'].stddev)**2) - (rsig_sii**2)
+                term3 = (term1*term2) + (rsig_nii_ha**2)
+                
+                return (np.sqrt(term3))
 
             g_ha_out.stddev.tied = tie_std_ha_out
             g_ha_out.stddev.fixed = True
@@ -1045,7 +1103,6 @@ class fit_nii_ha_lines:
                                                   gfit_b['ha_out'].mean.value)
             
             if ((ha_b_amp > ha_out_amp)&(ha_b_sig < ha_out_sig)):
-                print (3)
                 g_ha_out = Gaussian1D(amplitude = gfit_b['ha_b'].amplitude, \
                                      mean = gfit_b['ha_b'].mean, \
                                      stddev = gfit_b['ha_b'].stddev, \
@@ -1072,10 +1129,13 @@ class fit_nii_ha_lines:
             
             g_ha_n.mean.tied = tie_mean_ha
 
-            ## Fix sigma of narrow Ha to narrow [SII]
+            ## Fix intrinsic sigma of narrow Ha to narrow [SII]
             def tie_std_ha(model):
-                return ((model['ha_n'].mean/sii_bestfit['sii6716'].mean)*\
-                       sii_bestfit['sii6716'].stddev)
+                term1 = (model['ha_n'].mean/sii_bestfit['sii6716'].mean)**2
+                term2 = ((sii_bestfit['sii6716'].stddev)**2) - (rsig_sii**2)
+                term3 = (term1*term2) + (rsig_nii_ha**2)
+                
+                return (np.sqrt(term3))
 
             g_ha_n.stddev.tied = tie_std_ha
             g_ha_n.stddev.fixed = True
@@ -1097,10 +1157,13 @@ class fit_nii_ha_lines:
             
             g_ha_out.mean.tied = tie_mean_ha_out
 
-            ## Fix sigma of outflow Ha to outflow [SII]
+            ## Fix intrinsic sigma of outflow Ha to outflow [SII]
             def tie_std_ha_out(model):
-                return ((model['ha_out'].mean/sii_bestfit['sii6716_out'].mean)*\
-                       sii_bestfit['sii6716_out'].stddev)
+                term1 = (model['ha_out'].mean/sii_bestfit['sii6716_out'].mean)**2
+                term2 = ((sii_bestfit['sii6716_out'].stddev)**2) - (rsig_sii**2)
+                term3 = (term1*term2) + (rsig_nii_ha**2)
+                
+                return (np.sqrt(term3))
 
             g_ha_out.stddev.tied = tie_std_ha_out
             g_ha_out.stddev.fixed = True
