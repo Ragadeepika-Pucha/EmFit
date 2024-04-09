@@ -1461,12 +1461,13 @@ class fit_hb_line:
 class fit_extreme_broadline_sources:
     """
     Different functions associated with fitting extreme broadline sources:
-        1) fit_nii_ha_sii(lam_nii_ha_sii, flam_nii_ha_sii, ivar_nii_ha_sii)
+        1) fit_nii_ha_sii(lam_nii_ha_sii, flam_nii_ha_sii, ivar_nii_ha_sii, rsig_nii_ha_sii)
         2) fit_hb_oiii_1comp(lam_hb_oiii, flam_hb_oiii, ivar_hb_oiii, nii_ha_sii_bestfit)
         3) fit_hb_oiii_2comp(lam_hb_oiii, flam_hb_oiii, ivar_hb_oiii, nii_ha_sii_bestfit)
         
     """
-    def fit_nii_ha_sii(lam_nii_ha_sii, flam_nii_ha_sii, ivar_nii_ha_sii, priors = [5, 8]):
+    def fit_nii_ha_sii(lam_nii_ha_sii, flam_nii_ha_sii, ivar_nii_ha_sii, \
+                       rsig_nii_ha_sii, priors = [5, 8]):
         """
         Function to fit [NII]+Ha+[SII] together for extreme broadline (quasar-like) sources
         The widths of all the narrow-line components are tied together.
@@ -1482,6 +1483,9 @@ class fit_extreme_broadline_sources:
 
         ivar_nii_ha_sii : numpy array
             Inverse Variance array of the spectra in the [NII]+Ha+[SII] region.
+            
+        rsig_nii_ha_sii : float
+            Median resolution element in the [NII]+Ha+[SII]region.
             
         priors : list
             Initial priors for the amplitude and stddev of the broad component
@@ -1513,8 +1517,13 @@ class fit_extreme_broadline_sources:
         g_sii6731.mean.tied = tie_mean_sii
 
         ## Tie sigma of the two gaussians in velocity space
+        ## Intrinsic sigmas are equal
         def tie_std_sii(model):
-            return ((model['sii6716'].stddev)*(model['sii6731'].mean/model['sii6716'].mean))
+            term1 = (model['sii6731'].mean/model['sii6716'].mean)**2
+            term2 = ((model['sii6716'].stddev)**2) - (rsig_nii_ha_sii**2)
+            term3 = (term1*term2) + (rsig_nii_ha_sii**2)
+            
+            return (np.sqrt(term3))
 
         g_sii6731.stddev.tied = tie_std_sii
 
@@ -1551,14 +1560,22 @@ class fit_extreme_broadline_sources:
 
         g_nii6583.amplitude.tied = tie_amp_nii
 
-        ## Tie sigma of both Gaussians to [SII] in velocity space
+        ## Tie intrinsic sigma of both Gaussians to [SII] in velocity space
         def tie_std_nii6548(model):
-            return ((model['sii6716'].stddev)*(model['nii6548'].mean/model['sii6716'].mean))
+            term1 = (model['nii6548'].mean/model['sii6716'].mean)**2
+            term2 = ((model['sii6716'].stddev)**2) - (rsig_nii_ha_sii**2)
+            term3 = (term1*term2) + (rsig_nii_ha_sii**2)
+            
+            return (np.sqrt(term3))
 
         g_nii6548.stddev.tied = tie_std_nii6548
 
         def tie_std_nii6583(model):
-            return ((model['sii6716'].stddev)*(model['nii6583'].mean/model['sii6716'].mean))
+            term1 = (model['nii6583'].mean/model['sii6716'].mean)**2
+            term2 = ((model['sii6716'].stddev)**2) - (rsig_nii_ha_sii**2)
+            term3 = (term1*term2) + (rsig_nii_ha_sii**2)
+            
+            return (np.sqrt(term3))
 
         g_nii6583.stddev.tied = tie_std_nii6583
 
@@ -1583,9 +1600,13 @@ class fit_extreme_broadline_sources:
         
         g_ha_n.mean.tied = tie_mean_ha        
         
-        ## Tie sigma of narrow Ha to [SII] in velocity space
+        ## Tie intrinsic sigma of narrow Ha to [SII] in velocity space
         def tie_std_ha(model):
-            return ((model['sii6716'].stddev)*(model['ha_n'].mean/model['sii6716'].mean))
+            term1 = (model['ha_n'].mean/model['sii6716'].mean)**2
+            term2 = ((model['sii6716'].stddev)**2) - (rsig_nii_ha_sii**2)
+            term3 = (term1*term2) + (rsig_nii_ha_sii**2)
+            
+            return (np.sqrt(term3))
 
         g_ha_n.stddev.tied = tie_std_ha
         

@@ -715,7 +715,8 @@ def find_hb_best_fit(lam_hb, flam_hb, ivar_hb, rsig_hb, \
 ####################################################################################################
 ####################################################################################################
 
-def find_nii_ha_sii_best_fit(lam_nii_ha_sii, flam_nii_ha_sii, ivar_nii_ha_sii):
+def find_nii_ha_sii_best_fit(lam_nii_ha_sii, flam_nii_ha_sii, ivar_nii_ha_sii, \
+                            rsig_nii_ha_sii):
     """
     Find the bestfit for [NII]+Ha+[SII]region. This is for the case of 
     extreme broadline (quasar-like) sources. 
@@ -731,6 +732,9 @@ def find_nii_ha_sii_best_fit(lam_nii_ha_sii, flam_nii_ha_sii, ivar_nii_ha_sii):
     ivar_nii_ha_sii : numpy array
         Inverse variance array of the spectra in the [NII]+Ha+[SII] region.
         
+    rsig_nii_ha_sii : float
+        Median resolution element in the [NII]+Ha+[SII]region.
+        
     Returns
     -------
     nii_ha_sii_bestfit : Astropy model
@@ -740,7 +744,7 @@ def find_nii_ha_sii_best_fit(lam_nii_ha_sii, flam_nii_ha_sii, ivar_nii_ha_sii):
         Number of degrees of freedom
         
     psel : list
-            Selected prior for the broad component
+        Selected prior for the broad component
     """
     
     ## Test with different priors and select the one with the least chi2
@@ -751,7 +755,9 @@ def find_nii_ha_sii_best_fit(lam_nii_ha_sii, flam_nii_ha_sii, ivar_nii_ha_sii):
     for p in priors_list:
         gfit = fl.fit_extreme_broadline_sources.fit_nii_ha_sii(lam_nii_ha_sii,\
                                                                flam_nii_ha_sii, \
-                                                               ivar_nii_ha_sii, priors = p)
+                                                               ivar_nii_ha_sii, \
+                                                               rsig_nii_ha_sii, \
+                                                               priors = p)
         chi2_fit = mfit.calculate_chi2(flam_nii_ha_sii, gfit(lam_nii_ha_sii), ivar_nii_ha_sii)
         gfits.append(gfit)
         chi2s.append(chi2_fit)
