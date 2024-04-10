@@ -3,7 +3,7 @@ This script consists of functions for fitting emission-lines.
 The different functions are divided into different classes for different emission lines.
 
 Author : Ragadeepika Pucha
-Version : 2024, March 21
+Version : 2024, April 9
 """
 
 ###################################################################################################
@@ -20,7 +20,7 @@ from scipy.stats import chi2
 
 ###################################################################################################
 
-def find_sii_best_fit(lam_sii, flam_sii, ivar_sii):
+def find_sii_best_fit(lam_sii, flam_sii, ivar_sii, rsig_sii):
     """
     Find the best fit for [SII]6716,6731 doublet.
     The code fits both one-component and two-component fits and picks the best version.
@@ -37,6 +37,9 @@ def find_sii_best_fit(lam_sii, flam_sii, ivar_sii):
 
     ivar_sii : numpy array
         Inverse variance array of the spectra in the [SII] region.
+        
+    rsig_sii : float
+        Median Resolution element in the [SII] region.
 
     Returns
     -------
@@ -51,10 +54,10 @@ def find_sii_best_fit(lam_sii, flam_sii, ivar_sii):
     """
     
     ## Single component fit
-    gfit_1comp = fl.fit_sii_lines.fit_one_component(lam_sii, flam_sii, ivar_sii)
+    gfit_1comp = fl.fit_sii_lines.fit_one_component(lam_sii, flam_sii, ivar_sii, rsig_sii)
     
     ## Two-component fit
-    gfit_2comp = fl.fit_sii_lines.fit_two_components(lam_sii, flam_sii, ivar_sii)
+    gfit_2comp = fl.fit_sii_lines.fit_two_components(lam_sii, flam_sii, ivar_sii, rsig_sii)
     
     ## Chi2 values for both the fits
     chi2_1comp = mfit.calculate_chi2(flam_sii, gfit_1comp(lam_sii), ivar_sii)
@@ -65,13 +68,13 @@ def find_sii_best_fit(lam_sii, flam_sii, ivar_sii):
     del_chi2 = chi2_1comp - chi2_2comp
     p_val = chi2.sf(del_chi2, df)
     
-    ## Critetion to have min([SII]) in two-component model to be 35 km/s
-    sig_sii = mfit.lamspace_to_velspace(gfit_2comp['sii6716'].stddev.value, \
-                                       gfit_2comp['sii6716'].mean.value)
+    ## Criterion for two-component model --> narrow [SII] is resolved
+    res_cond = (gfit_2comp['sii6716'].stddev.value > rsig_sii)&\
+    (gfit_2comp['sii6731'].stddev.value > rsig_sii)
     
     ## Criterion for defaulting back to one-component model
     ## rel-redshift > 450 km/s or < -450 km/s
-    ## [SII]outflow sigma > 600 km/s or < 1000 km/s
+    ## [SII]outflow sigma > 600 km/s 
     mean_sii = gfit_2comp['sii6716'].mean.value
     mean_sii_out = gfit_2comp['sii6716_out'].mean.value
     sig_sii_out = mfit.lamspace_to_velspace(gfit_2comp['sii6716_out'].stddev.value, \
@@ -79,7 +82,7 @@ def find_sii_best_fit(lam_sii, flam_sii, ivar_sii):
     
     delz_sii = (mean_sii_out - mean_sii)*3e+5/6718.294
     
-    default_cond = (delz_sii < -450)|(delz_sii > 450)|((sig_sii_out > 600)&(sig_sii_out < 1000))
+    default_cond = (delz_sii < -450)|(delz_sii > 450)|((sig_sii_out > 600))
     
     ## If the sigma ([SII]) > 450 km/s in a single-component model
     ## Default back to two-component model
@@ -87,7 +90,7 @@ def find_sii_best_fit(lam_sii, flam_sii, ivar_sii):
                                              gfit_1comp['sii6716'].mean.value)
         
     ## 5-sigma confidence of an extra component
-    if ((p_val <= 3e-7)&(sig_sii >= 35)&(~default_cond|(sig_sii_1comp > 450))):
+    if ((p_val <= 3e-7)&(res_cond)&(~default_cond|(sig_sii_1comp > 450))):
         sii_bestfit = gfit_2comp
         n_dof = 8
     else:
@@ -99,7 +102,7 @@ def find_sii_best_fit(lam_sii, flam_sii, ivar_sii):
 ####################################################################################################
 ####################################################################################################
 
-def find_oiii_best_fit(lam_oiii, flam_oiii, ivar_oiii):
+def find_oiii_best_fit(lam_oiii, flam_oiii, ivar_oiii, rsig_oiii):
     """
     Find the best fit for [OIII]4959,5007 doublet.
     The code fits both one-component and two-component fits and picks the best version.
@@ -116,6 +119,9 @@ def find_oiii_best_fit(lam_oiii, flam_oiii, ivar_oiii):
 
     ivar_oiii : numpy array
         Inverse variance array of the spectra in the [OIII] region.
+        
+    rsig_oiii : float
+        Median Resolution element in the [OIII] region.
 
     Returns
     -------
@@ -127,10 +133,10 @@ def find_oiii_best_fit(lam_oiii, flam_oiii, ivar_oiii):
     """
     
     ## Single component fit
-    gfit_1comp = fl.fit_oiii_lines.fit_one_component(lam_oiii, flam_oiii, ivar_oiii)
+    gfit_1comp = fl.fit_oiii_lines.fit_one_component(lam_oiii, flam_oiii, ivar_oiii, rsig_oiii)
     
     ## Two component fit
-    gfit_2comp = fl.fit_oiii_lines.fit_two_components(lam_oiii, flam_oiii, ivar_oiii)
+    gfit_2comp = fl.fit_oiii_lines.fit_two_components(lam_oiii, flam_oiii, ivar_oiii, rsig_oiii)
     
     ## Chi2 values for both the fits
     chi2_1comp = mfit.calculate_chi2(flam_oiii, gfit_1comp(lam_oiii), ivar_oiii)
@@ -141,9 +147,9 @@ def find_oiii_best_fit(lam_oiii, flam_oiii, ivar_oiii):
     del_chi2 = chi2_1comp - chi2_2comp
     p_val = chi2.sf(del_chi2, df)
     
-    ## Criterion to have min([OIII]) in two-component model to be 35 km/s
-    sig_oiii = mfit.lamspace_to_velspace(gfit_2comp['oiii5007'].stddev.value, \
-                                       gfit_2comp['oiii5007'].mean.value)
+    ## Criterion for two-component model --> narrow [OIII] is resolved
+    res_cond = (gfit_2comp['oiii4959'].stddev.value > rsig_oiii)&\
+    (gfit_2comp['oiii5007'].stddev.value > rsig_oiii)
     
     ## Criterion for defaulting back to one-component model
     ## Sigma ([OIII]out) > 1000 km/s
@@ -153,7 +159,7 @@ def find_oiii_best_fit(lam_oiii, flam_oiii, ivar_oiii):
     default_cond = (sig_oiii_out > 1000)
     
     ## 5-sigma confidence of an extra component
-    if ((p_val <= 3e-7)&(sig_oiii >= 35)&(~default_cond)):
+    if ((p_val <= 3e-7)&(res_cond)&(~default_cond)):
         oiii_bestfit = gfit_2comp
         n_dof = 7
     else:
@@ -168,11 +174,15 @@ def find_oiii_best_fit(lam_oiii, flam_oiii, ivar_oiii):
 class nii_ha_fit:
     """
     This class contains functions related to [NII]+Ha Fitting:
-        1) free_ha_one_component(lam_nii_ha, flam_nii_ha, ivar_nii_ha, sii_bestfit)
-        2) fixed_ha_one_component(lam_nii_ha, flam_nii_ha, ivar_nii_ha, sii_bestfit)
-        3) fixed_ha_two_components(lam_nii_ha, flam_nii_ha, ivar_nii_ha, sii_bestfit)
+        1) free_ha_one_component(lam_nii_ha, flam_nii_ha, ivar_nii_ha, rsig_nii_ha, 
+                                sii_bestfit, rsig_sii)
+        2) fixed_ha_one_component(lam_nii_ha, flam_nii_ha, ivar_nii_ha, rsig_nii_ha, 
+                                 sii_bestfit, rsig_sii)
+        3) fixed_ha_two_components(lam_nii_ha, flam_nii_ha, ivar_nii_ha, rsig_nii_ha, 
+                                  sii_bestfit, rsig_sii)
     """
-    def free_ha_one_component(lam_nii_ha, flam_nii_ha, ivar_nii_ha, sii_bestfit):    
+    def free_ha_one_component(lam_nii_ha, flam_nii_ha, ivar_nii_ha, rsig_nii_ha, \
+                              sii_bestfit, rsig_sii):    
         """
         Find bestfit for [NII]+Ha emission-lines while keeping Ha is free to vary.
         [NII] is kept fixed to [SII], and all the narrow lines have a single component.
@@ -192,8 +202,14 @@ class nii_ha_fit:
         ivar_nii_ha : numpy array
             Inverse variance array of the spectra in the [NII]+Ha region.
             
+        rsig_nii_ha : float
+            Median resolution element in the [NII]+Ha region
+            
         sii_bestfit : Astropy model
             Best fit model for the [SII] emission-lines.
+            
+        rsig_sii : float
+            Median resolution element in the [SII] region.
             
         Returns
         -------
@@ -211,8 +227,9 @@ class nii_ha_fit:
         ## Single component model
         ## Without broad component
         gfit_no_b = fl.fit_nii_ha_lines.fit_nii_free_ha_one_component(lam_nii_ha, flam_nii_ha, \
-                                                                     ivar_nii_ha, sii_bestfit, \
-                                                                     broad_comp = False)
+                                                                      ivar_nii_ha, rsig_nii_ha, \
+                                                                      sii_bestfit, rsig_sii, \
+                                                                      broad_comp = False)
 
         ## With broad component
         ## Test with different priors and select the one with the least chi2
@@ -222,7 +239,8 @@ class nii_ha_fit:
         
         for p in priors_list:
             gfit = fl.fit_nii_ha_lines.fit_nii_free_ha_one_component(lam_nii_ha, flam_nii_ha, \
-                                                                     ivar_nii_ha, sii_bestfit, \
+                                                                     ivar_nii_ha, rsig_nii_ha, \
+                                                                     sii_bestfit, rsig_sii, \
                                                                      priors = p, broad_comp = True)
             chi2_fit = mfit.calculate_chi2(flam_nii_ha, gfit(lam_nii_ha), ivar_nii_ha)
             gfits.append(gfit)
@@ -244,19 +262,33 @@ class nii_ha_fit:
         p_val = chi2.sf(del_chi2, df)
     
         ## Broad Ha width
-        ha_b_sig = mfit.lamspace_to_velspace(gfit_b['ha_b'].stddev.value, \
-                                            gfit_b['ha_b'].mean.value)
+        ha_b_sig, _ = mfit.correct_for_rsigma(gfit_b['ha_b'].mean.value, \
+                                          gfit_b['ha_b'].stddev.value, \
+                                          rsig_nii_ha)
         ha_b_fwhm = mfit.sigma_to_fwhm(ha_b_sig)
         
         ## If narrow Ha flux is zero, but broad Ha flux is not zero
         ## If broad Hb flux = 0, then also default to no broad fit
+        ## If sigma (narrow Ha) < sigma (narrow [SII]), then also default to no broad fit
         ## Default to no broad fit
         ha_b_flux = mfit.compute_emline_flux(gfit_b['ha_b'].amplitude.value, \
                                             gfit_b['ha_b'].stddev.value)
         ha_n_flux = mfit.compute_emline_flux(gfit_b['ha_n'].amplitude.value, \
                                             gfit_b['ha_n'].stddev.value)
+    
+        ha_sig, _ = mfit.correct_for_rsigma(gfit_b['ha_n'].mean.value, \
+                                           gfit_b['ha_n'].stddev.value, \
+                                           rsig_nii_ha)
+        nii_sig, _ = mfit.correct_for_rsigma(gfit_b['nii6583'].mean.value, \
+                                            gfit_b['nii6583'].stddev.value, \
+                                            rsig_nii_ha)
         
-        default_cond = ((ha_n_flux == 0)&(ha_b_flux != 0))|(ha_b_flux == 0)
+        ## Default conditions
+        cond1 = ((ha_n_flux == 0)&(ha_b_flux != 0))
+        cond2 = (ha_b_flux == 0)
+        cond3 = (ha_sig < nii_sig)&(~np.isclose(ha_sig, nii_sig))
+        
+        default_cond = cond1|cond2|cond3
 
         ## Conditions for selecting a broad component:
         ## 5-sigma confidence of an extra component is satisfied
@@ -274,7 +306,8 @@ class nii_ha_fit:
     
 ####################################################################################################
 
-    def fixed_ha_one_component(lam_nii_ha, flam_nii_ha, ivar_nii_ha, sii_bestfit):
+    def fixed_ha_one_component(lam_nii_ha, flam_nii_ha, ivar_nii_ha, rsig_nii_ha, \
+                               sii_bestfit, rsig_sii):
         """
         Find bestfit for [NII]+Ha emission-lines while keeping Ha fixed to [SII].
         [NII] is kept fixed to [SII], and all the narrow lines have a single component.
@@ -294,8 +327,14 @@ class nii_ha_fit:
         ivar_nii_ha : numpy array
             Inverse variance array of the spectra in the [NII]+Ha region.
             
+        rsig_nii_ha : float
+            Median resolution element in the [NII]+Ha region
+            
         sii_bestfit : Astropy model
             Best fit model for the [SII] emission-lines.
+            
+        rsig_sii : float
+            Median resolution element in the [SII] region.
             
         Returns
         -------
@@ -313,7 +352,8 @@ class nii_ha_fit:
         ## Single component model
         ## Without broad component
         gfit_no_b = fl.fit_nii_ha_lines.fit_nii_ha_one_component(lam_nii_ha, flam_nii_ha, \
-                                                                 ivar_nii_ha, sii_bestfit, \
+                                                                 ivar_nii_ha, rsig_nii_ha, \
+                                                                 sii_bestfit, rsig_sii, \
                                                                  broad_comp = False)
         
         ## With broad component
@@ -324,8 +364,9 @@ class nii_ha_fit:
         
         for p in priors_list:
             gfit = fl.fit_nii_ha_lines.fit_nii_ha_one_component(lam_nii_ha, flam_nii_ha, \
-                                                                     ivar_nii_ha, sii_bestfit, \
-                                                                     priors = p, broad_comp = True)
+                                                                ivar_nii_ha, rsig_nii_ha, \
+                                                                sii_bestfit, rsig_sii, \
+                                                                priors = p, broad_comp = True)
             chi2_fit = mfit.calculate_chi2(flam_nii_ha, gfit(lam_nii_ha), ivar_nii_ha)
             gfits.append(gfit)
             chi2s.append(chi2_fit)
@@ -346,19 +387,32 @@ class nii_ha_fit:
         p_val = chi2.sf(del_chi2, df)
 
         ## Broad Ha width
-        ha_b_sig = mfit.lamspace_to_velspace(gfit_b['ha_b'].stddev.value, \
-                                            gfit_b['ha_b'].mean.value)
+        ha_b_sig, _ = mfit.correct_for_rsigma(gfit_b['ha_b'].mean.value, \
+                                          gfit_b['ha_b'].stddev.value, \
+                                          rsig_nii_ha)
         ha_b_fwhm = mfit.sigma_to_fwhm(ha_b_sig)
         
         ## If narrow Ha flux is zero, but broad Ha flux is not zero
         ## If broad Hb flux = 0, then also default to no broad fit
+        ## If sigma (narrow Ha) < sigma (narrow [SII]), then also default to no broad fit
         ## Default to no broad fit
         ha_b_flux = mfit.compute_emline_flux(gfit_b['ha_b'].amplitude.value, \
                                             gfit_b['ha_b'].stddev.value)
         ha_n_flux = mfit.compute_emline_flux(gfit_b['ha_n'].amplitude.value, \
                                             gfit_b['ha_n'].stddev.value)
+    
+        ha_sig, _ = mfit.correct_for_rsigma(gfit_b['ha_n'].mean.value, \
+                                           gfit_b['ha_n'].stddev.value, \
+                                           rsig_nii_ha)
+        nii_sig, _ = mfit.correct_for_rsigma(gfit_b['nii6583'].mean.value, \
+                                            gfit_b['nii6583'].stddev.value, \
+                                            rsig_nii_ha)
+        ## Default conditions
+        cond1 = ((ha_n_flux == 0)&(ha_b_flux != 0))
+        cond2 = (ha_b_flux == 0)
+        cond3 = (ha_sig < nii_sig)&(~np.isclose(ha_sig, nii_sig))
         
-        default_cond = ((ha_n_flux == 0)&(ha_b_flux != 0))|(ha_b_flux == 0)
+        default_cond = cond1|cond2|cond3
 
         ## Conditions for selecting a broad component:
         ## 5-sigma confidence of an extra component is satisfied
@@ -376,7 +430,8 @@ class nii_ha_fit:
     
 ####################################################################################################
     
-    def fixed_ha_two_components(lam_nii_ha, flam_nii_ha, ivar_nii_ha, sii_bestfit):
+    def fixed_ha_two_components(lam_nii_ha, flam_nii_ha, ivar_nii_ha, rsig_nii_ha, \
+                                sii_bestfit, rsig_sii):
         """
         Find bestfit for [NII]+Ha emission-lines while keeping Ha fixed to [SII].
         [NII] is kept fixed to [SII], and all the narrow lines have two components.
@@ -396,8 +451,14 @@ class nii_ha_fit:
         ivar_nii_ha : numpy array
             Inverse variance array of the spectra in the [NII]+Ha region.
             
+        rsig_nii_ha : float
+            Median resolution element in the [NII]+Ha region
+            
         sii_bestfit : Astropy model
             Best fit model for the [SII] emission-lines.
+            
+        rsig_sii : float
+            Median resolution element in the [SII] region.
             
         Returns
         -------
@@ -415,7 +476,8 @@ class nii_ha_fit:
         ## Two component model
         ## Without broad component
         gfit_no_b = fl.fit_nii_ha_lines.fit_nii_ha_two_components(lam_nii_ha, flam_nii_ha, \
-                                                                  ivar_nii_ha, sii_bestfit, \
+                                                                  ivar_nii_ha, rsig_nii_ha, \
+                                                                  sii_bestfit, rsig_sii, \
                                                                   broad_comp = False)
 
         ## With broad component
@@ -426,7 +488,8 @@ class nii_ha_fit:
         
         for p in priors_list:
             gfit = fl.fit_nii_ha_lines.fit_nii_ha_two_components(lam_nii_ha, flam_nii_ha, \
-                                                                 ivar_nii_ha, sii_bestfit, \
+                                                                 ivar_nii_ha, rsig_nii_ha, \
+                                                                 sii_bestfit, rsig_sii, \
                                                                  priors = p, broad_comp = True)
             chi2_fit = mfit.calculate_chi2(flam_nii_ha, gfit(lam_nii_ha), ivar_nii_ha)
             gfits.append(gfit)
@@ -448,12 +511,15 @@ class nii_ha_fit:
         p_val = chi2.sf(del_chi2, df)
 
         ## Broad Ha width
-        ha_b_sig = mfit.lamspace_to_velspace(gfit_b['ha_b'].stddev.value, \
-                                            gfit_b['ha_b'].mean.value)
+        ha_b_sig, _ = mfit.correct_for_rsigma(gfit_b['ha_b'].mean.value, \
+                                             gfit_b['ha_b'].stddev.value, \
+                                             rsig_nii_ha)
         ha_b_fwhm = mfit.sigma_to_fwhm(ha_b_sig)
         
         ## If narrow/outflow Ha flux is zero, but broad Ha flux is not zero
         ## If broad Hb flux = 0, then also default to no broad fit
+        ## If sigma (narrow Ha) < sigma (narrow [NII]), then also default to no broad fit
+        ## If sigma (outflow Ha) < sigma (outflow [NII]), then also default to no broad fit
         ## Default to no broad fit
         ha_b_flux = mfit.compute_emline_flux(gfit_b['ha_b'].amplitude.value, \
                                             gfit_b['ha_b'].stddev.value)
@@ -462,7 +528,26 @@ class nii_ha_fit:
         ha_out_flux = mfit.compute_emline_flux(gfit_b['ha_out'].amplitude.value, \
                                               gfit_b['ha_out'].stddev.value)
         
-        default_cond = (((ha_n_flux == 0)|(ha_out_flux == 0))&(ha_b_flux != 0))|(ha_b_flux == 0)
+        ha_sig, _ = mfit.correct_for_rsigma(gfit_b['ha_n'].mean.value, \
+                                           gfit_b['ha_n'].stddev.value, \
+                                           rsig_nii_ha)
+        ha_out_sig, _ = mfit.correct_for_rsigma(gfit_b['ha_out'].mean.value, \
+                                               gfit_b['ha_out'].stddev.value, \
+                                               rsig_nii_ha)
+        nii_sig, _ = mfit.correct_for_rsigma(gfit_b['nii6583'].mean.value, \
+                                            gfit_b['nii6583'].stddev.value, \
+                                            rsig_nii_ha)
+        nii_out_sig, _ = mfit.correct_for_rsigma(gfit_b['nii6583_out'].mean.value, \
+                                                gfit_b['nii6583_out'].stddev.value, \
+                                                rsig_nii_ha)
+        
+        ## Default conditions
+        cond1 = (((ha_n_flux == 0)|(ha_out_flux == 0))&(ha_b_flux != 0))
+        cond2 = (ha_b_flux == 0)
+        cond3 = (ha_sig < nii_sig)&(~np.isclose(ha_sig, nii_sig))
+        cond4 = (ha_out_sig < nii_out_sig)&(~np.isclose(ha_out_sig, nii_out_sig))
+        
+        default_cond = cond1|cond2|cond3|cond4
 
         ## Conditions for selecting a broad component:
         ## 5-sigma confidence of an extra component is satisfied
@@ -481,7 +566,8 @@ class nii_ha_fit:
 ####################################################################################################
 ####################################################################################################
 
-def find_nii_ha_best_fit(lam_nii_ha, flam_nii_ha, ivar_nii_ha, sii_bestfit):
+def find_nii_ha_best_fit(lam_nii_ha, flam_nii_ha, ivar_nii_ha, rsig_nii_ha, \
+                         sii_bestfit, rsig_sii):
     """
     Find the best fit for [NII]+Ha emission lines.
     The code fits both without and with broad component fits and picks the best version.
@@ -499,9 +585,15 @@ def find_nii_ha_best_fit(lam_nii_ha, flam_nii_ha, ivar_nii_ha, sii_bestfit):
 
     ivar_nii_ha : numpy array
         Inverse variance array of the spectra in the [NII]+Ha region.
+        
+    rsig_nii_ha : float
+        Median resolution element in the [NII]+Ha region.
 
     sii_bestfit : Astropy model
         Best fit model for the [SII] emission-lines.
+        
+    rsig_sii : float
+        Median resolution element in the [SII] region.
         
     Returns
     -------
@@ -522,14 +614,17 @@ def find_nii_ha_best_fit(lam_nii_ha, flam_nii_ha, ivar_nii_ha, sii_bestfit):
     if (('sii6716_out' not in sii_models)&('sii6731_out' not in sii_models)):
         ## First try free Ha version
         nii_ha_bestfit, n_dof, psel = nii_ha_fit.free_ha_one_component(lam_nii_ha, flam_nii_ha, \
-                                                                       ivar_nii_ha, sii_bestfit)
+                                                                       ivar_nii_ha, rsig_nii_ha, \
+                                                                       sii_bestfit, rsig_sii)
         
         ## How does Ha width compare to [SII] width?
-        sig_sii = mfit.lamspace_to_velspace(sii_bestfit['sii6716'].stddev.value, \
-                                           sii_bestfit['sii6716'].mean.value)
+        sig_sii, _ = mfit.correct_for_rsigma(sii_bestfit['sii6716'].mean.value, \
+                                             sii_bestfit['sii6716'].stddev.value, \
+                                             rsig_sii)
         
-        sig_ha = mfit.lamspace_to_velspace(nii_ha_bestfit['ha_n'].stddev.value, \
-                                         nii_ha_bestfit['ha_n'].mean.value)
+        sig_ha, _ = mfit.correct_for_rsigma(nii_ha_bestfit['ha_n'].mean.value, \
+                                           nii_ha_bestfit['ha_n'].stddev.value, \
+                                           rsig_nii_ha)
         
         per_diff = (sig_ha - sig_sii)*100/sig_sii
                 
@@ -539,18 +634,23 @@ def find_nii_ha_best_fit(lam_nii_ha, flam_nii_ha, ivar_nii_ha, sii_bestfit):
             nii_ha_bestfit, n_dof, psel = nii_ha_fit.fixed_ha_one_component(lam_nii_ha, \
                                                                             flam_nii_ha, \
                                                                             ivar_nii_ha, \
-                                                                            sii_bestfit)    
+                                                                            rsig_nii_ha, \
+                                                                            sii_bestfit, \
+                                                                            rsig_sii)    
     else:
         nii_ha_bestfit, n_dof, psel = nii_ha_fit.fixed_ha_two_components(lam_nii_ha, \
                                                                          flam_nii_ha, \
                                                                          ivar_nii_ha, \
-                                                                         sii_bestfit)
+                                                                         rsig_nii_ha, \
+                                                                         sii_bestfit, \
+                                                                         rsig_sii)
     return (nii_ha_bestfit, n_dof, psel)        
 
 ####################################################################################################
 ####################################################################################################
 
-def find_hb_best_fit(lam_hb, flam_hb, ivar_hb, nii_ha_bestfit):
+def find_hb_best_fit(lam_hb, flam_hb, ivar_hb, rsig_hb, \
+                     nii_ha_bestfit, rsig_nii_ha):
     """
     Find the best fit for Hb emission-line. The number of components of Hb is same as Ha.
     The width of narrow/outflow/broad component of Hb is fixed to the 
@@ -567,8 +667,14 @@ def find_hb_best_fit(lam_hb, flam_hb, ivar_hb, nii_ha_bestfit):
     ivar_hb : numpy array
         Inverse variance array of the spectra in the Hb region
         
+    rsig_hb : float
+        Median resolution element in the Hb region
+        
     nii_ha_bestfit : Astropy model
         Best fit model for the [NII]+Ha region
+        
+    rsig_nii_ha : float
+        Median resolution element in the [NII]+Ha region.
         
     Returns
     -------
@@ -584,7 +690,8 @@ def find_hb_best_fit(lam_hb, flam_hb, ivar_hb, nii_ha_bestfit):
     if ('ha_out' not in ha_models):
         ## Single component Fit
         hb_bestfit = fl.fit_hb_line.fit_hb_one_component(lam_hb, flam_hb, \
-                                                        ivar_hb, nii_ha_bestfit)
+                                                         ivar_hb, rsig_hb, \
+                                                         nii_ha_bestfit, rsig_nii_ha)
         
         if ('hb_b' not in hb_bestfit.submodel_names):
             n_dof = 2
@@ -594,7 +701,8 @@ def find_hb_best_fit(lam_hb, flam_hb, ivar_hb, nii_ha_bestfit):
     else:
         ## Two components fit
         hb_bestfit = fl.fit_hb_line.fit_hb_two_components(lam_hb, flam_hb, \
-                                                         ivar_hb, nii_ha_bestfit)
+                                                          ivar_hb, rsig_hb, \
+                                                          nii_ha_bestfit, rsig_nii_ha)
         
         if ('hb_b' not in hb_bestfit.submodel_names):
             n_dof = 3
@@ -607,7 +715,8 @@ def find_hb_best_fit(lam_hb, flam_hb, ivar_hb, nii_ha_bestfit):
 ####################################################################################################
 ####################################################################################################
 
-def find_nii_ha_sii_best_fit(lam_nii_ha_sii, flam_nii_ha_sii, ivar_nii_ha_sii):
+def find_nii_ha_sii_best_fit(lam_nii_ha_sii, flam_nii_ha_sii, ivar_nii_ha_sii, \
+                            rsig_nii_ha_sii):
     """
     Find the bestfit for [NII]+Ha+[SII]region. This is for the case of 
     extreme broadline (quasar-like) sources. 
@@ -623,6 +732,9 @@ def find_nii_ha_sii_best_fit(lam_nii_ha_sii, flam_nii_ha_sii, ivar_nii_ha_sii):
     ivar_nii_ha_sii : numpy array
         Inverse variance array of the spectra in the [NII]+Ha+[SII] region.
         
+    rsig_nii_ha_sii : float
+        Median resolution element in the [NII]+Ha+[SII]region.
+        
     Returns
     -------
     nii_ha_sii_bestfit : Astropy model
@@ -632,7 +744,7 @@ def find_nii_ha_sii_best_fit(lam_nii_ha_sii, flam_nii_ha_sii, ivar_nii_ha_sii):
         Number of degrees of freedom
         
     psel : list
-            Selected prior for the broad component
+        Selected prior for the broad component
     """
     
     ## Test with different priors and select the one with the least chi2
@@ -643,7 +755,9 @@ def find_nii_ha_sii_best_fit(lam_nii_ha_sii, flam_nii_ha_sii, ivar_nii_ha_sii):
     for p in priors_list:
         gfit = fl.fit_extreme_broadline_sources.fit_nii_ha_sii(lam_nii_ha_sii,\
                                                                flam_nii_ha_sii, \
-                                                               ivar_nii_ha_sii, priors = p)
+                                                               ivar_nii_ha_sii, \
+                                                               rsig_nii_ha_sii, \
+                                                               priors = p)
         chi2_fit = mfit.calculate_chi2(flam_nii_ha_sii, gfit(lam_nii_ha_sii), ivar_nii_ha_sii)
         gfits.append(gfit)
         chi2s.append(chi2_fit)
@@ -660,7 +774,8 @@ def find_nii_ha_sii_best_fit(lam_nii_ha_sii, flam_nii_ha_sii, ivar_nii_ha_sii):
 ####################################################################################################
 ####################################################################################################
 
-def find_hb_oiii_bestfit(lam_hb_oiii, flam_hb_oiii, ivar_hb_oiii, nii_ha_sii_bestfit):
+def find_hb_oiii_best_fit(lam_hb_oiii, flam_hb_oiii, ivar_hb_oiii, rsig_hb_oiii, \
+                         nii_ha_sii_bestfit, rsig_nii_ha_sii):
     """
     Find the bestfit for the Hb+[OIII] region. This is for the case of 
     extreme broadline (quasar-like) sources.
@@ -679,9 +794,15 @@ def find_hb_oiii_bestfit(lam_hb_oiii, flam_hb_oiii, ivar_hb_oiii, nii_ha_sii_bes
 
     ivar_hb_oiii : numpy array
         Inverse variance array of the spectra in the Hb+[OIII] region.
+        
+    rsig_hb_oiii : float
+        Median resolution element in the Hb+[OIII] region.
 
     nii_ha_sii_bestfit : Astropy model
         Best fit model for the [NII]+Ha+[SII] emission-lines.
+        
+    rsig_nii_ha_sii : float
+        Median resolution element in the [NII]+Ha+[SII] region.
 
     Returns
     -------
@@ -696,13 +817,17 @@ def find_hb_oiii_bestfit(lam_hb_oiii, flam_hb_oiii, ivar_hb_oiii, nii_ha_sii_bes
     gfit_1comp = fl.fit_extreme_broadline_sources.fit_hb_oiii_1comp(lam_hb_oiii, \
                                                                     flam_hb_oiii, \
                                                                     ivar_hb_oiii, \
-                                                                    nii_ha_sii_bestfit)
+                                                                    rsig_hb_oiii, \
+                                                                    nii_ha_sii_bestfit, \
+                                                                    rsig_nii_ha_sii)
     
     ## Two component fit
     gfit_2comp = fl.fit_extreme_broadline_sources.fit_hb_oiii_2comp(lam_hb_oiii, \
                                                                     flam_hb_oiii, \
                                                                     ivar_hb_oiii, \
-                                                                    nii_ha_sii_bestfit)
+                                                                    rsig_hb_oiii, \
+                                                                    nii_ha_sii_bestfit, \
+                                                                    rsig_nii_ha_sii)
     
     ## Chi2 values for both the fits
     chi2_1comp = mfit.calculate_chi2(flam_hb_oiii, gfit_1comp(lam_hb_oiii), ivar_hb_oiii)

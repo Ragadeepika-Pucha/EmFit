@@ -10,7 +10,7 @@ The following functions are available:
     5) compute_resolution_sigma(coadd_spec)
 
 Author : Ragadeepika Pucha
-Version : 2024, March 26
+Version : 2024, April 8
 """
 ###################################################################################################
 
@@ -344,7 +344,7 @@ def get_emline_spectra(specprod, survey, program, healpix, targetid, \
 
 ###################################################################################################
 
-def get_fit_window(lam_rest, flam_rest, ivar_rest, em_line):
+def get_fit_window(lam_rest, flam_rest, ivar_rest, rsigma, em_line):
     """
     Function to return the fitting windows for the different emission-lines.
     Only works for Hb, [OIII], [NII]+Ha and [SII].
@@ -360,12 +360,17 @@ def get_fit_window(lam_rest, flam_rest, ivar_rest, em_line):
     ivar_rest : numpy array
         Rest-frame inverse variance array
         
+    rsigma : numpy array
+        1D Resolution array for the spectra
+        
     em_line : str
         Emission-line(s) which needs to be fit
         'hb' for Hb
         'oiii' for [OIII]
         'nii_ha' for [NII]+Ha
         'sii' for [SII]
+        'nii_ha_sii' for [NII]+Ha+[SII]
+        'hb_oiii' for Hb+[OIII]
         
     Returns
     -------
@@ -377,42 +382,32 @@ def get_fit_window(lam_rest, flam_rest, ivar_rest, em_line):
         
     ivar_win : numpy array
         Inverse variance array of the fit window
+        
+    rsig_win : float
+        Median Resolution element in the fit window
     """
     
     if (em_line == 'hb'):
         lam_ii = (lam_rest >= 4700)&(lam_rest <= 4930)
-        lam_win = lam_rest[lam_ii]
-        flam_win = flam_rest[lam_ii]
-        ivar_win = ivar_rest[lam_ii]
     elif (em_line == 'oiii'):
         lam_ii = (lam_rest >= 4900)&(lam_rest <= 5100)
-        lam_win = lam_rest[lam_ii]
-        flam_win = flam_rest[lam_ii]
-        ivar_win = ivar_rest[lam_ii]
     elif (em_line == 'nii_ha'):
         lam_ii = (lam_rest >= 6300)&(lam_rest <= 6700)
-        lam_win = lam_rest[lam_ii]
-        flam_win = flam_rest[lam_ii]
-        ivar_win = ivar_rest[lam_ii]
     elif (em_line == 'sii'):
         lam_ii = (lam_rest >= 6630)&(lam_rest <= 6900)
-        lam_win = lam_rest[lam_ii]
-        flam_win = flam_rest[lam_ii]
-        ivar_win = ivar_rest[lam_ii]
     elif (em_line == 'nii_ha_sii'):
         lam_ii = (lam_rest >= 6300)&(lam_rest <= 6900)
-        lam_win = lam_rest[lam_ii]
-        flam_win = flam_rest[lam_ii]
-        ivar_win = ivar_rest[lam_ii]
     elif (em_line == 'hb_oiii'):
         lam_ii = (lam_rest >= 4700)&(lam_rest <= 5100)
-        lam_win = lam_rest[lam_ii]
-        flam_win = flam_rest[lam_ii]
-        ivar_win = ivar_rest[lam_ii]
     else:
         raise NameError('Emission-line not available!')
+
+    lam_win = lam_rest[lam_ii]
+    flam_win = flam_rest[lam_ii]
+    ivar_win = ivar_rest[lam_ii]
+    rsig_win = np.median(rsigma[lam_ii])
         
-    return (lam_win, flam_win, ivar_win)
+    return (lam_win, flam_win, ivar_win, rsig_win)
 
 ####################################################################################################
 
