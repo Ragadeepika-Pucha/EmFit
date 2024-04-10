@@ -3,7 +3,7 @@ This script consists of functions related to fitting the emission line spectra,
 and plotting the models and residuals.
 
 Author : Ragadeepika Pucha
-Version : 2024, March 28
+Version : 2024, April 9
 """
 
 ####################################################################################################
@@ -86,11 +86,14 @@ def fit_spectra(specprod, survey, program, healpix, targetid, z):
     coadd_spec, lam_rest, \
     flam_rest, ivar_rest = spec_utils.get_emline_spectra(specprod, survey, program, \
                                                          healpix, targetid, z, rest_frame = True)
+    ## 1D resolution array
+    rsigma = spec_utils.compute_resolution_sigma(coadd_spec)[0]
     
     ## Fit [SII] lines first
-    lam_sii, flam_sii, ivar_sii = spec_utils.get_fit_window(lam_rest, flam_rest, \
-                                                            ivar_rest, em_line = 'sii')
-    sii_fit, _ = find_bestfit.find_sii_best_fit(lam_sii, flam_sii, ivar_sii)
+    lam_sii, flam_sii, ivar_sii, rsig_sii = spec_utils.get_fit_window(lam_rest, flam_rest, \
+                                                                      ivar_rest, rsigma, \
+                                                                      em_line = 'sii')
+    sii_fit, _ = find_bestfit.find_sii_best_fit(lam_sii, flam_sii, ivar_sii, rsig_sii)
     sii_diff, sii_frac = mfit.measure_sii_difference(lam_sii, flam_sii)
     
     ## Conditions for separating extreme broadline sources
@@ -111,11 +114,20 @@ def fit_spectra(specprod, survey, program, healpix, targetid, z):
     if ext_cond:
         ## Fit using extreme-line fitting code
         t_orig, fits_orig, \
-        ndofs_orig, psel = fit_original_spectra.extreme_fit(lam_rest, flam_rest, ivar_rest)
+        ndofs_orig, psel = fit_original_spectra.extreme_fit(lam_rest, flam_rest, \
+                                                            ivar_rest, rsigma)
+        if (t_orig['hb_b_sigma'].data[0] <= 1000):
+            ## If the broad Ha sigma < 1000 km/s
+            ## Revert back to normal source fitting code
+            ext_cond = False
+            t_orig, fits_orig, \
+            ndofs_orig, psel = fit_original_spectra.normal_fit(lam_rest, flam_rest, \
+                                                               ivar_rest, rsigma) 
     else:
         ## Fit using the normal source fitting code
         t_orig, fits_orig, \
-        ndofs_orig, psel = fit_original_spectra.normal_fit(lam_rest, flam_rest, ivar_rest)
+        ndofs_orig, psel = fit_original_spectra.normal_fit(lam_rest, flam_rest, \
+                                                           ivar_rest, rsigma)
         
     ## Error spectra
     err_rest = 1/np.sqrt(ivar_rest) 
@@ -133,20 +145,17 @@ def fit_spectra(specprod, survey, program, healpix, targetid, z):
         if ext_cond:
             ## Extreme-line fitting code
             t_params = fit_spectra_iteration.extreme_fit(lam_rest, flam_new, ivar_rest, \
-                                                         fits_orig, psel)
+                                                         rsigma, fits_orig, psel)
         else:
             ## Normal source fitting code
             t_params = fit_spectra_iteration.normal_fit(lam_rest, flam_new, ivar_rest, \
-                                                        fits_orig, psel)
+                                                        rsigma, fits_orig, psel)
             
         tables.append(t_params)
         
     t_fits = vstack(tables)
     per_ha = len(t_fits[t_fits['ha_b_flux'].data != 0])*100/len(t_fits)
     
-    ## 1D resolution array
-    rsigma = spec_utils.compute_resolution_sigma(coadd_spec)[0]
-
     ## Get bestfit parameters
     if ext_cond:
         ## Extreme-line fitting
@@ -174,6 +183,9 @@ def fit_spectra(specprod, survey, program, healpix, targetid, z):
     
     for col in t_final.colnames:
         t_final.rename_column(col, col.upper())
+        
+    ## Check sigma values for unresolved cases
+    t_final = emp.fix_sigma(t_final)
     
     return (t_final)
 
@@ -183,11 +195,11 @@ class fit_original_spectra:
     """
     Functions to fit the original spectra for "normal" source fitting and 
     extreme broadline source fitting:
-        1) normal_fit(lam_rest, flam_rest, ivar_rest)
-        2) extreme_fit(lam_rest, flam_rest, ivar_rest)
+        1) normal_fit(lam_rest, flam_rest, ivar_rest, rsigma)
+        2) extreme_fit(lam_rest, flam_rest, ivar_rest, rsigma)
     """
     
-    def normal_fit(lam_rest, flam_rest, ivar_rest):
+    def normal_fit(lam_rest, flam_rest, ivar_rest, rsigma):
         """
         Function to fit the original "normal" source spectra.
         
@@ -201,6 +213,9 @@ class fit_original_spectra:
             
         ivar_rest : numpy array
             Rest-frame Inverse Variance array of the spectra
+            
+        rsigma : numpy array
+            1D array of Intrumental resolution elements
             
         Returns
         -------
@@ -218,30 +233,41 @@ class fit_original_spectra:
         """
 
         ## Fitting windows for the different emission-lines
-        lam_hb, flam_hb, ivar_hb = spec_utils.get_fit_window(lam_rest, flam_rest,\
-                                                             ivar_rest, em_line = 'hb')
-        lam_oiii, flam_oiii, ivar_oiii = spec_utils.get_fit_window(lam_rest, flam_rest,\
-                                                                   ivar_rest, em_line = 'oiii')
-        lam_nii_ha, flam_nii_ha, ivar_nii_ha = spec_utils.get_fit_window(lam_rest, flam_rest, \
-                                                                         ivar_rest, \
-                                                                         em_line = 'nii_ha')
-        lam_sii, flam_sii, ivar_sii = spec_utils.get_fit_window(lam_rest, flam_rest, \
-                                                                ivar_rest, em_line = 'sii')
+        lam_hb, flam_hb, \
+        ivar_hb, rsig_hb = spec_utils.get_fit_window(lam_rest, flam_rest,\
+                                                     ivar_rest, rsigma, \
+                                                     em_line = 'hb')
+        lam_oiii, flam_oiii, \
+        ivar_oiii, rsig_oiii = spec_utils.get_fit_window(lam_rest, flam_rest,\
+                                                         ivar_rest, rsigma, \
+                                                         em_line = 'oiii')
+        lam_nii_ha, flam_nii_ha, \
+        ivar_nii_ha, rsig_nii_ha = spec_utils.get_fit_window(lam_rest, flam_rest, \
+                                                             ivar_rest, rsigma, \
+                                                             em_line = 'nii_ha')
+        lam_sii, flam_sii, \
+        ivar_sii, rsig_sii = spec_utils.get_fit_window(lam_rest, flam_rest, \
+                                                       ivar_rest, rsigma, \
+                                                       em_line = 'sii')
 
         ## Fits
-        gfit_sii, ndof_sii = find_bestfit.find_sii_best_fit(lam_sii, flam_sii, ivar_sii)
-        gfit_oiii, ndof_oiii = find_bestfit.find_oiii_best_fit(lam_oiii, flam_oiii, ivar_oiii)
+        gfit_sii, ndof_sii = find_bestfit.find_sii_best_fit(lam_sii, flam_sii, \
+                                                            ivar_sii, rsig_sii)
+        gfit_oiii, ndof_oiii = find_bestfit.find_oiii_best_fit(lam_oiii, flam_oiii, \
+                                                               ivar_oiii, rsig_oiii)
         gfit_nii_ha, ndof_nii_ha, prior_sel = find_bestfit.find_nii_ha_best_fit(lam_nii_ha, \
                                                                                 flam_nii_ha, \
                                                                                 ivar_nii_ha, \
-                                                                                gfit_sii)
-        gfit_hb, ndof_hb = find_bestfit.find_hb_best_fit(lam_hb, \
-                                                         flam_hb, \
-                                                         ivar_hb, \
-                                                         gfit_nii_ha)
+                                                                                rsig_nii_ha, \
+                                                                                gfit_sii, \
+                                                                                rsig_sii)
+        gfit_hb, ndof_hb = find_bestfit.find_hb_best_fit(lam_hb, flam_hb, \
+                                                         ivar_hb, rsig_hb, \
+                                                         gfit_nii_ha, rsig_nii_ha)
 
         fits = [gfit_hb, gfit_oiii, gfit_nii_ha, gfit_sii]
         ndofs = [ndof_hb, ndof_oiii, ndof_nii_ha, ndof_sii]
+        rsig_vals = [rsig_hb, rsig_oiii, rsig_nii_ha, rsig_sii]
         
         ## Compute reduced chi2:
         rchi2_sii = mfit.calculate_chi2(flam_sii, gfit_sii(lam_sii), ivar_sii, \
@@ -254,7 +280,8 @@ class fit_original_spectra:
                                                ivar_nii_ha, ndof_nii_ha, reduced_chi2 = True)
         
         hb_params, oiii_params, \
-        nii_ha_params, sii_params = emp.get_allfit_params.normal_fit(fits, lam_rest, flam_rest)
+        nii_ha_params, sii_params = emp.get_allfit_params.normal_fit(fits, lam_rest, \
+                                                                     flam_rest, rsig_vals)
         
         hb_params['hb_rchi2'] = [rchi2_hb]
         oiii_params['oiii_rchi2'] = [rchi2_oiii]
@@ -270,7 +297,7 @@ class fit_original_spectra:
     
 ####################################################################################################
 
-    def extreme_fit(lam_rest, flam_rest, ivar_rest):
+    def extreme_fit(lam_rest, flam_rest, ivar_rest, rsigma):
         """
         Function to fit the original extreme broadline source spectra.
         
@@ -284,6 +311,9 @@ class fit_original_spectra:
             
         ivar_rest : numpy array
             Rest-frame Inverse Variance array of the spectra
+            
+        rsigma : numpy array
+            1D array of Intrumental resolution elements
             
         Returns
         -------
@@ -302,23 +332,31 @@ class fit_original_spectra:
         
         ## Fitting windows for the different emission-line regions
         lam_nii_ha_sii, flam_nii_ha_sii, \
-        ivar_nii_ha_sii = spec_utils.get_fit_window(lam_rest, flam_rest, ivar_rest, 'nii_ha_sii')
+        ivar_nii_ha_sii, rsig_nii_ha_sii = spec_utils.get_fit_window(lam_rest, flam_rest, \
+                                                                     ivar_rest, rsigma, \
+                                                                     em_line = 'nii_ha_sii')
 
-        lam_hb_oiii, flam_hb_oiii, ivar_hb_oiii = spec_utils.get_fit_window(lam_rest, flam_rest, \
-                                                                           ivar_rest, 'hb_oiii')
+        lam_hb_oiii, flam_hb_oiii, \
+        ivar_hb_oiii, rsig_hb_oiii  = spec_utils.get_fit_window(lam_rest, flam_rest, \
+                                                                ivar_rest, rsigma, \
+                                                                em_line = 'hb_oiii')
 
         ## Fits
         gfit_nii_ha_sii, \
         ndof_nii_ha_sii, prior_sel = find_bestfit.find_nii_ha_sii_best_fit(lam_nii_ha_sii, \
                                                                            flam_nii_ha_sii, \
-                                                                           ivar_nii_ha_sii)
-        gfit_hb_oiii, ndof_hb_oiii = find_bestfit.find_hb_oiii_bestfit(lam_hb_oiii, \
-                                                                       flam_hb_oiii, \
-                                                                       ivar_hb_oiii, \
-                                                                       gfit_nii_ha_sii)
+                                                                           ivar_nii_ha_sii, \
+                                                                           rsig_nii_ha_sii)
+        gfit_hb_oiii, ndof_hb_oiii = find_bestfit.find_hb_oiii_best_fit(lam_hb_oiii, \
+                                                                        flam_hb_oiii, \
+                                                                        ivar_hb_oiii, \
+                                                                        rsig_hb_oiii, \
+                                                                        gfit_nii_ha_sii, \
+                                                                        rsig_nii_ha_sii)
 
         fits = [gfit_hb_oiii, gfit_nii_ha_sii]
         ndofs = [ndof_hb_oiii, ndof_nii_ha_sii]
+        rsig_vals = [rsig_hb_oiii, rsig_nii_ha_sii]
         
         ## Compute reduced chi2
         rchi2_nii_ha_sii = mfit.calculate_chi2(flam_nii_ha_sii, gfit_nii_ha_sii(lam_nii_ha_sii), \
@@ -327,7 +365,8 @@ class fit_original_spectra:
                                            ivar_hb_oiii, ndof_hb_oiii, reduced_chi2 = True)
 
         hb_params, oiii_params, \
-        nii_ha_params, sii_params = emp.get_allfit_params.extreme_fit(fits, lam_rest, flam_rest)
+        nii_ha_params, sii_params = emp.get_allfit_params.extreme_fit(fits, lam_rest, \
+                                                                      flam_rest, rsig_vals)
         
         
         hb_params['hb_rchi2'] = [0.0]
@@ -348,11 +387,11 @@ class fit_original_spectra:
 class fit_spectra_iteration:
     """
     Functions to fit a Monte Carlo iteration of the spectra.
-        1) normal_fit(lam_rest, flam_new, ivar_rest, fits_orig, psel)
-        2) extreme_fit(lam_rest, flam_rest, ivar_rest, fits_orig, psel)
+        1) normal_fit(lam_rest, flam_new, ivar_rest, rsigma, fits_orig, psel)
+        2) extreme_fit(lam_rest, flam_rest, ivar_rest, rsigma, fits_orig, psel)
     """
     
-    def normal_fit(lam_rest, flam_new, ivar_rest, fits_orig, psel):
+    def normal_fit(lam_rest, flam_new, ivar_rest, rsigma, fits_orig, psel):
         """
         Function to fit an iteration of the "normal" source fit.
         
@@ -366,6 +405,9 @@ class fit_spectra_iteration:
             
         ivar_rest : numpy array
             Rest-frame Inverse Variance array of the spectra
+            
+        rsigma : numpy array
+            1D array of Intrumental resolution elements
             
         fits_orig : list
             List of original fits in the order - [Hb, [OIII], [NII]+Ha, [SII]]
@@ -383,15 +425,22 @@ class fit_spectra_iteration:
         hb_orig, oiii_orig, nii_ha_orig, sii_orig = fits_orig
 
         ## Fitting windows for the different emission-lines
-        lam_hb, flam_hb, ivar_hb = spec_utils.get_fit_window(lam_rest, flam_new, \
-                                                             ivar_rest, em_line = 'hb')
-        lam_oiii, flam_oiii, ivar_oiii = spec_utils.get_fit_window(lam_rest, flam_new, \
-                                                                   ivar_rest, em_line = 'oiii')
+        lam_hb, flam_hb, \
+        ivar_hb, rsig_hb = spec_utils.get_fit_window(lam_rest, flam_new, \
+                                                     ivar_rest, rsigma, \
+                                                     em_line = 'hb')
+        lam_oiii, flam_oiii, \
+        ivar_oiii, rsig_oiii = spec_utils.get_fit_window(lam_rest, flam_new, \
+                                                         ivar_rest, rsigma, \
+                                                         em_line = 'oiii')
         lam_nii_ha, flam_nii_ha, \
-        ivar_nii_ha = spec_utils.get_fit_window(lam_rest, flam_new, \
-                                                ivar_rest, em_line = 'nii_ha')
-        lam_sii, flam_sii, ivar_sii = spec_utils.get_fit_window(lam_rest, flam_new, \
-                                                                ivar_rest, em_line = 'sii')
+        ivar_nii_ha, rsig_nii_ha = spec_utils.get_fit_window(lam_rest, flam_new, \
+                                                             ivar_rest, rsigma, \
+                                                             em_line = 'nii_ha')
+        lam_sii, flam_sii, \
+        ivar_sii, rsig_sii = spec_utils.get_fit_window(lam_rest, flam_new, \
+                                                       ivar_rest, rsigma, \
+                                                       em_line = 'sii')
 
         ## [SII] models in the originial fit
         sii_models = sii_orig.submodel_names
@@ -404,10 +453,10 @@ class fit_spectra_iteration:
 
         if ('sii6716_out' not in sii_models):
             ## one-component model
-            gfit_sii = fl.fit_sii_lines.fit_one_component(lam_sii, flam_sii, ivar_sii)
+            gfit_sii = fl.fit_sii_lines.fit_one_component(lam_sii, flam_sii, ivar_sii, rsig_sii)
         else:
             ## two-component model
-            gfit_sii = fl.fit_sii_lines.fit_two_components(lam_sii, flam_sii, ivar_sii)
+            gfit_sii = fl.fit_sii_lines.fit_two_components(lam_sii, flam_sii, ivar_sii, rsig_sii)
 
         ################################### [OIII] Fitting #########################################
         ## Fit [OIII]
@@ -417,10 +466,12 @@ class fit_spectra_iteration:
 
         if ('oiii5007_out' not in oiii_orig.submodel_names):
             ## one-component model
-            gfit_oiii = fl.fit_oiii_lines.fit_one_component(lam_oiii, flam_oiii, ivar_oiii)
+            gfit_oiii = fl.fit_oiii_lines.fit_one_component(lam_oiii, flam_oiii, \
+                                                            ivar_oiii, rsig_oiii)
         else:
             ## two-component model
-            gfit_oiii = fl.fit_oiii_lines.fit_two_components(lam_oiii, flam_oiii, ivar_oiii)
+            gfit_oiii = fl.fit_oiii_lines.fit_two_components(lam_oiii, flam_oiii, \
+                                                             ivar_oiii, rsig_oiii)
 
         ################################### [NII]+Ha Fitting #######################################
         ## Fit [NII]+Ha
@@ -432,10 +483,13 @@ class fit_spectra_iteration:
 
         if ('sii6716_out' not in sii_models):
             ## one-component model
-            sig_ha = mfit.lamspace_to_velspace(nii_ha_orig['ha_n'].stddev.value, \
-                                               nii_ha_orig['ha_n'].mean.value)
-            sig_sii = mfit.lamspace_to_velspace(sii_orig['sii6716'].stddev.value, \
-                                                sii_orig['sii6716'].mean.value)
+            sig_ha, _ = mfit.correct_for_rsigma(nii_ha_orig['ha_n'].mean.value, \
+                                                nii_ha_orig['ha_n'].stddev.value, \
+                                                rsig_nii_ha)
+
+            sig_sii, _ = mfit.correct_for_rsigma(sii_orig['sii6716'].mean.value, \
+                                                 sii_orig['sii6716'].stddev.value, \
+                                                 rsig_sii)
 
             if ((sig_ha > sig_sii)&(~np.isclose(sig_ha, sig_sii))):
                 ## Free version
@@ -444,7 +498,9 @@ class fit_spectra_iteration:
                     gfit_nii_ha = fl.fit_nii_ha_lines.fit_nii_free_ha_one_component(lam_nii_ha, \
                                                                                 flam_nii_ha, \
                                                                                 ivar_nii_ha, \
+                                                                                rsig_nii_ha, \
                                                                                 gfit_sii, \
+                                                                                rsig_sii, \
                                                                                 priors = psel, \
                                                                                 broad_comp = True)
                 else:
@@ -452,7 +508,9 @@ class fit_spectra_iteration:
                     gfit_nii_ha = fl.fit_nii_ha_lines.fit_nii_free_ha_one_component(lam_nii_ha, \
                                                                                 flam_nii_ha, \
                                                                                 ivar_nii_ha, \
+                                                                                rsig_nii_ha, \
                                                                                 gfit_sii, \
+                                                                                rsig_sii, \
                                                                                 broad_comp = False)
             else:
                 ## Fixed version
@@ -461,7 +519,9 @@ class fit_spectra_iteration:
                     gfit_nii_ha = fl.fit_nii_ha_lines.fit_nii_ha_one_component(lam_nii_ha, \
                                                                             flam_nii_ha, \
                                                                             ivar_nii_ha, \
+                                                                            rsig_nii_ha, \
                                                                             gfit_sii, \
+                                                                            rsig_sii, \
                                                                             priors = psel, \
                                                                             broad_comp = True)
                 else:
@@ -469,7 +529,9 @@ class fit_spectra_iteration:
                     gfit_nii_ha = fl.fit_nii_ha_lines.fit_nii_ha_one_component(lam_nii_ha, \
                                                                             flam_nii_ha, \
                                                                             ivar_nii_ha, \
+                                                                            rsig_nii_ha, \
                                                                             gfit_sii, \
+                                                                            rsig_sii, \
                                                                             broad_comp = False)
         else:
             ## two-component model
@@ -479,7 +541,9 @@ class fit_spectra_iteration:
                 gfit_nii_ha = fl.fit_nii_ha_lines.fit_nii_ha_two_components(lam_nii_ha, \
                                                                         flam_nii_ha, \
                                                                         ivar_nii_ha, \
+                                                                        rsig_nii_ha, \
                                                                         gfit_sii, \
+                                                                        rsig_sii, \
                                                                         priors = psel, \
                                                                         broad_comp = True)
             else:
@@ -487,7 +551,9 @@ class fit_spectra_iteration:
                 gfit_nii_ha = fl.fit_nii_ha_lines.fit_nii_ha_two_components(lam_nii_ha, \
                                                                         flam_nii_ha, \
                                                                         ivar_nii_ha, \
+                                                                        rsig_nii_ha, \
                                                                         gfit_sii, \
+                                                                        rsig_sii, \
                                                                         broad_comp = False)  
 
         ####################################### Hb Fitting #########################################
@@ -497,17 +563,23 @@ class fit_spectra_iteration:
 
         if ('sii6716_out' not in sii_models):
             ## one-component model
-            gfit_hb = fl.fit_hb_line.fit_hb_one_component(lam_hb, flam_hb, ivar_hb, gfit_nii_ha)
+            gfit_hb = fl.fit_hb_line.fit_hb_one_component(lam_hb, flam_hb, \
+                                                          ivar_hb, rsig_hb, \
+                                                          gfit_nii_ha, rsig_nii_ha)
         else:
             ## two-component model
-            gfit_hb = fl.fit_hb_line.fit_hb_two_components(lam_hb, flam_hb, ivar_hb, gfit_nii_ha)
+            gfit_hb = fl.fit_hb_line.fit_hb_two_components(lam_hb, flam_hb, \
+                                                           ivar_hb, rsig_hb, \
+                                                           gfit_nii_ha, rsig_nii_ha)
 
         ############################################################################################
 
         fits = [gfit_hb, gfit_oiii, gfit_nii_ha, gfit_sii]
+        rsig_vals = [rsig_hb, rsig_oiii, rsig_nii_ha, rsig_sii]
 
         hb_params, oiii_params, \
-        nii_ha_params, sii_params = emp.get_allfit_params.normal_fit(fits, lam_rest, flam_new)
+        nii_ha_params, sii_params = emp.get_allfit_params.normal_fit(fits, lam_rest, \
+                                                                     flam_new, rsig_vals)
 
         t_params = Table(hb_params|oiii_params|nii_ha_params|sii_params)
 
@@ -515,7 +587,7 @@ class fit_spectra_iteration:
     
 ####################################################################################################
 
-    def extreme_fit(lam_rest, flam_new, ivar_rest, fits_orig, psel):
+    def extreme_fit(lam_rest, flam_new, ivar_rest, rsigma, fits_orig, psel):
         """
         Function to fit an iteration of the extreme-broadline source fit.
         
@@ -529,6 +601,9 @@ class fit_spectra_iteration:
             
         ivar_rest : numpy array
             Rest-frame Inverse Variance array of the spectra
+            
+        rsigma : numpy array
+            1D array of Intrumental resolution elements
             
         fits_orig : list
             List of original fits in the order - [Hb+[OIII], [NII]+Ha+[SII]]
@@ -547,10 +622,14 @@ class fit_spectra_iteration:
 
         ## Fitting windows for the different emission-line regions
         lam_nii_ha_sii, flam_nii_ha_sii, \
-        ivar_nii_ha_sii = spec_utils.get_fit_window(lam_rest, flam_new, ivar_rest, 'nii_ha_sii')
+        ivar_nii_ha_sii, rsig_nii_ha_sii = spec_utils.get_fit_window(lam_rest, flam_new, \
+                                                                     ivar_rest, rsigma, \
+                                                                     em_line = 'nii_ha_sii')
 
-        lam_hb_oiii, flam_hb_oiii, ivar_hb_oiii = spec_utils.get_fit_window(lam_rest, flam_new, \
-                                                                           ivar_rest, 'hb_oiii')
+        lam_hb_oiii, flam_hb_oiii, \
+        ivar_hb_oiii, rsig_hb_oiii = spec_utils.get_fit_window(lam_rest, flam_new, \
+                                                               ivar_rest, rsigma, \
+                                                               em_line = 'hb_oiii')
 
         ####################################### [NII]+Ha+[SII] Fitting #############################
 
@@ -559,6 +638,7 @@ class fit_spectra_iteration:
         gfit_nii_ha_sii = fl.fit_extreme_broadline_sources.fit_nii_ha_sii(lam_nii_ha_sii, \
                                                                           flam_nii_ha_sii, \
                                                                           ivar_nii_ha_sii, \
+                                                                          rsig_nii_ha_sii, \
                                                                           priors = psel)
 
         ############################## Hb + [OIII] Fitting #########################################
@@ -572,20 +652,26 @@ class fit_spectra_iteration:
             gfit_hb_oiii = fl.fit_extreme_broadline_sources.fit_hb_oiii_1comp(lam_hb_oiii, \
                                                                               flam_hb_oiii, \
                                                                               ivar_hb_oiii, \
-                                                                              gfit_nii_ha_sii)
+                                                                              rsig_hb_oiii, \
+                                                                              gfit_nii_ha_sii, \
+                                                                              rsig_nii_ha_sii)
         else:
             ## two component model
             gfit_hb_oiii = fl.fit_extreme_broadline_sources.fit_hb_oiii_2comp(lam_hb_oiii, \
                                                                               flam_hb_oiii, \
                                                                               ivar_hb_oiii, \
-                                                                              gfit_nii_ha_sii)
+                                                                              rsig_hb_oiii, \
+                                                                              gfit_nii_ha_sii, \
+                                                                              rsig_nii_ha_sii)
 
         ############################################################################################
 
         fits = [gfit_hb_oiii, gfit_nii_ha_sii]
+        rsig_vals = [rsig_hb_oiii, rsig_nii_ha_sii]
 
         hb_params, oiii_params, \
-        nii_ha_params, sii_params = emp.get_allfit_params.extreme_fit(fits, lam_rest, flam_new)
+        nii_ha_params, sii_params = emp.get_allfit_params.extreme_fit(fits, lam_rest, \
+                                                                      flam_new, rsig_vals)
 
         t_params = Table(hb_params|oiii_params|nii_ha_params|sii_params)
 

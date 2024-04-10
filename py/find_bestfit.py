@@ -3,7 +3,7 @@ This script consists of functions for fitting emission-lines.
 The different functions are divided into different classes for different emission lines.
 
 Author : Ragadeepika Pucha
-Version : 2024, April 8
+Version : 2024, April 9
 """
 
 ###################################################################################################
@@ -74,7 +74,7 @@ def find_sii_best_fit(lam_sii, flam_sii, ivar_sii, rsig_sii):
     
     ## Criterion for defaulting back to one-component model
     ## rel-redshift > 450 km/s or < -450 km/s
-    ## [SII]outflow sigma > 600 km/s or < 1000 km/s
+    ## [SII]outflow sigma > 600 km/s 
     mean_sii = gfit_2comp['sii6716'].mean.value
     mean_sii_out = gfit_2comp['sii6716_out'].mean.value
     sig_sii_out = mfit.lamspace_to_velspace(gfit_2comp['sii6716_out'].stddev.value, \
@@ -82,7 +82,7 @@ def find_sii_best_fit(lam_sii, flam_sii, ivar_sii, rsig_sii):
     
     delz_sii = (mean_sii_out - mean_sii)*3e+5/6718.294
     
-    default_cond = (delz_sii < -450)|(delz_sii > 450)|((sig_sii_out > 600)&(sig_sii_out < 1000))
+    default_cond = (delz_sii < -450)|(delz_sii > 450)|((sig_sii_out > 600))
     
     ## If the sigma ([SII]) > 450 km/s in a single-component model
     ## Default back to two-component model
