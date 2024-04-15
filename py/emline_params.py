@@ -7,7 +7,7 @@ It consists of the following functions:
     4) get_allfit_params.extreme_fit(fits, lam, flam)
     
 Author : Ragadeepika Pucha
-Version : 2024, April 9
+Version : 2024, April 15
 """
 
 ###################################################################################################
@@ -140,17 +140,17 @@ def get_bestfit_parameters(table, lam_rest, models, emline):
             sigma84 = 0.0
             flag = -1
         else:
-            amp, amp_err = amplitude_arr[0], np.std(amplitude_arr)
-            mean, mean_err = mean_arr[0], np.std(mean_arr)
-            std, std_err = std_arr[0], np.sqrt(np.std(var_arr))
+            amp, amp_err = amplitude_arr[0], np.nanstd(amplitude_arr)
+            mean, mean_err = mean_arr[0], np.nanstd(mean_arr)
+            std, std_err = std_arr[0], np.sqrt(np.nanstd(var_arr))
             
             ## Flux and Sigma from random Fits
-            flux, flux_err = flux_arr[0], np.std(flux_arr)
-            sigma, sigma_err = sigma_arr[0], np.std(sigma_arr)
+            flux, flux_err = flux_arr[0], np.nanstd(flux_arr)
+            sigma, sigma_err = sigma_arr[0], np.nanstd(sigma_arr)
 
             ## 16th and 84th Percentile of Flux and Sigma values
-            flux16, flux84 = np.percentile(flux_arr, 16), np.percentile(flux_arr, 84)
-            sigma16, sigma84 = np.percentile(sigma_arr, 16), np.percentile(sigma_arr, 84)
+            flux16, flux84 = np.nanpercentile(flux_arr, 16), np.nanpercentile(flux_arr, 84)
+            sigma16, sigma84 = np.nanpercentile(sigma_arr, 16), np.nanpercentile(sigma_arr, 84)
             
             ## Sigma Flag
             flag = sigma_flag_arr[0]
