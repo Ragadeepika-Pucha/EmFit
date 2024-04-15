@@ -3,7 +3,7 @@ This script consists of funcitons for fitting emission-lines.
 The different functions are divided into different classes for different emission lines.
 
 Author : Ragadeepika Pucha
-Version : 2024, April 8
+Version : 2024, April 15
 """
 
 ###################################################################################################
@@ -192,10 +192,12 @@ class fit_sii_lines:
                             weights = np.sqrt(ivar_sii), maxiter = 1000)
                 
         ## Set the broader component as the outflow component
-        sii_out_sig = mfit.lamspace_to_velspace(gfit_2comp['sii6716_out'].stddev.value, \
-                                               gfit_2comp['sii6716_out'].mean.value)
-        sii_sig = mfit.lamspace_to_velspace(gfit_2comp['sii6716'].stddev.value, \
-                                            gfit_2comp['sii6716'].mean.value)
+        sii_out_sig, _ = mfit.correct_for_rsigma(gfit_2comp['sii6716_out'].mean.value, \
+                                                 gfit_2comp['sii6716_out'].stddev.value, \
+                                                 rsig_sii)
+        sii_sig, _ = mfit.correct_for_rsigma(gfit_2comp['sii6716'].mean.value, \
+                                          gfit_2comp['sii6716'].stddev.value, \
+                                          rsig_sii)
         if (sii_out_sig < sii_sig):
             ## Set the broader component as "outflow" component
             gfit_sii6716 = Gaussian1D(amplitude = gfit_2comp['sii6716_out'].amplitude, \
@@ -413,11 +415,13 @@ class fit_oiii_lines:
                             weights = np.sqrt(ivar_oiii), maxiter = 1000)
         
         ## Set the broad component as the "outflow" component
-        oiii_out_sig = mfit.lamspace_to_velspace(gfit_2comp['oiii5007_out'].stddev.value, \
-                                                 gfit_2comp['oiii5007_out'].mean.value)
-        oiii_sig = mfit.lamspace_to_velspace(gfit_2comp['oiii5007'].stddev.value, \
-                                            gfit_2comp['oiii5007'].mean.value)
-        
+        oiii_out_sig, _ = mfit.correct_for_rsigma(gfit_2comp['oiii5007_out'].mean.value, \
+                                                  gfit_2comp['oiii5007_out'].stddev.value, \
+                                                  rsig_oiii)
+        oiii_sig, _ = mfit.correct_for_rsigma(gfit_2comp['oiii5007'].mean.value, \
+                                              gfit_2comp['oiii5007'].stddev.value, \
+                                              rsig_oiii)
+
         if (oiii_out_sig < oiii_sig):
             gfit_oiii4959 = Gaussian1D(amplitude = gfit_2comp['oiii4959_out'].amplitude, \
                                       mean = gfit_2comp['oiii4959_out'].mean, \
@@ -609,10 +613,12 @@ class fit_nii_ha_lines:
             ## if narrow Ha component has lower amplitude and broader sigma
             ha_b_amp = gfit_b['ha_b'].amplitude.value
             ha_n_amp = gfit_b['ha_n'].amplitude.value
-            ha_b_sig = mfit.lamspace_to_velspace(gfit_b['ha_b'].stddev.value, \
-                                                gfit_b['ha_b'].mean.value)
-            ha_n_sig = mfit.lamspace_to_velspace(gfit_b['ha_n'].stddev.value, \
-                                                gfit_b['ha_n'].mean.value)
+            ha_b_sig, _ = mfit.correct_for_rsigma(gfit_b['ha_b'].mean.value, \
+                                                  gfit_b['ha_b'].stddev.value, \
+                                                  rsig_nii_ha)
+            ha_n_sig, _ = mfit.correct_for_rsigma(gfit_b['ha_n'].mean.value, \
+                                                  gfit_b['ha_n'].stddev.value, \
+                                                  rsig_nii_ha)
 
             if ((ha_b_amp > ha_n_amp)&(ha_b_sig < ha_n_sig)):
                 g_ha_n = Gaussian1D(amplitude = gfit_b['ha_b'].amplitude, \
@@ -802,10 +808,12 @@ class fit_nii_ha_lines:
             ## if narrow Ha component has lower amplitude and broader sigma
             ha_b_amp = gfit_b['ha_b'].amplitude.value
             ha_n_amp = gfit_b['ha_n'].amplitude.value
-            ha_b_sig = mfit.lamspace_to_velspace(gfit_b['ha_b'].stddev.value, \
-                                                gfit_b['ha_b'].mean.value)
-            ha_n_sig = mfit.lamspace_to_velspace(gfit_b['ha_n'].stddev.value, \
-                                                gfit_b['ha_n'].mean.value)
+            ha_b_sig, _ = mfit.correct_for_rsigma(gfit_b['ha_b'].mean.value, \
+                                                  gfit_b['ha_b'].stddev.value, \
+                                                  rsig_nii_ha)
+            ha_n_sig, _ = mfit.correct_for_rsigma(gfit_b['ha_n'].mean.value, \
+                                                  gfit_b['ha_n'].stddev.value, \
+                                                  rsig_nii_ha)
 
             if ((ha_b_amp > ha_n_amp)&(ha_b_sig < ha_n_sig)):
                 g_ha_n = Gaussian1D(amplitude = gfit_b['ha_b'].amplitude, \
@@ -1097,10 +1105,12 @@ class fit_nii_ha_lines:
             ## If outflow Ha component has lower amplitude and broad sigma
             ha_b_amp = gfit_b['ha_b'].amplitude.value
             ha_out_amp = gfit_b['ha_out'].amplitude.value
-            ha_b_sig = mfit.lamspace_to_velspace(gfit_b['ha_b'].stddev.value, \
-                                                gfit_b['ha_b'].mean.value)
-            ha_out_sig = mfit.lamspace_to_velspace(gfit_b['ha_out'].stddev.value, \
-                                                  gfit_b['ha_out'].mean.value)
+            ha_b_sig, _ = mfit.correct_for_rsigma(gfit_b['ha_b'].mean.value, \
+                                                  gfit_b['ha_b'].stddev.value, \
+                                                  rsig_nii_ha)
+            ha_out_sig, _ = mfit.correct_for_rsigma(gfit_b['ha_out'].mean.value, \
+                                                    gfit_b['ha_out'].stddev.value, \
+                                                    rsig_nii_ha)
             
             if ((ha_b_amp > ha_out_amp)&(ha_b_sig < ha_out_sig)):
                 g_ha_out = Gaussian1D(amplitude = gfit_b['ha_b'].amplitude, \
@@ -1955,10 +1965,13 @@ class fit_extreme_broadline_sources:
                      weights = np.sqrt(ivar_hb_oiii), maxiter = 1000)
         
         ## Set the broad component as the "outflow" component
-        oiii_out_sig = mfit.lamspace_to_velspace(gfit['oiii5007_out'].stddev.value, \
-                                                 gfit['oiii5007_out'].mean.value)
-        oiii_sig = mfit.lamspace_to_velspace(gfit['oiii5007'].stddev.value, \
-                                            gfit['oiii5007'].mean.value)
+        oiii_out_sig, _ = mfit.correct_for_rsigma(gfit['oiii5007_out'].mean.value, \
+                                                  gfit['oiii5007_out'].stddev.value, \
+                                                  rsig_hb_oiii)
+
+        oiii_sig, _ = mfit.correct_for_rsigma(gfit['oiii5007'].mean.value, \
+                                              gfit['oiii5007'].stddev.value, \
+                                              rsig_hb_oiii)
         
         if (oiii_out_sig < oiii_sig):
             gfit_oiii4959 = Gaussian1D(amplitude = gfit['oiii4959_out'].amplitude, \

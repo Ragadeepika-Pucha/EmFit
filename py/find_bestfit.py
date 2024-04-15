@@ -3,7 +3,7 @@ This script consists of functions for fitting emission-lines.
 The different functions are divided into different classes for different emission lines.
 
 Author : Ragadeepika Pucha
-Version : 2024, April 9
+Version : 2024, April 15
 """
 
 ###################################################################################################
@@ -75,19 +75,22 @@ def find_sii_best_fit(lam_sii, flam_sii, ivar_sii, rsig_sii):
     ## Criterion for defaulting back to one-component model
     ## rel-redshift > 450 km/s or < -450 km/s
     ## [SII]outflow sigma > 600 km/s 
+    ## [SII] sigma < 35 km/s
     mean_sii = gfit_2comp['sii6716'].mean.value
     mean_sii_out = gfit_2comp['sii6716_out'].mean.value
-    sig_sii_out = mfit.lamspace_to_velspace(gfit_2comp['sii6716_out'].stddev.value, \
-                                           gfit_2comp['sii6716_out'].mean.value)
+    sig_sii_out, _ = mfit.correct_for_rsigma(gfit_2comp['sii6716_out'].mean.value, \
+                                            gfit_2comp['sii6716_out'].stddev.value, \
+                                            rsig_sii)
     
     delz_sii = (mean_sii_out - mean_sii)*3e+5/6718.294
     
-    default_cond = (delz_sii < -450)|(delz_sii > 450)|((sig_sii_out > 600))
+    default_cond = (delz_sii < -450)|(delz_sii > 450)|(sig_sii_out > 600)
     
     ## If the sigma ([SII]) > 450 km/s in a single-component model
     ## Default back to two-component model
-    sig_sii_1comp = mfit.lamspace_to_velspace(gfit_1comp['sii6716'].stddev.value, \
-                                             gfit_1comp['sii6716'].mean.value)
+    sig_sii_1comp, _ = mfit.correct_for_rsigma(gfit_1comp['sii6716'].mean.value, \
+                                               gfit_1comp['sii6716'].stddev.value, \
+                                               rsig_sii)
         
     ## 5-sigma confidence of an extra component
     if ((p_val <= 3e-7)&(res_cond)&(~default_cond|(sig_sii_1comp > 450))):
@@ -150,11 +153,12 @@ def find_oiii_best_fit(lam_oiii, flam_oiii, ivar_oiii, rsig_oiii):
     ## Criterion for two-component model --> narrow [OIII] is resolved
     res_cond = (gfit_2comp['oiii4959'].stddev.value > rsig_oiii)&\
     (gfit_2comp['oiii5007'].stddev.value > rsig_oiii)
-    
+        
     ## Criterion for defaulting back to one-component model
     ## Sigma ([OIII]out) > 1000 km/s
-    sig_oiii_out = mfit.lamspace_to_velspace(gfit_2comp['oiii5007_out'].stddev.value, \
-                                            gfit_2comp['oiii5007_out'].mean.value)
+    sig_oiii_out, _ = mfit.correct_for_rsigma(gfit_2comp['oiii5007'].mean.value, \
+                                             gfit_2comp['oiii5007'].stddev.value, \
+                                             rsig_oiii)
     
     default_cond = (sig_oiii_out > 1000)
     
@@ -840,8 +844,9 @@ def find_hb_oiii_best_fit(lam_hb_oiii, flam_hb_oiii, ivar_hb_oiii, rsig_hb_oiii,
     
     ## Criterion for defaulting back to one-component model
     ## Sigma ([OIII]out) > 1000 km/s
-    sig_oiii_out = mfit.lamspace_to_velspace(gfit_2comp['oiii5007_out'].stddev.value, \
-                                            gfit_2comp['oiii5007_out'].mean.value)
+    sig_oiii_out, _ = mfit.correct_for_rsigma(gfit_2comp['oiii5007_out'].mean.value, \
+                                          gfit_2comp['oiii5007_out'].stddev.value, \
+                                          rsig_hb_oiii)
     
     default_cond = (sig_oiii_out > 1000)
     
