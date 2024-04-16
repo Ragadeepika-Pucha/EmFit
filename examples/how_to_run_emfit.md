@@ -38,7 +38,7 @@ Example `.sh` and `.sbatch` scripts are available in this directory.
 If the tables has ~5000 sources, the code can be run in `debug` mode, which takes about 15-20 minutes.
 For larger tables, use `regular` mode.
 
-Author : Ragadeepika Pucha
+Author : Ragadeepika Pucha \
 Version : 2024, April 16
 
     
