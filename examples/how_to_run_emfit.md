@@ -23,14 +23,24 @@ python $PATH_TO_EMFIT_DIR/py/run_desi_emfit.py INPUT_FILE_NAME OUTPUT_FILE_NAME
 ```
 
 ## From Jupyter Notebook
-* For running the code from Jupyter Notebook (DESI 22.5 kernel) for one source, get the above-mentioned required column data.
+You can run the code from a Jupyter Notebook for one source at a time via the following code. 
+Change the kernel to DESI 22.5
+```
+import sys
+sys.path.append('$PATH_TO_EMFIT_DIR/py/')
+import emline_fitting as emfit
 
-  ```
-    import sys
-    sys.path.append('$path_to_repo_directory$/py/')
-    import emline_fitting as emfit
-    t_params = emfit.fit_spectra(specprod, survey, program, healpix, targetid, z)
-  ```
+t_params = emfit.fit_spectra(specprod, survey, program, healpix, targetid, z)
+```
+
+## Using SBATCH Files
+Example `.sh` and `.sbatch` scripts are available in this directory.
+If the tables has ~5000 sources, the code can be run in `debug` mode, which takes about 15-20 minutes.
+For larger tables, use `regular` mode.
+
+Author : Ragadeepika Pucha
+Version : 2024, April 16
+
     
     
     
