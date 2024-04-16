@@ -34,7 +34,9 @@ t_params = emfit.fit_spectra(specprod, survey, program, healpix, targetid, z)
 ```
 
 ## Using SBATCH Files
-Example `.sh` and `.sbatch` scripts are available in this directory.
+This directory contains example files for running EmFit using SLURM:
+    - `example_emfit_run.sh`
+    - `example_emfit_run.sbatch`
 If the tables has ~5000 sources, the code can be run in `debug` mode, which takes about 15-20 minutes.
 For larger tables, use `regular` mode.
 
