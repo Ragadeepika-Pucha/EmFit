@@ -301,5 +301,5 @@
 | SII_NOISE                  |   float     |       rms of the Continuum around the [SII] components |
 | SII_NDOF                   |    int      |       Number of Degrees of Freedom associated with the [SII]6716,6731 Fit |
 | SII_RCHI2                  |   float     |       Reduced chi2 associated with the [SII]6717,6731 Fit  |
-| NII_HA_SII_NDOF            |    int      |       Number of Degrees of Freedom associated with the [NII]6548,6583+Ha+[SII]6717,6731 Fit |
+| NII_HA_SII_NDOF            |    int      |       Number of Degrees of Freedom associated with the [NII]6548,6583 + Ha + [SII]6717,6731 Fit |
 | NII_HA_SII_RCHI2           |   float     |       Reduced chi2 associated with the [NII]6548,6583+Ha+[SII]6717,6731 Fit  |
