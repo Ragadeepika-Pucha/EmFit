@@ -776,7 +776,8 @@ def plot_from_params(table, index, title = None):
         
         ## Plot the figure
         fig = plot_spectra_fits.normal_fit(lam_rest, flam_rest, fits, rchi2s, title = title, \
-                                          smooth_cont = smooth_cont_rest, plot_smooth_cont = True)
+                                           smooth_cont = smooth_cont_rest, \
+                                           plot_smooth_cont = False)
         
     else:
         ## Constructing the fits from the table
@@ -790,7 +791,8 @@ def plot_from_params(table, index, title = None):
         
         ## Plot the figure
         fig = plot_spectra_fits.extreme_fit(lam_rest, flam_rest, fits, rchi2s, title = title, \
-                                          smooth_cont = smooth_cont_rest, plot_smooth_cont = True)    
+                                            smooth_cont = smooth_cont_rest, \
+                                            plot_smooth_cont = False)    
     
     return (fig)
 
