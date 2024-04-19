@@ -1,9 +1,24 @@
 """
-This script consists of functions for fitting emission-lines. 
-The different functions are divided into different classes for different emission lines.
+This script consists of functions for finding the bestfit for the emission-lines.
+It consists of the following functions:
+    1) find_sii_best_fit(lam_sii, flam_sii, ivar_sii, rsig_sii)
+    2) find_oiii_best_fit(lam_oiii, flam_oiii, ivar_oiii, rsig_oiii)
+    3) nii_ha_fit.free_ha_one_component(lam_nii_ha, flam_nii_ha, ivar_nii_ha, rsig_nii_ha, \
+                                        sii_bestfit, rsig_sii)
+    4) nii_ha_fit.fixed_ha_one_component(lam_nii_ha, flam_nii_ha, ivar_nii_ha, rsig_nii_ha, \
+                                        sii_bestfit, rsig_sii)
+    5) nii_ha_fit.fixed_ha_two_components(lam_nii_ha, flam_nii_ha, ivar_nii_ha, rsig_nii_ha, \
+                                        sii_bestfit, rsig_sii)
+    6) find_nii_ha_best_fit(lam_nii_ha, flam_nii_ha, ivar_nii_ha, rsig_nii_ha, \
+                            sii_bestfit, rsig_sii)
+    7) find_hb_best_fit(lam_hb, flam_hb, ivar_hb, rsig_hb, nii_ha_bestfit, rsig_nii_ha)
+    8) find_nii_ha_sii_best_fit(lam_nii_ha_sii, flam_nii_ha_sii, ivar_nii_ha_sii, \
+                                rsig_nii_ha_sii)
+    9) find_hb_oiii_best_fit(lam_hb_oiii, flam_hb_oiii, ivar_hb_oiii, rsig_hb_oiii, \
+                            nii_ha_sii_bestfit, rsig_nii_ha_sii)
 
 Author : Ragadeepika Pucha
-Version : 2024, April 15
+Version : 2024, April 18
 """
 
 ###################################################################################################
@@ -75,7 +90,6 @@ def find_sii_best_fit(lam_sii, flam_sii, ivar_sii, rsig_sii):
     ## Criterion for defaulting back to one-component model
     ## rel-redshift > 450 km/s or < -450 km/s
     ## [SII]outflow sigma > 600 km/s 
-    ## [SII] sigma < 35 km/s
     mean_sii = gfit_2comp['sii6716'].mean.value
     mean_sii_out = gfit_2comp['sii6716_out'].mean.value
     sig_sii_out, _ = mfit.correct_for_rsigma(gfit_2comp['sii6716_out'].mean.value, \
@@ -84,7 +98,11 @@ def find_sii_best_fit(lam_sii, flam_sii, ivar_sii, rsig_sii):
     
     delz_sii = (mean_sii_out - mean_sii)*3e+5/6718.294
     
-    default_cond = (delz_sii < -450)|(delz_sii > 450)|(sig_sii_out > 600)
+    ## If the amplitude ratio of (outflow/narrow) > 2
+    ## default to one-component model
+    amp_ratio = gfit_2comp['sii6716_out'].amplitude.value/gfit_2comp['sii6716'].amplitude.value
+
+    default_cond = (delz_sii < -450)|(delz_sii > 450)|(sig_sii_out > 600)|(amp_ratio > 2)
     
     ## If the sigma ([SII]) > 450 km/s in a single-component model
     ## Default back to two-component model
@@ -160,7 +178,11 @@ def find_oiii_best_fit(lam_oiii, flam_oiii, ivar_oiii, rsig_oiii):
                                              gfit_2comp['oiii5007'].stddev.value, \
                                              rsig_oiii)
     
-    default_cond = (sig_oiii_out > 1000)
+    ## If the amplitude ratio of (outflow/narrow) > 2
+    ## default to one-component model
+    amp_ratio = gfit_2comp['oiii5007_out'].amplitude.value/gfit_2comp['oiii5007'].amplitude.value
+    
+    default_cond = (sig_oiii_out > 1000)|(amp_ratio > 2)
     
     ## 5-sigma confidence of an extra component
     if ((p_val <= 3e-7)&(res_cond)&(~default_cond)):
@@ -271,6 +293,8 @@ class nii_ha_fit:
                                           rsig_nii_ha)
         ha_b_fwhm = mfit.sigma_to_fwhm(ha_b_sig)
         
+        
+        
         ## If narrow Ha flux is zero, but broad Ha flux is not zero
         ## If broad Hb flux = 0, then also default to no broad fit
         ## If sigma (narrow Ha) < sigma (narrow [SII]), then also default to no broad fit
@@ -287,12 +311,19 @@ class nii_ha_fit:
                                             gfit_b['nii6583'].stddev.value, \
                                             rsig_nii_ha)
         
+        ## Default conditions based on velocity offset of broad Ha
+        ## Velocity offset of broad Ha
+        ha_b_offset = (gfit_b['ha_n'].mean.value - gfit_b['ha_b'].mean.value)*3e+5/6564.312
+        ha_b_ratio = ha_b_offset/ha_b_sig
+        
+        off_cond = (ha_b_fwhm < 1000)&((ha_b_ratio > 0.8)|(ha_b_ratio < -0.8))
+    
         ## Default conditions
         cond1 = ((ha_n_flux == 0)&(ha_b_flux != 0))
         cond2 = (ha_b_flux == 0)
         cond3 = (ha_sig < nii_sig)&(~np.isclose(ha_sig, nii_sig))
         
-        default_cond = cond1|cond2|cond3
+        default_cond = cond1|cond2|cond3|off_cond
 
         ## Conditions for selecting a broad component:
         ## 5-sigma confidence of an extra component is satisfied
@@ -416,7 +447,14 @@ class nii_ha_fit:
         cond2 = (ha_b_flux == 0)
         cond3 = (ha_sig < nii_sig)&(~np.isclose(ha_sig, nii_sig))
         
-        default_cond = cond1|cond2|cond3
+        ## Default conditions based on velocity offset of broad Ha
+        ## Velocity offset of broad Ha
+        ha_b_offset = (gfit_b['ha_n'].mean.value - gfit_b['ha_b'].mean.value)*3e+5/6564.312
+        ha_b_ratio = ha_b_offset/ha_b_sig
+        
+        off_cond = (ha_b_fwhm < 1000)&((ha_b_ratio > 0.8)|(ha_b_ratio < -0.8))
+        
+        default_cond = cond1|cond2|cond3|off_cond
 
         ## Conditions for selecting a broad component:
         ## 5-sigma confidence of an extra component is satisfied
@@ -551,7 +589,14 @@ class nii_ha_fit:
         cond3 = (ha_sig < nii_sig)&(~np.isclose(ha_sig, nii_sig))
         cond4 = (ha_out_sig < nii_out_sig)&(~np.isclose(ha_out_sig, nii_out_sig))
         
-        default_cond = cond1|cond2|cond3|cond4
+        ## Default conditions based on velocity offset of broad Ha
+        ## Velocity offset of broad Ha
+        ha_b_offset = (gfit_b['ha_n'].mean.value - gfit_b['ha_b'].mean.value)*3e+5/6564.312
+        ha_b_ratio = ha_b_offset/ha_b_sig
+        
+        off_cond = (ha_b_fwhm < 1000)&((ha_b_ratio > 0.8)|(ha_b_ratio < -0.8))
+        
+        default_cond = cond1|cond2|cond3|cond4|off_cond
 
         ## Conditions for selecting a broad component:
         ## 5-sigma confidence of an extra component is satisfied
@@ -847,8 +892,11 @@ def find_hb_oiii_best_fit(lam_hb_oiii, flam_hb_oiii, ivar_hb_oiii, rsig_hb_oiii,
     sig_oiii_out, _ = mfit.correct_for_rsigma(gfit_2comp['oiii5007_out'].mean.value, \
                                           gfit_2comp['oiii5007_out'].stddev.value, \
                                           rsig_hb_oiii)
+    ## If the amplitude ratio of (outflow/narrow) > 1.5
+    ## default to one-component model
+    amp_ratio = gfit_2comp['oiii5007_out'].amplitude.value/gfit_2comp['oiii5007'].amplitude.value
     
-    default_cond = (sig_oiii_out > 1000)
+    default_cond = (sig_oiii_out > 1000)|(amp_ratio > 1.5)
     
     ## 5-sigma confidence of an extra component
     if ((p_val <= 3e-7)&(~default_cond)):

@@ -1,9 +1,18 @@
 """
-This script consists of functions related to fitting the emission line spectra, 
-and plotting the models and residuals.
+This script consists of functions related to fitting the emission line spectra. 
+It consists of the following functions:
+    1) fit_spectra(specprod, survey, program, healpix, targetid, z)
+    2) fit_original_spectra.normal_fit(lam_rest, flam_rest, ivar_rest, rsigma)
+    3) fit_original_spectra.extreme_fit(lam_rest, flam_rest, ivar_rest, rsigma)
+    4) fit_spectra_iteration.normal_fit(lam_rest, flam_new, ivar_rest, rsigma,\
+                                        fits_orig, psel)
+    5) fit_spectra_iteration.extreme_fit(lam_rest, flam_new, ivar_rest, rsigma,\
+                                        fits_orig, psel)
+    6) construct_fits_from_table.normal_fit(t, index)
+    7) construct_fits_from_table.extreme_fit(t, index)
 
 Author : Ragadeepika Pucha
-Version : 2024, April 15
+Version : 2024, April 18
 """
 
 ####################################################################################################

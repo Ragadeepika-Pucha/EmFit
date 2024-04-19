@@ -1,9 +1,35 @@
 """
 This script consists of funcitons for fitting emission-lines.
-The different functions are divided into different classes for different emission lines.
-
+The different functions are divided into different classes for different emission lines:
+    1) fit_sii_lines.fit_one_component(lam_sii, flam_sii, ivar_sii, rsig_sii)
+    2) fit_sii_lines.fit_two_components(lam_sii, flam_sii, ivar_sii, rsig_sii)
+    3) fit_oiii_lines.fit_one_component(lam_oiii, flam_oiii, ivar_oiii, rsig_oiii)
+    4) fit_oiii_lines.fit_two_components(lam_oiii, flam_oiii, ivar_oiii, rsig_oiii)
+    5) fit_nii_ha_lines.fit_nii_free_ha_one_component(lam_nii_ha, flam_nii_ha, ivar_nii_ha, \
+                                                      rsig_nii_ha, sii_bestfit, rsig_sii, \
+                                                      priors = [4,5], broad_comp = True)
+    6) fit_nii_ha_lines.fit_nii_ha_one_component(lam_nii_ha, flam_nii_ha, ivar_nii_ha, \
+                                                rsig_nii_ha, sii_bestfit, rsig_sii, \
+                                                priors = [4,5], broad_comp = True)
+    7) fit_nii_ha_lines.fit_nii_ha_two_components(lam_nii_ha, flam_nii_ha, ivar_nii_ha, \
+                                                rsig_nii_ha, sii_bestfit, rsig_sii, \
+                                                priors = [4,5], broad_comp = True)
+    8) fit_hb_line.fit_hb_one_component(lam_hb, flam_hb, ivar_hb, rsig_hb, \
+                                        nii_ha_bestfit, rsig_nii_ha)
+    9) fit_hb_line.fit_hb_two_components(lam_hb, flam_hb, ivar_hb, rsig_hb, \
+                                        nii_ha_bestfit, rsig_nii_ha)
+    10) fit_extreme_broadline_sources.fit_nii_ha_sii(lam_nii_ha_sii, flam_nii_ha_sii, \
+                                                    ivar_nii_ha_sii, rsig_nii_ha_sii, \
+                                                    priors = [5,8])
+    11) fit_extreme_broadline_sources.fit_hb_oiii_1comp(lam_hb_oiii, flam_hb_oiii, ivar_hb_oiii, \
+                                                        rsig_hb_oiii, nii_ha_sii_bestfit, \
+                                                        rsig_nii_ha_sii)
+    12) fit_extreme_broadline_sources.fit_hb_oiii_2comp(lam_hb_oiii, flam_hb_oiii, ivar_hb_oiii, \
+                                                        rsig_hb_oiii, nii_ha_sii_bestfit, \
+                                                        rsig_nii_ha_sii)
+                                                        
 Author : Ragadeepika Pucha
-Version : 2024, April 15
+Version : 2024, April 18
 """
 
 ###################################################################################################
@@ -198,6 +224,7 @@ class fit_sii_lines:
         sii_sig, _ = mfit.correct_for_rsigma(gfit_2comp['sii6716'].mean.value, \
                                           gfit_2comp['sii6716'].stddev.value, \
                                           rsig_sii)
+        
         if (sii_out_sig < sii_sig):
             ## Set the broader component as "outflow" component
             gfit_sii6716 = Gaussian1D(amplitude = gfit_2comp['sii6716_out'].amplitude, \

@@ -1,13 +1,18 @@
 """
 This script consists of functions for computing the parameters of the emission-line fits.
 It consists of the following functions:
-    1) get_parameters(gfit, models)
+    1) get_parameters(gfit, models, rsig)
     2) get_bestfit_parameters(table, models, emline)
-    3) get_allfit_params.normal_fit(fits, lam, flam)
-    4) get_allfit_params.extreme_fit(fits, lam, flam)
+    3) get_allfit_params.normal_fit(fits, lam, flam, rsig_vals)
+    4) get_allfit_params.extreme_fit(fits, lam, flam, rsig_vals)
+    5) get_allbestfit_params.normal_fit(t_fits, ndofs_list, lam_rest, \
+                                        flam_rest, ivar_rest, rsigma)
+    6) get_allbestfit_params.extreme_fit(t_fits, ndofs_list, lam_rest, \
+                                        flam_rest, ivar_rest, rsigma)
+    7) fix_sigma(table)
     
 Author : Ragadeepika Pucha
-Version : 2024, April 15
+Version : 2024, April 18
 """
 
 ###################################################################################################
@@ -78,7 +83,7 @@ def get_parameters(gfit, models, rsig):
 ###################################################################################################
 ###################################################################################################
 
-def get_bestfit_parameters(table, lam_rest, models, emline):
+def get_bestfit_parameters(table, models, emline):
     """
     Function to get the bestfit parameters from the table of iterations.
     If the model component is not available, then the bestfit parameters is set to zero.
@@ -89,9 +94,6 @@ def get_bestfit_parameters(table, lam_rest, models, emline):
     ----------
     table : Astropy Table
         Table of iteration parameters
-        
-    lam_rest : numpy array
-        Rest-frame Wavelength array
         
     models : list
         List of Gaussian models for a given emission-line fit
@@ -411,10 +413,10 @@ class get_allbestfit_params:
                          'ha_n', 'ha_out', 'ha_b']
         sii_models = ['sii6716', 'sii6716_out', 'sii6731', 'sii6731_out']
 
-        hb_params = get_bestfit_parameters(t_fits, lam_rest, hb_models, 'hb')
-        oiii_params = get_bestfit_parameters(t_fits, lam_rest, oiii_models, 'oiii')
-        nii_ha_params = get_bestfit_parameters(t_fits, lam_rest, nii_ha_models, 'nii_ha')
-        sii_params = get_bestfit_parameters(t_fits, lam_rest, sii_models, 'sii')
+        hb_params = get_bestfit_parameters(t_fits, hb_models, 'hb')
+        oiii_params = get_bestfit_parameters(t_fits, oiii_models, 'oiii')
+        nii_ha_params = get_bestfit_parameters(t_fits, nii_ha_models, 'nii_ha')
+        sii_params = get_bestfit_parameters(t_fits, sii_models, 'sii')
         
         ## Join into a table
         t_params = Table(hb_params|oiii_params|nii_ha_params|sii_params)
@@ -530,10 +532,10 @@ class get_allbestfit_params:
                          'ha_n', 'ha_out', 'ha_b']
         sii_models = ['sii6716', 'sii6716_out', 'sii6731', 'sii6731_out']
 
-        hb_params = get_bestfit_parameters(t_fits, lam_rest, hb_models, 'hb')
-        oiii_params = get_bestfit_parameters(t_fits, lam_rest, oiii_models, 'oiii')
-        nii_ha_params = get_bestfit_parameters(t_fits, lam_rest, nii_ha_models, 'nii_ha')
-        sii_params = get_bestfit_parameters(t_fits, lam_rest, sii_models, 'sii')
+        hb_params = get_bestfit_parameters(t_fits, hb_models, 'hb')
+        oiii_params = get_bestfit_parameters(t_fits, oiii_models, 'oiii')
+        nii_ha_params = get_bestfit_parameters(t_fits, nii_ha_models, 'nii_ha')
+        sii_params = get_bestfit_parameters(t_fits, sii_models, 'sii')
         
         ## Join into a table
         t_params = Table(hb_params|oiii_params|nii_ha_params|sii_params)
