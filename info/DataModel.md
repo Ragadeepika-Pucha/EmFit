@@ -1,7 +1,7 @@
 # EmFit Data Model
 
 | Column Name                |   Type      |                            Description                                       | 
-|:--------------------------:|:-----------:|:----------------------------------------------------------------------------:|
+|:--------------------------:|:-----------:|:---------------------------------------------------------------------------- |
 | TARGETID                   |    int64    |        Unique identifier of the DESI target                                  |
 | SPECPROD                   |    str      |       Spectral Production Pipeline fuji|guadalupe                            |
 | SURVEY                     |    str      |       DESI Survey of the spectra main or special or sv1 or sv2 or sv3 or cmx |
