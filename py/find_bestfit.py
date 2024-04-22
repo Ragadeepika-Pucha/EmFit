@@ -12,13 +12,14 @@ It consists of the following functions:
     6) find_nii_ha_best_fit(lam_nii_ha, flam_nii_ha, ivar_nii_ha, rsig_nii_ha, \
                             sii_bestfit, rsig_sii)
     7) find_hb_best_fit(lam_hb, flam_hb, ivar_hb, rsig_hb, nii_ha_bestfit, rsig_nii_ha)
-    8) find_nii_ha_sii_best_fit(lam_nii_ha_sii, flam_nii_ha_sii, ivar_nii_ha_sii, \
+    8) find_free_hb_best_fit(lam_hb, flam_hb, ivar_hb, rsig_hb)
+    9) find_nii_ha_sii_best_fit(lam_nii_ha_sii, flam_nii_ha_sii, ivar_nii_ha_sii, \
                                 rsig_nii_ha_sii)
-    9) find_hb_oiii_best_fit(lam_hb_oiii, flam_hb_oiii, ivar_hb_oiii, rsig_hb_oiii, \
+    10) find_hb_oiii_best_fit(lam_hb_oiii, flam_hb_oiii, ivar_hb_oiii, rsig_hb_oiii, \
                             nii_ha_sii_bestfit, rsig_nii_ha_sii)
 
 Author : Ragadeepika Pucha
-Version : 2024, April 18
+Version : 2024, April 22
 """
 
 ###################################################################################################
@@ -761,6 +762,108 @@ def find_hb_best_fit(lam_hb, flam_hb, ivar_hb, rsig_hb, \
     ## Returns the bestfit
     return (hb_bestfit, n_dof)
 
+####################################################################################################
+####################################################################################################
+
+def find_free_hb_best_fit(lam_hb, flam_hb, ivar_hb, rsig_hb):
+    """
+    Find bestfit for Hb when fit freely. This is for high-redshift galaxies when [SII] and Ha are
+    not available.
+    
+    The code fits both broad and non-broad component fits and picks the best version.
+    The broad component fit is picked if the p-value for chi2 distribution is < 3e-7 -->
+    5-sigma confidence for an extra component statistically.
+    
+    Parameters
+    ----------
+    lam_hb : numpy array
+        Wavelength array of the Hb region
+        
+    flam_hb : numpy array
+        Flux array of the spectra in the Hb region
+    
+    ivar_hb : numpy array
+        Inverse variance array of the spectra in the Hb region.
+        
+    rsig_hb : float
+        Median resolution element in the Hb region.
+        
+    Returns
+    -------
+    hb_bestfit : Astropy model
+        Best-fit "without-broad" or "with-broad" component
+        
+    n_dof : int
+        Number of degrees of freedom
+        
+    psel : list
+        Selected prior if the bestmodel fit has a broad component
+        psel = [] if there is no broad component
+    """
+
+    ## Single component model
+    ## Without broad component
+    gfit_no_b = fl.fit_hb_line.fit_free_hb_one_component(lam_hb, flam_hb, ivar_hb, rsig_hb, \
+                                                        broad_comp = False)
+    
+    ## With broad component
+    ## Test with different priors and select the one with the least chi2
+    priors_list = [[4,5], [3,6], [5,8]]
+    gfits = []
+    chi2s = []
+    
+    for p in priors_list:
+        gfit = fl.fit_hb_line.fit_free_hb_one_component(lam_hb, flam_hb, ivar_hb, rsig_hb, \
+                                                       priors = p, broad_comp = True)
+        chi2_fit = mfit.calculate_chi2(flam_hb, gfit(lam_hb), ivar_hb)
+        gfits.append(gfit)
+        chi2s.append(chi2_fit)
+        
+    ## Select the broad-component fit with the minimum chi2s
+    gfit_b = gfits[np.argmin(chi2s)]
+    
+    ## Select the prior that leads to the bestfit
+    psel = priors_list[np.argmin(chi2s)]
+    
+    ## Chi2 values for both the fits
+    chi2_no_b = mfit.calculate_chi2(flam_hb, gfit_no_b(lam_hb), ivar_hb)
+    chi2_b = mfit.calculate_chi2(flam_hb, gfit_b(lam_hb), ivar_hb)
+    
+    ## Statistical check for the broad component
+    df = 6-3
+    del_chi2 = chi2_no_b - chi2_b
+    p_val = chi2.sf(del_chi2, df)
+    
+    ## Broad Ha width
+    hb_b_sig, _ = mfit.correct_for_rsigma(gfit_b['hb_b'].mean.value, \
+                                          gfit_b['hb_b'].stddev.value, \
+                                          rsig_hb)
+    hb_b_fwhm = mfit.sigma_to_fwhm(hb_b_sig)
+    
+    ## If narrow Hb flux is zero, but broad Hb is not zero
+    ## If broad Hb flux = 0
+    ## Default to no broad fit in these cases
+    hb_n_flux = mfit.compute_emline_flux(gfit_b['hb_n'].amplitude.value, \
+                                        gfit_b['hb_n'].stddev.value)
+    hb_b_flux = mfit.compute_emline_flux(gfit_b['hb_b'].amplitude.value, \
+                                        gfit_b['hb_b'].stddev.value)
+    
+    default_cond = ((hb_n_flux == 0)&(hb_b_flux != 0))|(hb_b_flux == 0)
+    
+    ## Conditions for selecting a broad component
+    ## 5-sigma confidence of an extra component is satisfied
+    ## Broad component FWHM > 300 km/s
+    if ((p_val <= 3e-7)&(hb_b_fwhm >= 300)&(~default_cond)):
+        hb_bestfit = gfit_b
+        n_dof = 6
+        psel = psel
+    else:
+        hb_bestfit = gfit_no_b
+        n_dof = 3
+        psel = []
+        
+    return (hb_bestfit, n_dof, psel)
+    
 ####################################################################################################
 ####################################################################################################
 

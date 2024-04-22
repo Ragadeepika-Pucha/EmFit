@@ -18,18 +18,20 @@ The different functions are divided into different classes for different emissio
                                         nii_ha_bestfit, rsig_nii_ha)
     9) fit_hb_line.fit_hb_two_components(lam_hb, flam_hb, ivar_hb, rsig_hb, \
                                         nii_ha_bestfit, rsig_nii_ha)
-    10) fit_extreme_broadline_sources.fit_nii_ha_sii(lam_nii_ha_sii, flam_nii_ha_sii, \
+    10) fit_hb_line.fit_free_hb_one_component(lam_hb, flam_hb, ivar_hb, rsig_hb, \
+                                            priors = [4,5], broad_comp = True)
+    11) fit_extreme_broadline_sources.fit_nii_ha_sii(lam_nii_ha_sii, flam_nii_ha_sii, \
                                                     ivar_nii_ha_sii, rsig_nii_ha_sii, \
                                                     priors = [5,8])
-    11) fit_extreme_broadline_sources.fit_hb_oiii_1comp(lam_hb_oiii, flam_hb_oiii, ivar_hb_oiii, \
+    12) fit_extreme_broadline_sources.fit_hb_oiii_1comp(lam_hb_oiii, flam_hb_oiii, ivar_hb_oiii, \
                                                         rsig_hb_oiii, nii_ha_sii_bestfit, \
                                                         rsig_nii_ha_sii)
-    12) fit_extreme_broadline_sources.fit_hb_oiii_2comp(lam_hb_oiii, flam_hb_oiii, ivar_hb_oiii, \
+    13) fit_extreme_broadline_sources.fit_hb_oiii_2comp(lam_hb_oiii, flam_hb_oiii, ivar_hb_oiii, \
                                                         rsig_hb_oiii, nii_ha_sii_bestfit, \
                                                         rsig_nii_ha_sii)
                                                         
 Author : Ragadeepika Pucha
-Version : 2024, April 18
+Version : 2024, April 22
 """
 
 ###################################################################################################
@@ -1225,6 +1227,8 @@ class fit_hb_line:
                                 nii_ha_bestfit, rsig_nii_ha)
         2) fit_hb_two_components(lam_hb, flam_hb, ivar_hb, rsig_hb, \
                                 nii_ha_bestfit, rsig_nii_ha)
+        3) fit_free_hb_one_component(lam_hb, flam_hb, ivar_hb, rsig_hb, \
+                                    priors = [4,5], broad_comp = True)
     """
     
     def fit_hb_one_component(lam_hb, flam_hb, ivar_hb, rsig_hb, \
@@ -1491,7 +1495,109 @@ class fit_hb_line:
 
         ## Return with/without broad component depending on the presence of broad line in Ha
         return (gfit)
+    
+####################################################################################################
 
+    def fit_free_hb_one_component(lam_hb, flam_hb, ivar_hb, rsig_hb, \
+                                  priors = [4,5], broad_comp = True):
+        """
+        Function to fit Hb freely. This is useful for high-redshift sources, 
+        where [SII] and Ha are not available.
+        
+        The code can fit with and without a broad component, depending on whether the
+        broad_comp keyword is set to True/False.
+        
+        Parameters
+        ----------
+        lam_hb : numpy array
+            Wavelength array of the Hb region.
+            
+        flam_hb : numpy array
+            Flux array of the spectra in the Hb region
+            
+        ivar_hb : numpy array
+            Inverse variance array of the spectra in the Hb region
+            
+        rsig_hb : float
+            Median Resolution element in the Hb region
+            
+        priors : list
+            Initial priors for the amplitude and stddev of the broad component
+            
+        broad_comp : bool
+            Whether or not to add a broad component for the fit
+            Default is True
+        
+        Returns
+        -------
+        gfit : Astropy model
+            Best-fit "without-broad" or "with-broad" component
+            Depends on what the broad_comp is set to.
+        """
+        
+        ## Initial estimate of amplitude of Hb
+        amp_hb = np.max(flam_hb[(lam_hb >= 4861)&(lam_hb <= 4863)])
+        
+        ## Continuum
+        cont = Const1D(amplitude = 0.0, name = 'hb_cont')
+                
+        if (broad_comp == True):
+            ## Narrow Hb Gaussian
+            g_hb_n = Gaussian1D(amplitude = amp_hb/2, mean = 4862.683, \
+                               stddev = 3.0, name = 'hb_n', \
+                               bounds = {'amplitude' : (0.0, None)})
+            ## Broad component
+            g_hb_b = Gaussian1D(amplitude = amp_hb/priors[0], mean = 4862.683, \
+                               stddev = priors[1], name = 'hb_b', \
+                               bounds = {'amplitude' : (0.0, None)})
+            
+            ## Initial Fit
+            g_init = cont + g_hb_n + g_hb_b
+            fitter_b = fitting.LevMarLSQFitter()
+            
+            gfit_b = fitter_b(g_init, lam_hb, flam_hb, \
+                             weights = np.sqrt(ivar_hb), maxiter = 1000)
+            
+            ## Exchange broad and narrow Hb components
+            ## If narrow Hb component has lower amplitude and broader sigma
+            hb_b_amp = gfit_b['hb_b'].amplitude.value
+            hb_n_amp = gfit_b['hb_n'].amplitude.value
+            hb_b_sig, _ = mfit.correct_for_rsigma(gfit_b['hb_b'].mean.value, \
+                                                  gfit_b['hb_b'].stddev.value, \
+                                                  rsig_hb)
+            hb_n_sig, _ = mfit.correct_for_rsigma(gfit_b['hb_n'].mean.value, \
+                                                  gfit_b['hb_n'].stddev.value, \
+                                                  rsig_hb)
+            
+            if ((hb_b_amp > hb_n_amp)&(hb_b_sig < hb_n_sig)):
+                g_hb_n = Gaussian1D(amplitude = gfit_b['hb_b'].amplitude, \
+                                   mean = gfit_b['hb_b'].mean, \
+                                   stddev = gfit_b['hb_b'].stddev, \
+                                   name = 'hb_n')
+                g_hb_b = Gaussian1D(amplitude = gfit_b['hb_n'].amplitude, \
+                                   mean = gfit_b['hb_n'].mean, \
+                                   stddev = gfit_b['hb_n'].stddev, \
+                                   name = 'hb_b')
+                gfit_b = gfit_b['hb_cont'] + g_hb_n + g_hb_b
+                
+            ## Returns fit with broad component if broad_comp = True
+            return (gfit_b)
+        
+        else:
+            ## Narrow Hb Gaussian
+            g_hb_n = Gaussian1D(amplitude = amp_hb, mean = 4862.683, \
+                               stddev = 3.0, name = 'hb_n', \
+                               bounds = {'amplitude' : (0.0, None)})
+            ## Initial fit
+            g_init = cont + g_hb_n
+            fitter_no_b = fitting.LevMarLSQFitter()
+            
+            gfit_no_b = fitter_no_b(g_init, lam_hb, flam_hb, weights = np.sqrt(ivar_hb), \
+                                   maxiter = 1000)
+            
+            ## Returns fit without broad component if broad_comp = False
+            return (gfit_no_b)
+            
 ####################################################################################################
 ####################################################################################################
 
