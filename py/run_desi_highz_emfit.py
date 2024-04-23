@@ -1,9 +1,9 @@
 """
-This script is for running the DESI EmFit Code for a given table of sources.
-It requires input and output filenames
+This script is for running the DESI EmFit High-z code for a given table of sources.
+Only works for Hb for now. It requires input and output filenames
 
 Author : Ragadeepika Pucha
-Version : 2024 March 28
+Version : 2024 April 22
 """
 ####################################################################################################
 import sys
@@ -11,7 +11,7 @@ sys.path.append('/global/cfs/cdirs/desi/users/raga19/repos/EmFit/py/')
 sys.path.append('/global/cfs/cdirs/desi/users/raga19/repos/DESI_Project/py/')
 
 import numpy as np
-import emline_fitting as emfit
+import emline_fitting_highz as emfit
 from astropy.table import Table, vstack
 
 import warnings
@@ -33,7 +33,7 @@ t = Table.read(filename)
 pool = Pool(processes = 128)
 inputs = [(obj['SPECPROD'], obj['SURVEY'], obj['PROGRAM'], obj['HEALPIX'],\
            obj['TARGETID'], obj['Z']) for obj in t]
-t_final = vstack(pool.starmap(emfit.fit_spectra, inputs))
+t_final = vstack(pool.starmap(emfit.fit_highz_hb, inputs))
 pool.close()
 pool.join()
 
@@ -43,5 +43,3 @@ end = time.time()
 print ('Time taken: ', round(end-start, 2), 'sec')
 
 ####################################################################################################
-
-
