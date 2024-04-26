@@ -36,7 +36,7 @@ import measure_fits as mfit
 
 ## Making the matplotlib plots look nicer
 settings = {
-    'font.size':22,
+    'font.size':28,
     'axes.linewidth':2.0,
     'xtick.major.size':6.0,
     'xtick.minor.size':4.0,
@@ -319,7 +319,7 @@ class plot_spectra_fits:
         res_hb = (flam_hb - hb_fit(lam_hb))
         hb_res.scatter(lam_hb, res_hb, color = 'r', marker = '.')
         hb_res.axhline(0.0, color = 'k', ls = ':')
-        hb_res.set(xlabel = '$\lambda$')
+        hb_res.set(xlabel = '$\lambda_{rest}$')
         hb_res.set_ylabel('Data - Model', fontsize = 14)
         
 
@@ -372,7 +372,7 @@ class plot_spectra_fits:
         res_oiii = (flam_oiii - oiii_fit(lam_oiii))
         oiii_res.scatter(lam_oiii, res_oiii, color = 'r', marker = '.')
         oiii_res.axhline(0.0, color = 'k', ls = ':')
-        oiii_res.set(xlabel = '$\lambda$')
+        oiii_res.set(xlabel = '$\lambda_{rest}$')
         oiii_res.set_ylabel('Data - Model', fontsize = 14)
 
         ############################################################################################
@@ -452,7 +452,7 @@ class plot_spectra_fits:
         res_nii = (flam_nii - nii_ha_fit(lam_nii))
         ha_res.scatter(lam_nii, res_nii, color = 'r', marker = '.')
         ha_res.axhline(0.0, color = 'k', ls = ':')
-        ha_res.set(xlabel = '$\lambda$')
+        ha_res.set(xlabel = '$\lambda_{rest}$')
         ha_res.set_ylabel('Data - Model', fontsize = 14)
 
         ############################################################################################
@@ -506,7 +506,7 @@ class plot_spectra_fits:
         res_sii = (flam_sii - sii_fit(lam_sii))
         sii_res.scatter(lam_sii, res_sii, color = 'r', marker = '.')
         sii_res.axhline(0.0, color = 'k', ls = ':')
-        sii_res.set(xlabel = '$\lambda$')
+        sii_res.set(xlabel = '$\lambda_{rest}$')
         sii_res.set_ylabel('Data - Model', fontsize = 14)
 
         plt.tight_layout()
@@ -648,7 +648,7 @@ class plot_spectra_fits:
         res_hb_oiii = (flam_hb_oiii - hb_oiii_fit(lam_hb_oiii))
         hb_res.scatter(lam_hb_oiii, res_hb_oiii, color = 'r', marker = '.')
         hb_res.axhline(0.0, color = 'k', ls = ':')
-        hb_res.set(xlabel = '$\lambda$')
+        hb_res.set(xlabel = '$\lambda_{rest}$')
         hb_res.set_ylabel('Data - Model', fontsize = 14)
 
         ############################################################################################
@@ -713,7 +713,7 @@ class plot_spectra_fits:
         res_nii_ha_sii = (flam_nii_ha_sii - nii_ha_sii_fit(lam_nii_ha_sii))
         ha_res.scatter(lam_nii_ha_sii, res_nii_ha_sii, color = 'r', marker = '.')
         ha_res.axhline(0.0, color = 'k', ls = ':')
-        ha_res.set(xlabel = '$\lambda$')
+        ha_res.set(xlabel = '$\lambda_{rest}$')
         ha_res.set_ylabel('Data - Model', fontsize = 14)
 
         plt.tight_layout()
@@ -867,7 +867,7 @@ class plot_fits_from_table:
         hb_res.scatter(lam_hb, res_hb, color = 'k', marker = '.', alpha = 0.7)
         hb_res.axhline(0.0, color = 'grey', ls = ':')
         hb_res.set(yticks = [0])
-        hb_res.set(xlabel = '$\lambda$', ylim = [-10, 10])
+        hb_res.set(xlabel = '$\lambda_{rest}$', ylim = [-10, 10])
 
         ############################################################################################
         ############################## [OIII] spectra + models #####################################
@@ -911,7 +911,7 @@ class plot_fits_from_table:
         res_oiii = (flam_oiii - oiii_fit(lam_oiii))/flam_oiii
         oiii_res.scatter(lam_oiii, res_oiii, color = 'k', marker = '.', alpha = 0.7)
         oiii_res.axhline(0.0, color = 'k', ls = ':')
-        oiii_res.set(xlabel = '$\lambda$', ylim = [-10, 10], yticks = [0])
+        oiii_res.set(xlabel = '$\lambda_{rest}$', ylim = [-10, 10], yticks = [0])
 
         ############################################################################################
         ############################## [NII]+Ha spectra + models ###################################
@@ -977,7 +977,7 @@ class plot_fits_from_table:
         res_nii = (flam_nii - nii_ha_fit(lam_nii))/flam_nii
         ha_res.scatter(lam_nii, res_nii, color = 'k', marker = '.', alpha = 0.7)
         ha_res.axhline(0.0, color = 'k', ls = ':')
-        ha_res.set(xlabel = '$\lambda$', ylim = [-10, 10], yticks = [0])
+        ha_res.set(xlabel = '$\lambda_{rest}$', ylim = [-10, 10], yticks = [0])
 
         ############################################################################################
         ############################## [SII] spectra + models ######################################
@@ -1022,7 +1022,7 @@ class plot_fits_from_table:
         res_sii = (flam_sii - sii_fit(lam_sii))/flam_sii
         sii_res.scatter(lam_sii, res_sii, color = 'k', marker = '.', alpha = 0.7)
         sii_res.axhline(0.0, color = 'k', ls = ':')
-        sii_res.set(xlabel = '$\lambda$', ylim = [-10, 10], yticks = [0])
+        sii_res.set(xlabel = '$\lambda_{rest}$', ylim = [-10, 10], yticks = [0])
         plt.tight_layout()
         plt.close()
 
@@ -1154,7 +1154,7 @@ class plot_fits_from_table:
         res_hb_oiii = (flam_hb_oiii - hb_oiii_fit(lam_hb_oiii))/flam_hb_oiii
         hb_res.scatter(lam_hb_oiii, res_hb_oiii, color = 'k', marker = '.', alpha = 0.7)
         hb_res.axhline(0.0, color = 'k', ls = ':')
-        hb_res.set(xlabel = '$\lambda$', ylim = [-10,10], yticks = [0])
+        hb_res.set(xlabel = '$\lambda_{rest}$', ylim = [-10,10], yticks = [0])
 
         ############################################################################################
         ###################### [NII] + Ha + [SII] spectra and models ###############################
@@ -1213,7 +1213,7 @@ class plot_fits_from_table:
         res_nii_ha_sii = (flam_nii_ha_sii - nii_ha_sii_fit(lam_nii_ha_sii))/flam_nii_ha_sii
         ha_res.scatter(lam_nii_ha_sii, res_nii_ha_sii, color = 'k', marker = '.', alpha = 0.7)
         ha_res.axhline(0.0, color = 'k', ls = ':')
-        ha_res.set(xlabel = '$\lambda$', ylim = [-10, 10], yticks = [0])
+        ha_res.set(xlabel = '$\lambda_{rest}$', ylim = [-10, 10], yticks = [0])
 
         plt.tight_layout()
         plt.close()
