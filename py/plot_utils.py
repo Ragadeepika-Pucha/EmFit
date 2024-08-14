@@ -730,7 +730,7 @@ class plot_fits_from_table:
         1) normal_fit(table, index, title = None)
         2) extreme_fit(table, index, title = None)
     """
-    def normal_fit(table, index, title = None):
+    def normal_fit(table, index, ha_xlim = None, title = None):
         """
         Function to plot the spectra+fits from the table of parameters for default cases.
 
@@ -920,6 +920,10 @@ class plot_fits_from_table:
         ha.plot(lam_nii, nii_ha_fit(lam_nii), color = 'r', lw = 4.0, ls = '--')
         ha.set(ylabel = '$F_{\lambda}$')
         plt.setp(ha.get_xticklabels(), visible = False)
+        
+        if (ha_xlim is not None):
+            ha.set(xlim = ha_xlim)
+        
 
         ## [NII] + Ha continuum
         nii_ha_cont = nii_ha_fit['nii_ha_cont'].amplitude.value
@@ -931,12 +935,12 @@ class plot_fits_from_table:
 
         sig_nii = table['NII6583_SIGMA'].data[index]
         ha.annotate('$\sigma$ ([NII]) = \n'+str(round(sig_nii, 1))+' km/s', \
-                    xy = (6620, 0.85), xycoords = ha.get_xaxis_transform(), \
+                    xy = (0.8, 0.85), xycoords = (ha.get_yaxis_transform(), ha.get_xaxis_transform()), \
                     fontsize = 20, color = 'k')
 
         sig_ha = table['HA_N_SIGMA'].data[index]
         ha.annotate('$\sigma \\rm(H\\alpha)$ = \n'+str(round(sig_ha, 1))+' km/s', \
-                    xy = (6620, 0.7), xycoords = ha.get_xaxis_transform(), \
+                    xy = (0.8, 0.7), xycoords = (ha.get_yaxis_transform(), ha.get_xaxis_transform()), \
                     fontsize = 20, color = 'k')
 
         ## Outflow components, if available
@@ -947,12 +951,12 @@ class plot_fits_from_table:
 
             sig_nii_out = table['NII6583_OUT_SIGMA'].data[index]
             ha.annotate('$\sigma$ ([NII];out) = \n'+str(round(sig_nii_out, 1))+' km/s', \
-                        xy = (6620, 0.55), xycoords = ha.get_xaxis_transform(), \
+                        xy = (0.8, 0.55), xycoords = (ha.get_yaxis_transform(), ha.get_xaxis_transform()), \
                         fontsize = 20, color = 'k')
 
             sig_ha_out = table['HA_OUT_SIGMA'].data[index]
             ha.annotate('$\sigma \\rm(H\\alpha;out)$ = \n'+str(round(sig_ha_out, 1))+' km/s', \
-                        xy = (6620, 0.4), xycoords = ha.get_xaxis_transform(), \
+                        xy = (0.8, 0.4), xycoords = (ha.get_yaxis_transform(), ha.get_xaxis_transform()), \
                         fontsize = 20, color = 'k')
 
         ## Broad component, if available
@@ -961,16 +965,17 @@ class plot_fits_from_table:
 
             sig_ha_b = table['HA_B_SIGMA'].data[index]
             fwhm_ha_b = 2.355*sig_ha_b
-            ha.annotate('FWHM $\\rm(H\\alpha;b)$ = '+str(round(fwhm_ha_b, 1))+' km/s', \
-                        xy = (6400, 0.7), xycoords = ha.get_xaxis_transform(), \
+            ha.annotate('FWHM $\\rm(H\\alpha;b)$ = \n'+str(round(fwhm_ha_b, 1))+' km/s', \
+                        xy = (0.02, 0.65), xycoords = (ha.get_yaxis_transform(), ha.get_xaxis_transform()), \
                         fontsize = 20, color = 'k')
 
+
         ## Rchi2 value
-        ha.annotate('$H\\alpha$ + [NII]6548,6583', xy = (6400, 0.9),\
-                    xycoords = ha.get_xaxis_transform(),\
+        ha.annotate('$H\\alpha$ + [NII]6548,6583', xy = (0.02, 0.9),\
+                    xycoords = (ha.get_yaxis_transform(), ha.get_xaxis_transform()),\
                     fontsize = 20, color = 'k')
         ha.annotate('$\chi^{2}_{red}$ = '+str(round(rchi2_nii_ha, 2)),\
-                    xy = (6400, 0.8), xycoords = ha.get_xaxis_transform(),\
+                    xy = (0.02, 0.8), xycoords = (ha.get_yaxis_transform(), ha.get_xaxis_transform()),\
                     fontsize = 20, color = 'k')
 
         ## [NII]+Ha fit residuals
@@ -978,6 +983,8 @@ class plot_fits_from_table:
         ha_res.scatter(lam_nii, res_nii, color = 'k', marker = '.', alpha = 0.7)
         ha_res.axhline(0.0, color = 'k', ls = ':')
         ha_res.set(xlabel = '$\lambda_{rest}$', ylim = [-10, 10], yticks = [0])
+        if (ha_xlim is not None):
+            ha_res.set(xlim = ha_xlim)
 
         ############################################################################################
         ############################## [SII] spectra + models ######################################
@@ -1223,7 +1230,7 @@ class plot_fits_from_table:
 ####################################################################################################
 ####################################################################################################
 
-def plot_from_params(table, index, title = None):
+def plot_from_params(table, index, ha_xlim = None, title = None):
     """
     Function to plot the spectra+fits from the table of parameters.
     
@@ -1246,7 +1253,7 @@ def plot_from_params(table, index, title = None):
     
     if (table['HB_NDOF'].data[index] != 0):
         ## Default mode fit
-        fig = plot_fits_from_table.normal_fit(table, index, title = title)
+        fig = plot_fits_from_table.normal_fit(table, index, ha_xlim, title = title)
         
     else:
         ## EBL mode fit
