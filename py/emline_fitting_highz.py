@@ -4,9 +4,10 @@ It consists of the following functions:
     1) fit_highz_spectra(specprod, survey, program, healpix, targetid, z)
     2) fit_original(lam_rest, flam_rest, ivar_rest, rsigma)
     3) fit_iteration(lam_rest, flam_new, ivar_rest, rsigma, fit_orig, psel)
+    4) construct_fits_from_table(t, index)
 
 Author : Ragadeepika Pucha
-Version : 2024, August 30
+Version : 2024, September 2
 """
 
 ####################################################################################################
@@ -640,3 +641,90 @@ class fit_highz_spectra_fixed_hb:
 
 ####################################################################################################
 ####################################################################################################
+
+def construct_fits_from_table(t, index):
+    """
+    Construct fits of a particular source from the table of parameters.
+    This is for high-z sources.
+    
+    Parameters
+    ----------
+    t : Astropy Table
+        Table of fit parameters
+        
+    index : int
+        Index number of the source
+        
+    Returns
+    -------
+    fits : list
+        List of [Hb, [OIII]] fits
+    
+    """
+
+    ######################################################################################
+    ## Hbeta model
+    hb_models = []
+
+    ## Hb continuum model
+    hb_cont = Const1D(amplitude = t['HB_CONTINUUM'].data[index], name = 'hb_cont')
+
+    ## Gaussian model for the narrow component
+    gfit_hb_n = Gaussian1D(amplitude = t['HB_N_AMPLITUDE'].data[index], \
+                          mean = t['HB_N_MEAN'].data[index], \
+                          stddev = t['HB_N_STD'].data[index], name = 'hb_n')
+
+    gfit_hb = hb_cont + gfit_hb_n
+
+    if (t['HB_B_MEAN'].data[index] != 0):
+        ## Gaussian model for the broad component if available
+        gfit_hb_b = Gaussian1D(amplitude = t['HB_B_AMPLITUDE'].data[index], \
+                              mean = t['HB_B_MEAN'].data[index], \
+                              stddev = t['HB_B_STD'].data[index], name = 'hb_b')
+
+        hb_models.append(gfit_hb_b)
+
+    ## Total Hb model
+    for model in hb_models:
+        gfit_hb = gfit_hb + model
+
+    ######################################################################################
+    ######################################################################################
+    ## [OIII] model
+
+    ## [OIII] continuum model
+    oiii_cont = Const1D(amplitude = t['OIII_CONTINUUM'].data[index], name = 'oiii_cont')
+    ## Gaussian model for [OIII]4959 narrow component
+    gfit_oiii4959 = Gaussian1D(amplitude = t['OIII4959_AMPLITUDE'].data[index], \
+                              mean = t['OIII4959_MEAN'].data[index], \
+                               stddev = t['OIII4959_STD'].data[index], name = 'oiii4959')
+    ## Gaussian model for [OIII]5007 narrow component
+    gfit_oiii5007 = Gaussian1D(amplitude = t['OIII5007_AMPLITUDE'].data[index], \
+                              mean = t['OIII5007_MEAN'].data[index], \
+                              stddev = t['OIII5007_STD'].data[index], name = 'oiii5007')
+
+    gfit_oiii = oiii_cont + gfit_oiii4959 + gfit_oiii5007
+
+    oiii_models = []
+
+    if (t['OIII5007_OUT_MEAN'].data[index] != 0):
+        ## Gaussian model for [OIII]4959 outflow component if available
+        gfit_oiii4959_out = Gaussian1D(amplitude = t['OIII4959_OUT_AMPLITUDE'].data[index], \
+                                      mean = t['OIII4959_OUT_MEAN'].data[index], \
+                                      stddev = t['OIII4959_OUT_STD'].data[index], \
+                                       name = 'oiii4959_out')
+        ## Gaussian model for [OIII]5007 outflow component if available
+        gfit_oiii5007_out = Gaussian1D(amplitude = t['OIII5007_OUT_AMPLITUDE'].data[index], \
+                                      mean = t['OIII5007_OUT_MEAN'].data[index], \
+                                      stddev = t['OIII5007_OUT_STD'].data[index], \
+                                       name = 'oiii5007_out')
+
+        oiii_models.append(gfit_oiii4959_out)
+        oiii_models.append(gfit_oiii5007_out)
+    ## Total [OIII] model
+    for model in oiii_models:
+        gfit_oiii = gfit_oiii + model
+
+    fits = [gfit_hb, gfit_oiii]
+    
+    return (fits)
