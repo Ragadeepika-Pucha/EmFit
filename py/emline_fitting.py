@@ -716,7 +716,6 @@ class construct_fits_from_table:
             List of [Hb, [OIII], [NII]+Ha, [SII]] fits
 
         """
-
         ######################################################################################
         ## Hbeta model
         hb_models = []
@@ -788,6 +787,7 @@ class construct_fits_from_table:
         for model in oiii_models:
             gfit_oiii = gfit_oiii + model
 
+          
         ######################################################################################
         ######################################################################################
         ## [NII] + Ha model
@@ -956,6 +956,7 @@ class construct_fits_from_table:
         for model in hb_oiii_models:
             gfit_hb_oiii = gfit_hb_oiii + model
 
+    
         ######################################################################################
         ######################################################################################
         ## [NII]+Ha+[SII] models
