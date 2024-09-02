@@ -29,9 +29,13 @@ The different functions are divided into different classes for different emissio
     13) fit_extreme_broadline_sources.fit_hb_oiii_2comp(lam_hb_oiii, flam_hb_oiii, ivar_hb_oiii, \
                                                         rsig_hb_oiii, nii_ha_sii_bestfit, \
                                                         rsig_nii_ha_sii)
+    14) fit_highz_hb_oiii_lines.fit_free_hb(lam_hb, flam_hb, ivar_hb, rsig_hb, priors = [4,5], \
+                                            broad_comp = True)
+    15) fit_highz_hb_oiii_lines.fit_fixed_hb(lam_hb, flam_hb, ivar_hb, rsig_hb, oiii_bestfit, \
+                                            rsig_oiii, priors = [4,5], broad_comp = True)
                                                         
 Author : Ragadeepika Pucha
-Version : 2024, April 22
+Version : 2024, August 30
 """
 
 ###################################################################################################
@@ -1497,108 +1501,6 @@ class fit_hb_line:
         return (gfit)
     
 ####################################################################################################
-
-    def fit_free_hb_one_component(lam_hb, flam_hb, ivar_hb, rsig_hb, \
-                                  priors = [4,5], broad_comp = True):
-        """
-        Function to fit Hb freely. This is useful for high-redshift sources, 
-        where [SII] and Ha are not available.
-        
-        The code can fit with and without a broad component, depending on whether the
-        broad_comp keyword is set to True/False.
-        
-        Parameters
-        ----------
-        lam_hb : numpy array
-            Wavelength array of the Hb region.
-            
-        flam_hb : numpy array
-            Flux array of the spectra in the Hb region
-            
-        ivar_hb : numpy array
-            Inverse variance array of the spectra in the Hb region
-            
-        rsig_hb : float
-            Median Resolution element in the Hb region
-            
-        priors : list
-            Initial priors for the amplitude and stddev of the broad component
-            
-        broad_comp : bool
-            Whether or not to add a broad component for the fit
-            Default is True
-        
-        Returns
-        -------
-        gfit : Astropy model
-            Best-fit "without-broad" or "with-broad" component
-            Depends on what the broad_comp is set to.
-        """
-        
-        ## Initial estimate of amplitude of Hb
-        amp_hb = np.max(flam_hb[(lam_hb >= 4861)&(lam_hb <= 4863)])
-        
-        ## Continuum
-        cont = Const1D(amplitude = 0.0, name = 'hb_cont')
-                
-        if (broad_comp == True):
-            ## Narrow Hb Gaussian
-            g_hb_n = Gaussian1D(amplitude = amp_hb/2, mean = 4862.683, \
-                               stddev = 3.0, name = 'hb_n', \
-                               bounds = {'amplitude' : (0.0, None)})
-            ## Broad component
-            g_hb_b = Gaussian1D(amplitude = amp_hb/priors[0], mean = 4862.683, \
-                               stddev = priors[1], name = 'hb_b', \
-                               bounds = {'amplitude' : (0.0, None)})
-            
-            ## Initial Fit
-            g_init = cont + g_hb_n + g_hb_b
-            fitter_b = fitting.LevMarLSQFitter()
-            
-            gfit_b = fitter_b(g_init, lam_hb, flam_hb, \
-                             weights = np.sqrt(ivar_hb), maxiter = 1000)
-            
-            ## Exchange broad and narrow Hb components
-            ## If narrow Hb component has lower amplitude and broader sigma
-            hb_b_amp = gfit_b['hb_b'].amplitude.value
-            hb_n_amp = gfit_b['hb_n'].amplitude.value
-            hb_b_sig, _ = mfit.correct_for_rsigma(gfit_b['hb_b'].mean.value, \
-                                                  gfit_b['hb_b'].stddev.value, \
-                                                  rsig_hb)
-            hb_n_sig, _ = mfit.correct_for_rsigma(gfit_b['hb_n'].mean.value, \
-                                                  gfit_b['hb_n'].stddev.value, \
-                                                  rsig_hb)
-            
-            if ((hb_b_amp > hb_n_amp)&(hb_b_sig < hb_n_sig)):
-                g_hb_n = Gaussian1D(amplitude = gfit_b['hb_b'].amplitude, \
-                                   mean = gfit_b['hb_b'].mean, \
-                                   stddev = gfit_b['hb_b'].stddev, \
-                                   name = 'hb_n')
-                g_hb_b = Gaussian1D(amplitude = gfit_b['hb_n'].amplitude, \
-                                   mean = gfit_b['hb_n'].mean, \
-                                   stddev = gfit_b['hb_n'].stddev, \
-                                   name = 'hb_b')
-                gfit_b = gfit_b['hb_cont'] + g_hb_n + g_hb_b
-                
-            ## Returns fit with broad component if broad_comp = True
-            return (gfit_b)
-        
-        else:
-            ## Narrow Hb Gaussian
-            g_hb_n = Gaussian1D(amplitude = amp_hb, mean = 4862.683, \
-                               stddev = 3.0, name = 'hb_n', \
-                               bounds = {'amplitude' : (0.0, None)})
-            ## Initial fit
-            g_init = cont + g_hb_n
-            fitter_no_b = fitting.LevMarLSQFitter()
-            
-            gfit_no_b = fitter_no_b(g_init, lam_hb, flam_hb, weights = np.sqrt(ivar_hb), \
-                                   maxiter = 1000)
-            
-            ## Returns fit without broad component if broad_comp = False
-            return (gfit_no_b)
-            
-####################################################################################################
 ####################################################################################################
 
 class fit_extreme_broadline_sources:
@@ -2131,6 +2033,256 @@ class fit_extreme_broadline_sources:
             gfit_oiii4959_out + gfit_oiii5007_out
 
         return (gfit)
+
+####################################################################################################
+####################################################################################################
+
+class fit_highz_hb_oiii_lines:
+    """
+    Different functions associated with fitting z > 0.45 sources, specifically Hb and [OIII] lines:
+        1) fit_free_hb(lam_hb, flam_hb, ivar_hb, rsig_hb, \
+                        priors = [4,5], broad_comp = True)
+        2) fit_fixed_hb(lam_hb, flam_hb, ivar_hb, rsig_hb, oiii_bestfit, rsig_oiii, \
+                        priors = [4,5], broad_comp = True)
+    """
+    
+    def fit_free_hb(lam_hb, flam_hb, ivar_hb, rsig_hb, \
+                    priors = [4,5], broad_comp = True):
+        """
+        Function to fit Hb freely. This is useful for high-redshift sources, 
+        where [SII] and Ha are not available.
+        
+        The code can fit with and without a broad component, depending on whether the
+        broad_comp keyword is set to True/False.
+        
+        Parameters
+        ----------
+        lam_hb : numpy array
+            Wavelength array of the Hb region.
+            
+        flam_hb : numpy array
+            Flux array of the spectra in the Hb region
+            
+        ivar_hb : numpy array
+            Inverse variance array of the spectra in the Hb region
+            
+        rsig_hb : float
+            Median Resolution element in the Hb region
+            
+        priors : list
+            Initial priors for the amplitude and stddev of the broad component
+            
+        broad_comp : bool
+            Whether or not to add a broad component for the fit
+            Default is True
+        
+        Returns
+        -------
+        gfit : Astropy model
+            Best-fit "without-broad" or "with-broad" component
+            Depends on what the broad_comp is set to.
+        """
+        
+        ## Initial estimate of amplitude of Hb
+        amp_hb = np.max(flam_hb[(lam_hb >= 4859)&(lam_hb <= 4863)])
+        
+        ## Continuum
+        cont = Const1D(amplitude = 0.0, name = 'hb_cont')
+                
+        if (broad_comp == True):
+            ## Narrow Hb Gaussian
+            g_hb_n = Gaussian1D(amplitude = amp_hb/2, mean = 4862.683, \
+                               stddev = 3.0, name = 'hb_n', \
+                               bounds = {'amplitude' : (0.0, None)})
+            ## Broad component
+            g_hb_b = Gaussian1D(amplitude = amp_hb/priors[0], mean = 4862.683, \
+                               stddev = priors[1], name = 'hb_b', \
+                               bounds = {'amplitude' : (0.0, None)})
+            
+            ## Initial Fit
+            g_init = cont + g_hb_n + g_hb_b
+            fitter_b = fitting.LevMarLSQFitter()
+            
+            gfit_b = fitter_b(g_init, lam_hb, flam_hb, \
+                             weights = np.sqrt(ivar_hb), maxiter = 1000)
+            
+            ## Exchange broad and narrow Hb components
+            ## If narrow Hb component has lower amplitude and broader sigma
+            hb_b_amp = gfit_b['hb_b'].amplitude.value
+            hb_n_amp = gfit_b['hb_n'].amplitude.value
+            hb_b_sig, _ = mfit.correct_for_rsigma(gfit_b['hb_b'].mean.value, \
+                                                  gfit_b['hb_b'].stddev.value, \
+                                                  rsig_hb)
+            hb_n_sig, _ = mfit.correct_for_rsigma(gfit_b['hb_n'].mean.value, \
+                                                  gfit_b['hb_n'].stddev.value, \
+                                                  rsig_hb)
+            
+            if ((hb_b_amp > hb_n_amp)&(hb_b_sig < hb_n_sig)):
+                g_hb_n = Gaussian1D(amplitude = gfit_b['hb_b'].amplitude, \
+                                   mean = gfit_b['hb_b'].mean, \
+                                   stddev = gfit_b['hb_b'].stddev, \
+                                   name = 'hb_n')
+                g_hb_b = Gaussian1D(amplitude = gfit_b['hb_n'].amplitude, \
+                                   mean = gfit_b['hb_n'].mean, \
+                                   stddev = gfit_b['hb_n'].stddev, \
+                                   name = 'hb_b')
+                gfit_b = gfit_b['hb_cont'] + g_hb_n + g_hb_b
+                
+            ## Returns fit with broad component if broad_comp = True
+            return (gfit_b)
+        
+        else:
+            ## Narrow Hb Gaussian
+            g_hb_n = Gaussian1D(amplitude = amp_hb, mean = 4862.683, \
+                               stddev = 3.0, name = 'hb_n', \
+                               bounds = {'amplitude' : (0.0, None)})
+            ## Initial fit
+            g_init = cont + g_hb_n
+            fitter_no_b = fitting.LevMarLSQFitter()
+            
+            gfit_no_b = fitter_no_b(g_init, lam_hb, flam_hb, weights = np.sqrt(ivar_hb), \
+                                   maxiter = 1000)
+            
+            ## Returns fit without broad component if broad_comp = False
+            return (gfit_no_b)
+        
+####################################################################################################
+
+    def fit_fixed_hb(lam_hb, flam_hb, ivar_hb, rsig_hb, oiii_bestfit, rsig_oiii, \
+                     priors = [4,5], broad_comp = True):
+        """
+        Function to fit Hb. The sigma of Hb is tied to [OIII] in velocity space.
+        This is for high-redshift sources, where [SII] and Ha are not available.
+        
+        The code can fit with and without a broad component, depending on whether the
+        broad_comp keyword is set to True/False.
+        
+        Parameters
+        ----------
+        lam_hb : numpy array
+            Wavelength array of the Hb region.
+            
+        flam_hb : numpy array
+            Flux array of the spectra in the Hb region
+            
+        ivar_hb : numpy array
+            Inverse variance array of the spectra in the Hb region
+            
+        rsig_hb : float
+            Median Resolution element in the Hb region
+            
+        oiii_bestfit: Astropy model
+            Bestfit for [OIII] emission-lines
+            
+        rsig_oiii : float
+            Median Resolution element in the [OIII] region
+            
+        priors : list
+            Initial priors for the amplitude and stddev of the broad component
+            
+        broad_comp : bool
+            Whether or not to add a broad component for the fit
+            Default is True
+        
+        Returns
+        -------
+        gfit : Astropy model
+            Best-fit "without-broad" or "with-broad" component
+            Depends on what the broad_comp is set to.
+        """
+        
+        ## Initial estimate of amplitude of Hb
+        amp_hb = np.max(flam_hb[(lam_hb >= 4861)&(lam_hb <= 4863)])
+
+        ## Continuum
+        cont = Const1D(amplitude = 0.0, name = 'hb_cont')
+
+        ## Initial estimate for the standard deviation of Hb
+        oiii_std = oiii_bestfit['oiii5007'].stddev.value
+        std_hb = (4862.683/oiii_bestfit['oiii5007'].mean.value)*oiii_std
+
+        if (broad_comp == True):
+            ## Narrow Hb Gaussian
+            g_hb_n = Gaussian1D(amplitude = amp_hb, mean = 4862.683, \
+                               stddev = std_hb, name = 'hb_n', \
+                               bounds = {'amplitude' : (0.0, None)})
+
+            ## Tie standard deviation of the narrow Hb component to narrow [OIII]
+            ## Intrinsic sigma values match with [OIII]
+            def tie_std_hb(model):
+                term1 = (model['hb_n'].mean/oiii_bestfit['oiii5007'].mean)**2
+                term2 = ((oiii_bestfit['oiii5007'].stddev)**2) - (rsig_oiii**2)
+                term3 = (term1*term2)+(rsig_hb**2)
+
+                return (np.sqrt(term3))
+
+            g_hb_n.stddev.tied = tie_std_hb
+            g_hb_n.stddev.fixed = True
+
+            ## Broad component
+            g_hb_b = Gaussian1D(amplitude = amp_hb/priors[0], mean = 4862.683, \
+                               stddev = priors[1], name = 'hb_b', \
+                               bounds = {'amplitude' : (0.0, None)})
+
+            ## Initial Fit
+            g_init = cont + g_hb_n + g_hb_b
+            fitter_b = fitting.LevMarLSQFitter()
+
+            gfit_b = fitter_b(g_init, lam_hb, flam_hb, \
+                             weights = np.sqrt(ivar_hb), maxiter = 1000)
+
+            ## Exchange broad and narrow Hb components
+            ## If narrow Hb component has lower amplitude and broader sigma
+            hb_b_amp = gfit_b['hb_b'].amplitude.value
+            hb_n_amp = gfit_b['hb_n'].amplitude.value
+            hb_b_sig, _ = mfit.correct_for_rsigma(gfit_b['hb_b'].mean.value, \
+                                                  gfit_b['hb_b'].stddev.value, \
+                                                  rsig_hb)
+            hb_n_sig, _ = mfit.correct_for_rsigma(gfit_b['hb_n'].mean.value, \
+                                                  gfit_b['hb_n'].stddev.value, \
+                                                  rsig_hb)
+
+            if ((hb_b_amp > hb_n_amp)&(hb_b_sig < hb_n_sig)):
+                g_hb_n = Gaussian1D(amplitude = gfit_b['hb_b'].amplitude, \
+                                   mean = gfit_b['hb_b'].mean, \
+                                   stddev = gfit_b['hb_b'].stddev, \
+                                   name = 'hb_n')
+                g_hb_b = Gaussian1D(amplitude = gfit_b['hb_n'].amplitude, \
+                                   mean = gfit_b['hb_n'].mean, \
+                                   stddev = gfit_b['hb_n'].stddev, \
+                                   name = 'hb_b')
+                gfit_b = gfit_b['hb_cont'] + g_hb_n + g_hb_b
+
+            ## Returns fit with broad component if broad_comp = True
+            return (gfit_b)
+
+        else:
+            ## Narrow Hb Gaussian
+            g_hb_n = Gaussian1D(amplitude = amp_hb, mean = 4862.683, \
+                               stddev = std_hb, name = 'hb_n', \
+                               bounds = {'amplitude' : (0.0, None)})
+
+            ## Tie standard deviation of the narrow Hb component to narrow [OIII]
+            ## Intrinsic sigma values match with [OIII]
+            def tie_std_hb(model):
+                term1 = (model['hb_n'].mean/oiii_bestfit['oiii5007'].mean)**2
+                term2 = ((oiii_bestfit['oiii5007'].stddev)**2) - (rsig_oiii**2)
+                term3 = (term1*term2)+(rsig_hb**2)
+
+                return (np.sqrt(term3))
+
+            g_hb_n.stddev.tied = tie_std_hb
+            g_hb_n.stddev.fixed = True
+
+            ## Initial fit
+            g_init = cont + g_hb_n
+            fitter_no_b = fitting.LevMarLSQFitter()
+
+            gfit_no_b = fitter_no_b(g_init, lam_hb, flam_hb, weights = np.sqrt(ivar_hb), \
+                                   maxiter = 1000)
+
+            ## Returns fit without broad component if broad_comp = False
+            return (gfit_no_b)
 
 ####################################################################################################
 ####################################################################################################
