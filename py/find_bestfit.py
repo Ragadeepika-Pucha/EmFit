@@ -22,7 +22,7 @@ It consists of the following functions:
                                         oiii_bestfit, rsig_oiii)
 
 Author : Ragadeepika Pucha
-Version : 2024, August 30
+Version : 2024, October 24
 """
 
 ###################################################################################################
@@ -915,114 +915,13 @@ def find_hb_oiii_best_fit(lam_hb_oiii, flam_hb_oiii, ivar_hb_oiii, rsig_hb_oiii,
 ####################################################################################################
 ####################################################################################################
 
-class highz_fit:
+class highz_hb_fit:
     """
-    This class contains functions related to High-z Hb and [OIII] Fitting:
-        1) find_free_hb_best_fit(lam_hb, flam_hb, ivar_hb, rsig_hb)
-        2) find_fixed_hb_best_fit(lam_hb, flam_hb, ivar_hb, rsig_hb)
+    This class contains functions related to High-redshift Hb Fit (Fixed Version)
+        1) fixed_hb_one_component(lam_hb, flam_hb, ivar_hb, rsig_hb, oiii_bestfit, rsig_oiii)
+        2) fixed_hb_two_components(lam_hb, flam_hb, ivar_hb, rsig_hb, oiii_bestfit, rsig_oiii)
     """
-    def find_free_hb_best_fit(lam_hb, flam_hb, ivar_hb, rsig_hb):
-        """
-        Find bestfit for Hb when fit freely. This is for high-redshift galaxies 
-        when [SII] and Ha are not available.
-
-        The code fits both broad and non-broad component fits and picks the best version.
-        The broad component fit is picked if the p-value for chi2 distribution is < 3e-7 -->
-        5-sigma confidence for an extra component statistically.
-
-        Parameters
-        ----------
-        lam_hb : numpy array
-            Wavelength array of the Hb region
-
-        flam_hb : numpy array
-            Flux array of the spectra in the Hb region
-
-        ivar_hb : numpy array
-            Inverse variance array of the spectra in the Hb region.
-
-        rsig_hb : float
-            Median resolution element in the Hb region.
-
-        Returns
-        -------
-        hb_bestfit : Astropy model
-            Best-fit "without-broad" or "with-broad" component
-
-        n_dof : int
-            Number of degrees of freedom
-
-        psel : list
-            Selected prior if the bestmodel fit has a broad component
-            psel = [] if there is no broad component
-        """
-
-        ## Single component model
-        ## Without broad component
-        gfit_no_b = fl.fit_highz_hb_oiii_lines.fit_free_hb(lam_hb, flam_hb, ivar_hb, \
-                                                           rsig_hb, broad_comp = False)
-
-        ## With broad component
-        ## Test with different priors and select the one with the least chi2
-        priors_list = [[4,5], [3,6], [5,8]]
-        gfits = []
-        chi2s = []
-
-        for p in priors_list:
-            gfit = fl.fit_highz_hb_oiii_lines.fit_free_hb(lam_hb, flam_hb, ivar_hb, rsig_hb, \
-                                                          priors = p, broad_comp = True)
-            chi2_fit = mfit.calculate_chi2(flam_hb, gfit(lam_hb), ivar_hb)
-            gfits.append(gfit)
-            chi2s.append(chi2_fit)
-
-        ## Select the broad-component fit with the minimum chi2s
-        gfit_b = gfits[np.argmin(chi2s)]
-
-        ## Select the prior that leads to the bestfit
-        psel = priors_list[np.argmin(chi2s)]
-
-        ## Chi2 values for both the fits
-        chi2_no_b = mfit.calculate_chi2(flam_hb, gfit_no_b(lam_hb), ivar_hb)
-        chi2_b = mfit.calculate_chi2(flam_hb, gfit_b(lam_hb), ivar_hb)
-
-        ## Statistical check for the broad component
-        df = 6-3
-        del_chi2 = chi2_no_b - chi2_b
-        p_val = chi2.sf(del_chi2, df)
-
-        ## Broad Ha width
-        hb_b_sig, _ = mfit.correct_for_rsigma(gfit_b['hb_b'].mean.value, \
-                                              gfit_b['hb_b'].stddev.value, \
-                                              rsig_hb)
-        hb_b_fwhm = mfit.sigma_to_fwhm(hb_b_sig)
-
-        ## If narrow Hb flux is zero, but broad Hb is not zero
-        ## If broad Hb flux = 0
-        ## Default to no broad fit in these cases
-        hb_n_flux = mfit.compute_emline_flux(gfit_b['hb_n'].amplitude.value, \
-                                            gfit_b['hb_n'].stddev.value)
-        hb_b_flux = mfit.compute_emline_flux(gfit_b['hb_b'].amplitude.value, \
-                                            gfit_b['hb_b'].stddev.value)
-
-        default_cond = ((hb_n_flux == 0)&(hb_b_flux != 0))|(hb_b_flux == 0)
-
-        ## Conditions for selecting a broad component
-        ## 5-sigma confidence of an extra component is satisfied
-        ## Broad component FWHM > 300 km/s
-        if ((p_val <= 3e-7)&(hb_b_fwhm >= 300)&(~default_cond)):
-            hb_bestfit = gfit_b
-            n_dof = 6
-            psel = psel
-        else:
-            hb_bestfit = gfit_no_b
-            n_dof = 3
-            psel = []
-
-        return (hb_bestfit, n_dof, psel)
-    
-####################################################################################################
-
-    def find_fixed_hb_best_fit(lam_hb, flam_hb, ivar_hb, rsig_hb, oiii_bestfit, rsig_oiii):
+    def fixed_hb_one_component(lam_hb, flam_hb, ivar_hb, rsig_hb, oiii_bestfit, rsig_oiii):
         """
         Find bestfit for the sigma of Hb is tied to [OIII].
         This is for high-redshift galaxies when [SII] and Ha are not available.
@@ -1066,9 +965,9 @@ class highz_fit:
 
         ## Single component model
         ## Without broad component
-        gfit_no_b = fl.fit_highz_hb_oiii_lines.fit_fixed_hb(lam_hb, flam_hb, ivar_hb, rsig_hb, \
-                                                            oiii_bestfit, rsig_oiii, broad_comp = False)
-
+        gfit_no_b = fl.fit_highz_hb_line.fit_fixed_hb_one_component(lam_hb, flam_hb, ivar_hb, \
+                                                                    rsig_hb, oiii_bestfit, \
+                                                                    rsig_oiii, broad_comp = False)
         ## With broad component
         ## Test with different priors and select the one with the least chi2
         priors_list = [[4,5], [3,6], [5,8]]
@@ -1076,9 +975,9 @@ class highz_fit:
         chi2s = []
 
         for p in priors_list:
-            gfit = fl.fit_highz_hb_oiii_lines.fit_fixed_hb(lam_hb, flam_hb, ivar_hb, rsig_hb, \
-                                                           oiii_bestfit, rsig_oiii, \
-                                                           priors = p, broad_comp = True)
+            gfit = fl.fit_highz_hb_line.fit_fixed_hb_one_component(lam_hb, flam_hb, ivar_hb, \
+                                                                   rsig_hb, oiii_bestfit, rsig_oiii, \
+                                                                   priors = p, broad_comp = True)
             chi2_fit = mfit.calculate_chi2(flam_hb, gfit(lam_hb), ivar_hb)
             gfits.append(gfit)
             chi2s.append(chi2_fit)
@@ -1098,7 +997,7 @@ class highz_fit:
         del_chi2 = chi2_no_b - chi2_b
         p_val = chi2.sf(del_chi2, df)
 
-        ## Broad Ha width
+        ## Broad Hb width
         hb_b_sig, _ = mfit.correct_for_rsigma(gfit_b['hb_b'].mean.value, \
                                               gfit_b['hb_b'].stddev.value, \
                                               rsig_hb)
@@ -1127,6 +1026,298 @@ class highz_fit:
             psel = []
 
         return (hb_bestfit, n_dof, psel)
+    
+####################################################################################################
 
+    def fixed_hb_two_components(lam_hb, flam_hb, ivar_hb, rsig_hb, oiii_bestfit, rsig_oiii):
+        """
+        Find bestfit for the sigma of Hb and outflow component is tied to [OIII] components.
+        This is for high-redshift galaxies when [SII] and Ha are not available.
+
+        The code fits both broad and non-broad component fits and picks the best version.
+        The broad component fit is picked if the p-value for chi2 distribution is < 3e-7 -->
+        5-sigma confidence for an extra component statistically.
+
+        Parameters
+        ----------
+        lam_hb : numpy array
+            Wavelength array of the Hb region
+
+        flam_hb : numpy array
+            Flux array of the spectra in the Hb region
+
+        ivar_hb : numpy array
+            Inverse variance array of the spectra in the Hb region.
+
+        rsig_hb : float
+            Median resolution element in the Hb region.
+            
+        oiii_bestfit: Astropy model
+            Bestfit for [OIII] emission-lines
+            
+        rsig_oiii : float
+            Median Resolution element in the [OIII] region
+
+        Returns
+        -------
+        hb_bestfit : Astropy model
+            Best-fit "without-broad" or "with-broad" component
+
+        n_dof : int
+            Number of degrees of freedom
+
+        psel : list
+            Selected prior if the bestmodel fit has a broad component
+            psel = [] if there is no broad component
+        """
+        
+        ## Two component model
+        ## Without broad component
+        gfit_no_b = fl.fit_highz_hb_line.fit_fixed_hb_two_components(lam_hb, flam_hb, ivar_hb, \
+                                                                     rsig_hb, oiii_bestfit, \
+                                                                     rsig_oiii, broad_comp = False)
+        
+        ## With broad component
+        ## Test with different priors and select the one with the least chi2
+        priors_list = [[4,5], [3,6], [5,8]]
+        gfits = []
+        chi2s = []
+        
+        for p in priors_list:
+            gfit = fl.fit_highz_hb_line.fit_fixed_hb_two_components(lam_hb, flam_hb, ivar_hb, \
+                                                                   rsig_hb, oiii_bestfit, rsig_oiii, \
+                                                                   priors = p, broad_comp = True)
+            chi2_fit = mfit.calculate_chi2(flam_hb, gfit(lam_hb), ivar_hb)
+            gfits.append(gfit)
+            chi2s.append(chi2_fit)
+            
+        ## Select the broad-component fit with the minimum chi2
+        gfit_b = gfits[np.argmin(chi2s)]
+        
+        ## Select the prior that leads to the bestfit
+        psel = priors_list[np.argmin(chi2s)]
+        
+        ## Chi2 values for both the fits
+        chi2_no_b = mfit.calculate_chi2(flam_hb, gfit_no_b(lam_hb), ivar_hb)
+        chi2_b = mfit.calculate_chi2(flam_hb, gfit_b(lam_hb), ivar_hb)
+        
+        ## Statistical check for a broad component
+        df = 7-4
+        del_chi2 = chi2_no_b - chi2_b
+        p_val = chi2.sf(del_chi2, df)
+        
+        ## Broad Hb width
+        hb_b_sig, _ = mfit.correct_for_rsigma(gfit_b['hb_b'].mean.value, \
+                                             gfit_b['hb_b'].stddev.value, \
+                                             rsig_hb)
+        hb_b_fwhm = mfit.sigma_to_fwhm(hb_b_sig)
+        
+        ## If narrow/outflow Hb flux is zero, but broad Hb is not zero
+        ## If broad Hb flux = 0
+        ## Default to no broad fit in these cases
+        
+        hb_b_flux = mfit.compute_emline_flux(gfit_b['hb_b'].amplitude.value, \
+                                            gfit_b['hb_b'].stddev.value)
+        hb_n_flux = mfit.compute_emline_flux(gfit_b['hb_n'].amplitude.value, \
+                                            gfit_b['hb_n'].stddev.value)
+        hb_out_flux = mfit.compute_emline_flux(gfit_b['hb_out'].amplitude.value, \
+                                              gfit_b['hb_out'].stddev.value)
+        
+        ## Default conditions
+        cond1 = (((hb_n_flux == 0)|(hb_out_flux == 0))&(hb_b_flux != 0))
+        cond2 = (hb_b_flux == 0)
+        
+        default_cond = cond1|cond2
+        
+        ## Conditions for selecting a broad component
+        ## 5-sigma confidence of an extra component is satisfied
+        ## Broad component FWHM > 300 km/s
+        if ((p_val <= 3e-7)&(hb_b_fwhm >= 300)&(~default_cond)):
+            hb_bestfit = gfit_b
+            n_dof = 7
+            psel = psel
+        else:
+            hb_bestfit = gfit_no_b
+            n_dof = 4
+            psel = []
+            
+        return (hb_bestfit, n_dof, psel)
+    
 ####################################################################################################
 ####################################################################################################
+
+def find_highz_hb_best_fit(lam_hb, flam_hb, ivar_hb, rsig_hb, oiii_bestfit, rsig_oiii):
+    """
+    Find the best fit for the high-z Hb emission line.
+    This is for the sources with z >= 0.45, where [SII] and Ha are not available.
+    
+    The code fits both broad and non-broad component fits and picks the best version.
+    The broad component fit is picked if the p-value for chi2 distribution is < 3e-7 -->
+    5-sigma confidence for an extra component statistically.
+
+    Parameters
+    ----------
+    lam_hb : numpy array
+        Wavelength array of the Hb region
+
+    flam_hb : numpy array
+        Flux array of the spectra in the Hb region
+
+    ivar_hb : numpy array
+        Inverse variance array of the spectra in the Hb region.
+
+    rsig_hb : float
+        Median resolution element in the Hb region.
+
+    oiii_bestfit: Astropy model
+        Bestfit for [OIII] emission-lines
+
+    rsig_oiii : float
+        Median Resolution element in the [OIII] region
+
+    Returns
+    -------
+    hb_bestfit : Astropy model
+        Best-fit "without-broad" or "with-broad" component
+
+    n_dof : int
+        Number of degrees of freedom
+
+    psel : list
+        Selected prior if the bestmodel fit has a broad component
+        psel = [] if there is no broad component
+    """
+    
+    ## Functions change depending on the number of components in [OIII]
+    oiii_models = oiii_bestfit.submodel_names
+    
+    if (('oiii4959_out' not in oiii_models)&('oiii5007_out' not in oiii_models)):
+        ## One-Component Fit
+        hb_bestfit, n_dof, psel = highz_hb_fit.fixed_hb_one_component(lam_hb, flam_hb, ivar_hb, \
+                                                                     rsig_hb, oiii_bestfit, \
+                                                                     rsig_oiii)
+    else:
+        ## Two-Component Fit
+        hb_bestfit, n_dof, psel = highz_hb_fit.fixed_hb_two_components(lam_hb, flam_hb, ivar_hb, \
+                                                                      rsig_hb, oiii_bestfit, \
+                                                                      rsig_oiii)
+        
+    return (hb_bestfit, n_dof, psel)
+    
+####################################################################################################
+####################################################################################################
+
+# class highz_fit:
+#     """
+#     This class contains functions related to High-z Hb and [OIII] Fitting:
+#         1) find_free_hb_best_fit(lam_hb, flam_hb, ivar_hb, rsig_hb)
+#         2) find_fixed_hb_best_fit(lam_hb, flam_hb, ivar_hb, rsig_hb)
+#     """
+#     def find_free_hb_best_fit(lam_hb, flam_hb, ivar_hb, rsig_hb):
+#         """
+#         Find bestfit for Hb when fit freely. This is for high-redshift galaxies 
+#         when [SII] and Ha are not available.
+
+#         The code fits both broad and non-broad component fits and picks the best version.
+#         The broad component fit is picked if the p-value for chi2 distribution is < 3e-7 -->
+#         5-sigma confidence for an extra component statistically.
+
+#         Parameters
+#         ----------
+#         lam_hb : numpy array
+#             Wavelength array of the Hb region
+
+#         flam_hb : numpy array
+#             Flux array of the spectra in the Hb region
+
+#         ivar_hb : numpy array
+#             Inverse variance array of the spectra in the Hb region.
+
+#         rsig_hb : float
+#             Median resolution element in the Hb region.
+
+#         Returns
+#         -------
+#         hb_bestfit : Astropy model
+#             Best-fit "without-broad" or "with-broad" component
+
+#         n_dof : int
+#             Number of degrees of freedom
+
+#         psel : list
+#             Selected prior if the bestmodel fit has a broad component
+#             psel = [] if there is no broad component
+#         """
+
+#         ## Single component model
+#         ## Without broad component
+#         gfit_no_b = fl.fit_highz_hb_oiii_lines.fit_free_hb(lam_hb, flam_hb, ivar_hb, \
+#                                                            rsig_hb, broad_comp = False)
+
+#         ## With broad component
+#         ## Test with different priors and select the one with the least chi2
+#         priors_list = [[4,5], [3,6], [5,8]]
+#         gfits = []
+#         chi2s = []
+
+#         for p in priors_list:
+#             gfit = fl.fit_highz_hb_oiii_lines.fit_free_hb(lam_hb, flam_hb, ivar_hb, rsig_hb, \
+#                                                           priors = p, broad_comp = True)
+#             chi2_fit = mfit.calculate_chi2(flam_hb, gfit(lam_hb), ivar_hb)
+#             gfits.append(gfit)
+#             chi2s.append(chi2_fit)
+
+#         ## Select the broad-component fit with the minimum chi2s
+#         gfit_b = gfits[np.argmin(chi2s)]
+
+#         ## Select the prior that leads to the bestfit
+#         psel = priors_list[np.argmin(chi2s)]
+
+#         ## Chi2 values for both the fits
+#         chi2_no_b = mfit.calculate_chi2(flam_hb, gfit_no_b(lam_hb), ivar_hb)
+#         chi2_b = mfit.calculate_chi2(flam_hb, gfit_b(lam_hb), ivar_hb)
+
+#         ## Statistical check for the broad component
+#         df = 6-3
+#         del_chi2 = chi2_no_b - chi2_b
+#         p_val = chi2.sf(del_chi2, df)
+
+#         ## Broad Ha width
+#         hb_b_sig, _ = mfit.correct_for_rsigma(gfit_b['hb_b'].mean.value, \
+#                                               gfit_b['hb_b'].stddev.value, \
+#                                               rsig_hb)
+#         hb_b_fwhm = mfit.sigma_to_fwhm(hb_b_sig)
+
+#         ## If narrow Hb flux is zero, but broad Hb is not zero
+#         ## If broad Hb flux = 0
+#         ## Default to no broad fit in these cases
+#         hb_n_flux = mfit.compute_emline_flux(gfit_b['hb_n'].amplitude.value, \
+#                                             gfit_b['hb_n'].stddev.value)
+#         hb_b_flux = mfit.compute_emline_flux(gfit_b['hb_b'].amplitude.value, \
+#                                             gfit_b['hb_b'].stddev.value)
+
+#         default_cond = ((hb_n_flux == 0)&(hb_b_flux != 0))|(hb_b_flux == 0)
+
+#         ## Conditions for selecting a broad component
+#         ## 5-sigma confidence of an extra component is satisfied
+#         ## Broad component FWHM > 300 km/s
+#         if ((p_val <= 3e-7)&(hb_b_fwhm >= 300)&(~default_cond)):
+#             hb_bestfit = gfit_b
+#             n_dof = 6
+#             psel = psel
+#         else:
+#             hb_bestfit = gfit_no_b
+#             n_dof = 3
+#             psel = []
+
+#         return (hb_bestfit, n_dof, psel)
+    
+
+
+    
+    
+    
+    
+
+# ####################################################################################################
+# ####################################################################################################

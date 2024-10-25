@@ -13,7 +13,7 @@ The following functions are available:
     9) plot_from_params_highz(table, index, title = None)
 
 Author : Ragadeepika Pucha
-Version : 2024, September 2
+Version : 2024, October 24
 
 """
 
@@ -1454,12 +1454,20 @@ def plot_from_params_highz(table, index, title = None):
     hb.annotate('$\sigma \\rm(H\\beta;n)$ = '+str(round(sig_hb_n, 1))+' km/s', xy = (0.55, 0.9), \
                 xycoords = (hb.get_yaxis_transform(), hb.get_xaxis_transform()), \
                 fontsize = 20, color = 'k')
+    
+    ## Outflow component of Hb, if available
+    if ('hb_out' in hb_fit.submodel_names):
+        hb.plot(lam_hb, hb_fit['hb_out'](lam_hb)+hb_cont, color = 'orange', lw = 2.0)
+        sig_hb_out = table['HB_OUT_SIGMA'].data[index]
+        hb.annotate('$\sigma \\rm(H\\beta;out)$ ='+str(round(sig_hb_out, 1))+' km/s', xy = (0.55, 0.8), \
+                   xycoords = (hb.get_yaxis_transform(), hb.get_xaxis_transform()), \
+                   fontsize = 20, color = 'k')
 
     ## Broad component of Hb, if available
     if ('hb_b' in hb_fit.submodel_names):
         hb.plot(lam_hb, hb_fit['hb_b'](lam_hb) + hb_cont, color = 'blue', lw = 2.0)
         sig_hb_b = table['HB_B_SIGMA'].data[index]
-        hb.annotate('$\sigma \\rm(H\\beta;b)$ = '+str(round(sig_hb_b, 1))+' km/s', xy = (0.55, 0.8), \
+        hb.annotate('$\sigma \\rm(H\\beta;b)$ = '+str(round(sig_hb_b, 1))+' km/s', xy = (0.55, 0.7), \
                     xycoords = (hb.get_yaxis_transform(), hb.get_xaxis_transform()), \
                     fontsize = 20, color = 'k')
 
