@@ -10,7 +10,7 @@ The following functions are available:
     5) compute_resolution_sigma(coadd_spec)
 
 Author : Ragadeepika Pucha
-Version : 2024, April 8
+Version : 2025, February 28
 """
 ###################################################################################################
 
@@ -69,10 +69,10 @@ def find_coadded_spectra(specprod, survey, program, healpix, targets):
     ## Get spectra
     spec = read_spectra(coadd_file).select(targets = targets)
     
-    ## Coadd the spectra across cameras
-    coadd_spec = coadd_cameras(spec)
+    # ## Coadd the spectra across cameras
+    # coadd_spec = coadd_cameras(spec)
     
-    return (coadd_spec)
+    return (spec)
 
 ###################################################################################################
 
