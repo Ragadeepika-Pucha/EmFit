@@ -109,7 +109,7 @@ def find_coadded_spectra(specprod, survey, program, healpix, targets):
     ## Coadd the spectra across cameras
     coadd_spec = coadd_cameras(spec)
     
-    return (spec)
+    return (coadd_spec)
 
 ###################################################################################################
 
@@ -386,9 +386,71 @@ def get_emline_spectra(specprod, survey, program, healpix, targetid, \
 
 ###################################################################################################
 
+def get_single_emline_spectrum(lam, flam, ivar, ebv, model, z):
+    """
+    Get Rest-frame emission-line spectrum given the observed spectrum and fastspecfit model.
+
+    Parameters:
+    ----------
+    lam : numpy array
+        Observed Wavelength array of the target
+
+    flam : numpy array
+        Observed DESI Spectrum Flux array of the target
+
+    ivar : numpy array
+        Inverse Variance Array of the target
+
+    ebv : int
+        E(B-V) value from DESI Fibermap related to the target
+
+    model : list
+        FastSpecFit model of the target
+
+    z : int
+        Redshift of the target
+
+    Returns:
+    -------
+    lam_rest : numpy array
+        Rest-frame Wavelength array of the target
+
+    emline_spec : numpy array
+        Rest-frame Emission-line flux array of the target
+
+    ivar_rest : numpy array
+        Rest-frame Inverse Variance array of the target
+    
+    """
+    ## MW Transmission
+    mw_trans_spec = dust_transmission(lam, ebv)
+    flam = flam.flatten()/mw_trans_spec
+    ivar = ivar.flatten()
+
+    ## Continuum model
+    cont_model = model[0,0,:]
+    ## Smooth Continuum model
+    smooth_cont_model = model[0,1,:]
+
+    ## Total continuum model
+    total_cont = cont_model + smooth_cont_model
+
+    ## Subtract the continuum from the flux
+    ## Emission-line spectra
+    emline_spec = flam - total_cont
+
+    ## Rest-frame values
+    lam_rest = lam/(1+z)
+    emline_spec = emline_spec*(1+z)
+    ivar_rest = ivar/((1+z)**2)
+
+    return (lam_rest, emline_spec, ivar_rest)
+
+###################################################################################################
+
 def get_spectra_fastspec_data(specprod, survey, program, healpix, targets):
     """
-    Function to get DESI spectra and fastspecfit metafile data and models.
+    Function to get the coadded spectra and fastspecfit metafile data and models.
 
     Parameters:
     ----------
@@ -410,8 +472,8 @@ def get_spectra_fastspec_data(specprod, survey, program, healpix, targets):
 
     Returns:
     -------
-    spec : obj
-        DESI Spectra object associated with the targets
+    coadd_spec : obj
+        Coadded Spectra object associated with the targets
 
     fmeta : Astropy Table
         Table of Metadata from FastSpecFit files
@@ -420,10 +482,10 @@ def get_spectra_fastspec_data(specprod, survey, program, healpix, targets):
         List of FastSpecFit models associated with the targets
     """
 
-    spec = find_desi_spectra(spectra, survey, program, healpix, targets)
+    coadd_spec = find_coadded_spectra(specprod, survey, program, healpix, targets)
     fmeta, models = get_fastspec_files(specprod, survey, program, healpix, targets)
 
-    return (spec, fmeta, models)
+    return (coadd_spec, fmeta, models)
 
 ###################################################################################################
 
