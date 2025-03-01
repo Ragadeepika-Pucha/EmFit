@@ -1,13 +1,15 @@
 """
 This script consists of spectra-related utility functions.
 The following functions are available:
-    1) find_coadded_spectra(specprod, survey, program, healpix, targets)
-    2) get_fastspec_files(specprod, survey, program, healpix, targets)
-    2) find_fastspec_models(specprod, survey, program, healpix, targetid, ver)
-    3) get_emline_spectra(specprod, survey, program, healpix, targetid, \
+    1) find_desi_spectra(specprod, survey, program, healpix, targets)
+    2) find_coadded_spectra(specprod, survey, program, healpix, targets)
+    3) get_fastspec_files(specprod, survey, program, healpix, targets)
+    4) find_fastspec_models(specprod, survey, program, healpix, targetid, ver)
+    5) get_emline_spectra(specprod, survey, program, healpix, targetid, \
                           z, rest_frame = False, plot_continuum = False)
-    4) get_fit_window(lam_rest, flam_rest, ivar_rest, em_line)
-    5) compute_resolution_sigma(coadd_spec)
+    6) get_spectra_fastspec_data(specprod, survey, program, healpix, targets)
+    7) get_fit_window(lam_rest, flam_rest, ivar_rest, em_line)
+    8) compute_resolution_sigma(coadd_spec)
 
 Author : Ragadeepika Pucha
 Version : 2025, February 28
@@ -24,6 +26,51 @@ from desispec.io import read_spectra
 from desispec.coaddition import coadd_cameras
 
 import plot_utils
+
+###################################################################################################
+
+def find_desi_spectra(specprod, survey, program, healpix, targets):
+    """
+    This function finds the coadded spectra of a given target and returns the desi spectra object.
+    
+    Parameters
+    ----------
+    specprod : str
+        Spectral Production Pipeline name 
+        fuji|guadalupe|...
+        
+    survey : str
+        Survey name for the spectra
+        
+    program : str
+        Program name for the spectra
+        
+    healpix : str
+        Healpix number of the targets
+        
+    targets : numpy array
+        List of required TARGETIDs
+        
+    Returns
+    -------
+    spec : obj
+        DESI Spectra object associated with the targets
+    """
+    
+    ## Targets healpix directory
+    ## Since it is read only, changed the directory to dvs_ro/cfs/..
+    hpx_dir =  f'/dvs_ro/cfs/cdirs/desi/spectro/redux/{specprod}/healpix'
+    ## Specific healpix directory of the target
+    target_dir = f'{survey}/{program}/{healpix//100}/{healpix}'
+    ## Coadded data file directory of the target
+    coadd_dir = f'{hpx_dir}/{target_dir}'
+    ## Coadded file name
+    coadd_file = f'{coadd_dir}/coadd-{survey}-{program}-{healpix}.fits'
+    
+    ## Get spectra
+    spec = read_spectra(coadd_file).select(targets = targets)
+    
+    return (spec)
 
 ###################################################################################################
 
@@ -53,24 +100,14 @@ def find_coadded_spectra(specprod, survey, program, healpix, targets):
     Returns
     -------
     coadd_spec : obj
-        Coadded Spectra object (coadded across cameras) associated with the target
+        Coadded Spectra object (coadded across cameras) associated with the targets
     """
     
-    ## Targets healpix directory
-    ## Since it is read only, changed the directory to dvs_ro/cfs/..
-    hpx_dir =  f'/dvs_ro/cfs/cdirs/desi/spectro/redux/{specprod}/healpix'
-    ## Specific healpix directory of the target
-    target_dir = f'{survey}/{program}/{healpix//100}/{healpix}'
-    ## Coadded data file directory of the target
-    coadd_dir = f'{hpx_dir}/{target_dir}'
-    ## Coadded file name
-    coadd_file = f'{coadd_dir}/coadd-{survey}-{program}-{healpix}.fits'
-    
     ## Get spectra
-    spec = read_spectra(coadd_file).select(targets = targets)
+    spec = find_desi_spectra(specprod, survey, program, healpix, targets)
     
-    # ## Coadd the spectra across cameras
-    # coadd_spec = coadd_cameras(spec)
+    ## Coadd the spectra across cameras
+    coadd_spec = coadd_cameras(spec)
     
     return (spec)
 
@@ -108,6 +145,12 @@ def get_fastspec_files(specprod, survey, program, healpix, targets):
     models_sel : list
         Fastspecfit models for the targets
     """
+    
+    # ver : str
+    # Version of the fastspecfit. Default is v3.2
+    # Latest Fuji version: v3.2
+    # Latest Guadalupe version: v3.1
+    # Latest Iron version: v2.1
     
     if (specprod == 'fuji'):
         ver = 'v3.2'
@@ -190,7 +233,6 @@ def find_fastspec_models(specprod, survey, program, healpix, targetid, fspec = F
         Returned only if fspec = True
         
     """
-    
     # ver : str
     # Version of the fastspecfit. Default is v3.2
     # Latest Fuji version: v3.2
@@ -341,6 +383,47 @@ def get_emline_spectra(specprod, survey, program, healpix, targetid, \
         plot_utils.plot_spectra_continuum(lam, flam, total_cont)
         
     return (coadd_spec, lam, emline_spec, ivar)
+
+###################################################################################################
+
+def get_spectra_fastspec_data(specprod, survey, program, healpix, targets):
+    """
+    Function to get DESI spectra and fastspecfit metafile data and models.
+
+    Parameters:
+    ----------
+    specprod : str
+        Spectral Production Pipeline name 
+        fuji|guadalupe|...
+        
+    survey : str
+        Survey name for the spectra
+        
+    program : str
+        Program name for the spectra
+        
+    healpix : str
+        Healpix number of the targets
+        
+    targets : numpy array
+        List of required TARGETIDs
+
+    Returns:
+    -------
+    spec : obj
+        DESI Spectra object associated with the targets
+
+    fmeta : Astropy Table
+        Table of Metadata from FastSpecFit files
+
+    models : List
+        List of FastSpecFit models associated with the targets
+    """
+
+    spec = find_desi_spectra(spectra, survey, program, healpix, targets)
+    fmeta, models = get_fastspec_files(specprod, survey, program, healpix, targets)
+
+    return (spec, fmeta, models)
 
 ###################################################################################################
 
