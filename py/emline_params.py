@@ -12,11 +12,12 @@ It consists of the following functions:
     7) fix_sigma(table)
     
 Author : Ragadeepika Pucha
-Version : 2024, April 18
+Version : 2025, March 02
 """
 
 ###################################################################################################
 from astropy.table import Table
+import astropy.units as u
 import numpy as np
 
 import measure_fits as mfit
@@ -157,20 +158,20 @@ def get_bestfit_parameters(table, models, emline):
             ## Sigma Flag
             flag = sigma_flag_arr[0]
                    
-        params[f'{model}_amplitude'] = [amp]
-        params[f'{model}_amplitude_err'] = [amp_err]
-        params[f'{model}_mean'] = [mean]
-        params[f'{model}_mean_err'] = [mean_err]
-        params[f'{model}_std'] = [std]
-        params[f'{model}_std_err'] = [std_err]
-        params[f'{model}_flux'] = [flux]
-        params[f'{model}_flux_err'] = [flux_err]
-        params[f'{model}_flux_lerr'] = [flux16]
-        params[f'{model}_flux_uerr'] = [flux84]
-        params[f'{model}_sigma'] = [sigma]
-        params[f'{model}_sigma_err'] = [sigma_err]
-        params[f'{model}_sigma_lerr'] = [sigma16]
-        params[f'{model}_sigma_uerr'] = [sigma84]
+        params[f'{model}_amplitude'] = [amp*(u.erg/(u.angstrom*(u.cm**2)*u.s))]
+        params[f'{model}_amplitude_err'] = [amp_err*(u.erg/(u.angstrom*(u.cm**2)*u.s))]
+        params[f'{model}_mean'] = [mean*u.angstrom]
+        params[f'{model}_mean_err'] = [mean_err*u.angstrom]
+        params[f'{model}_std'] = [std*u.angstrom]
+        params[f'{model}_std_err'] = [std_err*u.angstrom]
+        params[f'{model}_flux'] = [flux*(u.erg/((u.cm**2)*u.s))]
+        params[f'{model}_flux_err'] = [flux_err*(u.erg/((u.cm**2)*u.s))]
+        params[f'{model}_flux_lerr'] = [flux16*(u.erg/((u.cm**2)*u.s))]
+        params[f'{model}_flux_uerr'] = [flux84*(u.erg/((u.cm**2)*u.s))]
+        params[f'{model}_sigma'] = [sigma*(u.km/u.s)]
+        params[f'{model}_sigma_err'] = [sigma_err*(u.km/u.s)]
+        params[f'{model}_sigma_lerr'] = [sigma16*(u.km/u.s)]
+        params[f'{model}_sigma_uerr'] = [sigma84*(u.km/u.s)]
         params[f'{model}_sigma_flag'] = [int(flag)]
     
     ## Continuum computation
@@ -181,13 +182,13 @@ def get_bestfit_parameters(table, models, emline):
     else:
         cont, cont_err = cont_col[0], np.std(cont_col)
         
-    params[f'{emline}_continuum'] = [cont]
-    params[f'{emline}_continuum_err'] = [cont_err]
+    params[f'{emline}_continuum'] = [cont*(u.erg/(u.angstrom*(u.cm**2)*u.s))]
+    params[f'{emline}_continuum_err'] = [cont_err*(u.erg/(u.angstrom*(u.cm**2)*u.s))]
         
     ## Noise computation
     noise = table[f'{emline}_noise'].data[0]
 
-    params[f'{emline}_noise'] = [noise]
+    params[f'{emline}_noise'] = [noise*(u.erg/(u.angstrom*(u.cm**2)*u.s))]
         
     return (params)
 
