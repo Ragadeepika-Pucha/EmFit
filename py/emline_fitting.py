@@ -2,17 +2,19 @@
 This script consists of functions related to fitting the emission line spectra. 
 It consists of the following functions:
     1) fit_spectra(specprod, survey, program, healpix, targetid, z)
-    2) fit_original_spectra.normal_fit(lam_rest, flam_rest, ivar_rest, rsigma)
-    3) fit_original_spectra.extreme_fit(lam_rest, flam_rest, ivar_rest, rsigma)
-    4) fit_spectra_iteration.normal_fit(lam_rest, flam_new, ivar_rest, rsigma,\
+    2) fit_single_spectrum(table, fmeta, models, targeted, lam, flam, ivar, \
+                            ebv, rsigma, res_matrix)
+    3) fit_original_spectra.normal_fit(lam_rest, flam_rest, ivar_rest, rsigma)
+    4) fit_original_spectra.extreme_fit(lam_rest, flam_rest, ivar_rest, rsigma)
+    5) fit_spectra_iteration.normal_fit(lam_rest, flam_new, ivar_rest, rsigma,\
                                         fits_orig, psel)
-    5) fit_spectra_iteration.extreme_fit(lam_rest, flam_new, ivar_rest, rsigma,\
+    6) fit_spectra_iteration.extreme_fit(lam_rest, flam_new, ivar_rest, rsigma,\
                                         fits_orig, psel)
-    6) construct_fits_from_table.normal_fit(t, index)
-    7) construct_fits_from_table.extreme_fit(t, index)
+    7) construct_fits_from_table.normal_fit(t, index)
+    8) construct_fits_from_table.extreme_fit(t, index)
 
 Author : Ragadeepika Pucha
-Version : 2024, April 18
+Version : 2025, March 2
 """
 
 ####################################################################################################
@@ -196,6 +198,168 @@ def fit_spectra(specprod, survey, program, healpix, targetid, z):
     ## Check sigma values for unresolved cases
     t_final = emp.fix_sigma(t_final)
     
+    return (t_final)
+
+####################################################################################################
+
+def fit_single_spectrum(table, fmeta, models, targetid, lam, flam, ivar, \
+                        ebv, rsigma, res_matrix):
+    """
+    Fitting a single spectrum from a given survey-program-healpix file.
+
+    Parameters:
+    ----------
+    table : Astropy Table
+        Table of sources from a given survey-program-healpix file.
+
+    fmeta : Astropy Table
+        FastSpecFit Metadata file for the associated targets.
+
+    models : List
+        FastSpecFit models for the associated targets.
+
+    targetid : int64
+        TARGETID of the target to be fit.
+
+    lam : numpy array
+        Rest-Frame Wavelength array of the target.
+
+    flam : numpy array
+        Rest-Frame Flux array of the target.
+
+    ivar : numpy array
+        Rest-Frame Inverse Variance of the target.
+
+    ebv : int
+        E(B-V) of the target from the fibermap.
+
+    rsigma : numpy array
+        1-d resolution sigma array
+
+    res_matrix : numpy array
+        Resolution Matrix
+
+    Returns:
+    --------
+    t_final : astropy table
+        Table of fit parameters
+    
+    """
+    
+    z_ii = (table['TARGETID'].data == targetid)
+    z = table['Z'].data[z_ii][0]
+
+    ## Select the FastSpec model
+    row = np.nonzero(fmeta['TARGETID'].data == targetid)
+    model = models[row]
+    
+    lam_rest, flam_rest, ivar_rest = spec_utils.get_single_emline_spectrum(lam, flam, ivar, ebv, model, z)
+
+    ## [SII] Information
+    lam_sii, flam_sii, ivar_sii, rsig_sii = spec_utils.get_fit_window(lam_rest, flam_rest, \
+                                                                     ivar_rest, rsigma, \
+                                                                     em_line = 'sii')
+
+    sii_fit, _ = find_bestfit.find_sii_best_fit(lam_sii, flam_sii, ivar_sii, rsig_sii)
+    sii_diff, sii_frac = mfit.measure_sii_difference(lam_sii, flam_sii)
+
+    ## Conditions for separating extreme broadline sources
+    sii_frac_cond = (np.abs(sii_frac) >= 5.0)
+    sii_diff_cond = (sii_diff >= 0.5)
+
+    if ('sii6716_out' in sii_fit.submodel_names):
+        sii_out_sig = mfit.lamspace_to_velspace(sii_fit['sii6716_out'].stddev.value, \
+                                               sii_fit['sii6716_out'].mean.value)
+    else:
+        sii_out_sig = 0.0
+
+    sii_out_cond = (sii_out_sig >= 1000)
+
+    ext_cond = ((sii_frac_cond)&(sii_diff_cond))|(sii_out_cond)
+
+    ## Original Fits
+    if ext_cond:
+        ## Fit using extreme-line fitting code
+        t_orig, fits_orig, \
+        ndofs_orig, psel = fit_original_spectra.extreme_fit(lam_rest, flam_rest, \
+                                                            ivar_rest, rsigma)
+        if (t_orig['hb_b_sigma'].data[0] <= 1000):
+            ## If the broad Ha sigma < 1000 km/s
+            ## Revert back to normal source fitting code
+            ext_cond = False
+            t_orig, fits_orig, \
+            ndofs_orig, psel = fit_original_spectra.normal_fit(lam_rest, flam_rest, \
+                                                               ivar_rest, rsigma) 
+    else:
+        ## Fit using the normal source fitting code
+        t_orig, fits_orig, \
+        ndofs_orig, psel = fit_original_spectra.normal_fit(lam_rest, flam_rest, \
+                                                           ivar_rest, rsigma)
+
+    ## Error spectra
+    err_rest = 1/np.sqrt(ivar_rest)
+    err_rest[~np.isfinite(err_rest)] = 0.0
+
+    tables = []
+    tables.append(t_orig)
+
+    for kk in range(100):
+        noise_spec = random.gauss(0, err_rest)
+        to_add_spec = res_matrix.dot(noise_spec)
+        flam_new = flam_rest + to_add_spec
+
+        if ext_cond:
+            ## Extreme-line fitting mode
+            t_params = fit_spectra_iteration.extreme_fit(lam_rest, flam_new, ivar_rest, \
+                                                              rsigma, fits_orig, psel)
+        else:
+            ## Default fitting mode
+            t_params = fit_spectra_iteration.normal_fit(lam_rest, flam_new, ivar_rest, \
+                                                             rsigma, fits_orig, psel)
+
+        tables.append(t_params)
+
+    ## Combine all the fits
+    t_fits = vstack(tables)
+    per_ha = len(t_fits[t_fits['ha_b_flux'].data != 0])*100/len(t_fits)
+
+    ## Get bestfit parameters
+    if ext_cond:
+        ## Extreme-line fitting
+        hb_params, oiii_params, \
+        nii_ha_params, sii_params = emp.get_allbestfit_params.extreme_fit(t_fits, ndofs_orig, \
+                                                                          lam_rest, flam_rest, \
+                                                                          ivar_rest, rsigma)
+    else:
+        ## Normal source fitting
+        hb_params, oiii_params, \
+        nii_ha_params, sii_params = emp.get_allbestfit_params.normal_fit(t_fits, ndofs_orig, \
+                                                                         lam_rest, flam_rest, \
+                                                                         ivar_rest, rsigma)
+
+    ## Target Information
+    specprod = table['SPECPROD'].astype(str).data[z_ii][0]
+    survey = table['SURVEY'].astype(str).data[z_ii][0]
+    program = table['PROGRAM'].astype(str).data[z_ii][0]
+    healpix = table['HEALPIX'].data[z_ii][0]
+
+    tgt = {}
+    tgt['targetid'] = [targetid]
+    tgt['specprod'] = [specprod]
+    tgt['survey'] = [survey]
+    tgt['program'] = [program]
+    tgt['healpix'] = [healpix]
+    tgt['z'] = [z]
+    tgt['per_broad'] = [per_ha]
+
+    t_final = Table(tgt|hb_params|oiii_params|nii_ha_params|sii_params)
+
+    for col in t_final.colnames:
+        t_final.rename_column(col, col.upper())
+
+    ## Check sigma values for unresolved cases
+    t_final = emp.fix_sigma(t_final)
+
     return (t_final)
 
 ####################################################################################################
