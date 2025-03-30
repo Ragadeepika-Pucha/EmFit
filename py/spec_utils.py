@@ -12,7 +12,7 @@ The following functions are available:
     8) compute_resolution_sigma(coadd_spec)
 
 Author : Ragadeepika Pucha
-Version : 2025, February 28
+Version : 2025, March 29
 """
 ###################################################################################################
 
@@ -363,7 +363,7 @@ def get_emline_spectra(specprod, survey, program, healpix, targetid, \
     ## Wavelength, flux and inverse variance arrays
     lam = coadd_spec.wave[bands]
     flam = coadd_spec.flux[bands].flatten()/mw_trans_spec
-    ivar = coadd_spec.ivar[bands].flatten()
+    ivar = coadd_spec.ivar[bands].flatten()*(mw_trans_spec**2)
     
     ## Stellar continuum model
     modelwave, cont_model, smooth_cont_model, _ = find_fastspec_models(specprod, survey, \
@@ -425,7 +425,7 @@ def get_single_emline_spectrum(lam, flam, ivar, ebv, model, z):
     ## MW Transmission
     mw_trans_spec = dust_transmission(lam, ebv)
     flam = flam.flatten()/mw_trans_spec
-    ivar = ivar.flatten()
+    ivar = ivar.flatten()*(mw_trans_spec**2)
 
     ## Continuum model
     cont_model = model[0,0,:]
