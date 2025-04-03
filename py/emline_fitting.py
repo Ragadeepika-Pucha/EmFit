@@ -34,6 +34,7 @@ from desiutil.dust import dust_transmission
 
 import matplotlib.pyplot as plt
 import random
+import pdb
 
 ####################################################################################################
 
@@ -97,6 +98,9 @@ def fit_spectra(specprod, survey, program, healpix, targetid, z):
     coadd_spec, lam_rest, \
     flam_rest, ivar_rest = spec_utils.get_emline_spectra(specprod, survey, program, \
                                                          healpix, targetid, z, rest_frame = True)
+
+    pdb.set_trace()
+
     ## 1D resolution array
     rsigma = spec_utils.compute_resolution_sigma(coadd_spec)[0]
     
@@ -202,7 +206,7 @@ def fit_spectra(specprod, survey, program, healpix, targetid, z):
 
 ####################################################################################################
 
-def fit_single_spectrum(table, fmeta, models, targetid, lam, flam, ivar, \
+def fit_single_spectrum(table, model, lam, flam, ivar, \
                         ebv, rsigma, res_matrix):
     """
     Fitting a single spectrum from a given survey-program-healpix file.
@@ -246,14 +250,17 @@ def fit_single_spectrum(table, fmeta, models, targetid, lam, flam, ivar, \
     
     """
     
-    z_ii = (table['TARGETID'].data == targetid)
-    z = table['Z'].data[z_ii][0]
+    # z_ii = (table['TARGETID'].data == targetid)
+    # z = table['Z'].data[z_ii][0]
+    z = table['Z']
+    targetid = table['TARGETID']
 
     ## Select the FastSpec model
-    row = np.nonzero(fmeta['TARGETID'].data == targetid)
-    model = models[row]
+    # row = np.nonzero(fmeta['TARGETID'].data == targetid)
+    # model = models[row]
     
     lam_rest, flam_rest, ivar_rest = spec_utils.get_single_emline_spectrum(lam, flam, ivar, ebv, model, z)
+
 
     ## [SII] Information
     lam_sii, flam_sii, ivar_sii, rsig_sii = spec_utils.get_fit_window(lam_rest, flam_rest, \
@@ -338,10 +345,15 @@ def fit_single_spectrum(table, fmeta, models, targetid, lam, flam, ivar, \
                                                                          ivar_rest, rsigma)
 
     ## Target Information
-    specprod = table['SPECPROD'].astype(str).data[z_ii][0]
-    survey = table['SURVEY'].astype(str).data[z_ii][0]
-    program = table['PROGRAM'].astype(str).data[z_ii][0]
-    healpix = table['HEALPIX'].data[z_ii][0]
+    # specprod = table['SPECPROD'].astype(str).data[z_ii][0]
+    # survey = table['SURVEY'].astype(str).data[z_ii][0]
+    # program = table['PROGRAM'].astype(str).data[z_ii][0]
+    # healpix = table['HEALPIX'].data[z_ii][0]
+
+    specprod = table['SPECPROD']
+    survey = table['SURVEY']
+    program = table['PROGRAM']
+    healpix = table['HEALPIX']
 
     tgt = {}
     tgt['targetid'] = [targetid]

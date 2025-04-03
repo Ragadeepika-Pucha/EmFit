@@ -3,7 +3,7 @@ This script is for running the DESI EmFit Code for a given table of sources.
 It requires input and output filenames
 
 Author : Ragadeepika Pucha
-Version : 2025 March 02
+Version : 2025 April 03
 """
 ####################################################################################################
 import sys
@@ -103,10 +103,20 @@ for specprod in specprods:
                     run_start = time.time()
                     t_in = vstack(t_ins)
                     fmeta = vstack(t_fmeta)
+
+                    ## Sort the t_in, fmeta, and models_arr to match the tgt_arr array
+                    ## Create a dictionary for fast lookup
+                    id_to_index = {tgt : ii for ii, tgt in enumerate(tgt_arr)}
+                    t_in_sorted = t_in[np.argsort([id_to_index[tgt] for tgt in t_in['TARGETID'].data])]
+
+                    ## Sorted indices for fmeta
+                    sorted_indices = np.argsort([id_to_index[tgt] for tgt in fmeta['TARGETID'].data])
+                    models_arr_sorted = models_arr[sorted_indices, :, :]
+                    
                     print (f'==================================== Fitting {len(t_in)} galaxies ==============================================================')
 
                     ## Multiprocessing 
-                    args = [(t_in, fmeta, models_arr, tgt_arr[kk], lam, flam_arr[kk], \
+                    args = [(t_in[kk], models_arr[kk], tgt_arr[kk], lam, flam_arr[kk], \
                              ivar_arr[kk], ebv_arr[kk], rsigma_arr[kk], res_arr[kk]) for kk in range(len(t_in))]
                     pool = Pool(processes = 256)
                     t_fit = vstack(pool.starmap(emfit.fit_single_spectrum, args))

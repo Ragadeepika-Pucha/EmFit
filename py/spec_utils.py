@@ -12,7 +12,7 @@ The following functions are available:
     8) compute_resolution_sigma(coadd_spec)
 
 Author : Ragadeepika Pucha
-Version : 2025, March 29
+Version : 2025, April 03
 
 """
 ###################################################################################################
@@ -27,6 +27,7 @@ from desispec.io import read_spectra
 from desispec.coaddition import coadd_cameras
 
 import plot_utils
+import pdb
 
 ###################################################################################################
 
@@ -171,7 +172,7 @@ def get_fastspec_files(specprod, survey, program, healpix, targets):
     fastfile = f'{target_fast_dir}/fastspec-{survey}-{program}-{healpix}.fits.gz'
     
     ## Metadata 
-    meta = Table(fitsio.read(fastfile, 'METADATA'))
+    meta = Table(fitsio.read(fastfile, 'METADATA', columns = ['TARGETID']))
    
     ## Models
     models = fitsio.read(fastfile, 'MODELS')
@@ -423,15 +424,17 @@ def get_single_emline_spectrum(lam, flam, ivar, ebv, model, z):
         Rest-frame Inverse Variance array of the target
     
     """
+    pdb.set_trace()
+    
     ## MW Transmission
     mw_trans_spec = dust_transmission(lam, ebv)
     flam = flam.flatten()/mw_trans_spec
     ivar = ivar.flatten()*(mw_trans_spec**2)
-
+    
     ## Continuum model
-    cont_model = model[0,0,:]
+    cont_model = model[0,:]
     ## Smooth Continuum model
-    smooth_cont_model = model[0,1,:]
+    smooth_cont_model = model[1,:]
 
     ## Total continuum model
     total_cont = cont_model + smooth_cont_model
