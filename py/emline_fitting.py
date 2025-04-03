@@ -14,7 +14,7 @@ It consists of the following functions:
     8) construct_fits_from_table.extreme_fit(t, index)
 
 Author : Ragadeepika Pucha
-Version : 2025, March 2
+Version : 2025, April 03
 """
 
 ####################################################################################################
@@ -99,10 +99,9 @@ def fit_spectra(specprod, survey, program, healpix, targetid, z):
     flam_rest, ivar_rest = spec_utils.get_emline_spectra(specprod, survey, program, \
                                                          healpix, targetid, z, rest_frame = True)
 
-    pdb.set_trace()
-
     ## 1D resolution array
     rsigma = spec_utils.compute_resolution_sigma(coadd_spec)[0]
+
     
     ## [SII] information
     lam_sii, flam_sii, ivar_sii, rsig_sii = spec_utils.get_fit_window(lam_rest, flam_rest, \
@@ -124,6 +123,7 @@ def fit_spectra(specprod, survey, program, healpix, targetid, z):
     sii_out_cond = (sii_out_sig >= 1000)
     
     ext_cond = ((sii_frac_cond)&(sii_diff_cond))|(sii_out_cond)
+
     
     ## Original Fits
     if ext_cond:
@@ -216,14 +216,8 @@ def fit_single_spectrum(table, model, lam, flam, ivar, \
     table : Astropy Table
         Table of sources from a given survey-program-healpix file.
 
-    fmeta : Astropy Table
-        FastSpecFit Metadata file for the associated targets.
-
-    models : List
+    model : List
         FastSpecFit models for the associated targets.
-
-    targetid : int64
-        TARGETID of the target to be fit.
 
     lam : numpy array
         Rest-Frame Wavelength array of the target.
@@ -249,19 +243,12 @@ def fit_single_spectrum(table, model, lam, flam, ivar, \
         Table of fit parameters
     
     """
-    
-    # z_ii = (table['TARGETID'].data == targetid)
-    # z = table['Z'].data[z_ii][0]
     z = table['Z']
     targetid = table['TARGETID']
 
-    ## Select the FastSpec model
-    # row = np.nonzero(fmeta['TARGETID'].data == targetid)
-    # model = models[row]
-    
+    ## Rest-Frame Spectra information    
     lam_rest, flam_rest, ivar_rest = spec_utils.get_single_emline_spectrum(lam, flam, ivar, ebv, model, z)
-
-
+    
     ## [SII] Information
     lam_sii, flam_sii, ivar_sii, rsig_sii = spec_utils.get_fit_window(lam_rest, flam_rest, \
                                                                      ivar_rest, rsigma, \
@@ -345,11 +332,6 @@ def fit_single_spectrum(table, model, lam, flam, ivar, \
                                                                          ivar_rest, rsigma)
 
     ## Target Information
-    # specprod = table['SPECPROD'].astype(str).data[z_ii][0]
-    # survey = table['SURVEY'].astype(str).data[z_ii][0]
-    # program = table['PROGRAM'].astype(str).data[z_ii][0]
-    # healpix = table['HEALPIX'].data[z_ii][0]
-
     specprod = table['SPECPROD']
     survey = table['SURVEY']
     program = table['PROGRAM']

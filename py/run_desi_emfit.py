@@ -113,12 +113,12 @@ for specprod in specprods:
                     sorted_indices = np.argsort([id_to_index[tgt] for tgt in fmeta['TARGETID'].data])
                     models_arr_sorted = models_arr[sorted_indices, :, :]
                     
-                    print (f'==================================== Fitting {len(t_in)} galaxies ==============================================================')
+                    print (f'==================================== Fitting {len(t_in_sorted)} galaxies ==============================================================')
 
                     ## Multiprocessing 
-                    args = [(t_in[kk], models_arr[kk], tgt_arr[kk], lam, flam_arr[kk], \
+                    args = [(t_in_sorted[kk], models_arr_sorted[kk], lam, flam_arr[kk], \
                              ivar_arr[kk], ebv_arr[kk], rsigma_arr[kk], res_arr[kk]) for kk in range(len(t_in))]
-                    pool = Pool(processes = 256)
+                    pool = Pool(processes = 128)
                     t_fit = vstack(pool.starmap(emfit.fit_single_spectrum, args))
                     pool.close()
                     pool.join()

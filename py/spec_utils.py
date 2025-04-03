@@ -259,7 +259,7 @@ def find_fastspec_models(specprod, survey, program, healpix, targetid, fspec = F
     fastfile = f'{target_fast_dir}/fastspec-{survey}-{program}-{healpix}.fits.gz'
     
     ## Metadata 
-    meta = Table(fitsio.read(fastfile, 'METADATA'))
+    meta = Table(fitsio.read(fastfile, 'METADATA', columns = ['TARGETID']))
    
     ## Models
     models, hdr = fitsio.read(fastfile, 'MODELS', header = True)
@@ -268,17 +268,17 @@ def find_fastspec_models(specprod, survey, program, healpix, targetid, fspec = F
     modelwave = hdr['CRVAL1'] + np.arange(hdr['NAXIS1'])*hdr['CDELT1']
     
     ## The specific row of the target
-    row = (meta['TARGETID'] == targetid)
+    row = np.nonzero(meta['TARGETID'] == targetid)[0][0]
     
     ## Model for the target
     model = models[row]
     
     ## Continuum model
-    cont_model = model[0,0,:]
+    cont_model = model[0,:]
     ## Smooth continuum model
-    smooth_cont_model = model[0,1,:]
+    smooth_cont_model = model[1,:]
     ## Emission-line model
-    em_model = model[0,2,:]
+    em_model = model[2,:]
 
     ## Total continuum model
     total_cont = cont_model + smooth_cont_model
@@ -357,7 +357,7 @@ def get_emline_spectra(specprod, survey, program, healpix, targetid, \
     
     ## EBV
     ## Correct for MW Transmission
-    ebv = coadd_spec.fibermap['EBV'].data
+    ebv = coadd_spec.fibermap['EBV'].data[0]
     
     ## MW Transmission
     mw_trans_spec = dust_transmission(coadd_spec.wave[bands], ebv)
@@ -380,7 +380,7 @@ def get_emline_spectra(specprod, survey, program, healpix, targetid, \
         lam = lam/(1+z)
         emline_spec = emline_spec*(1+z)
         ivar = ivar/((1+z)**2)
-
+        
     if (plot_continuum == True):
         plot_utils.plot_spectra_continuum(lam, flam, total_cont)
         
@@ -423,8 +423,7 @@ def get_single_emline_spectrum(lam, flam, ivar, ebv, model, z):
     ivar_rest : numpy array
         Rest-frame Inverse Variance array of the target
     
-    """
-    pdb.set_trace()
+    """    
     
     ## MW Transmission
     mw_trans_spec = dust_transmission(lam, ebv)
@@ -447,7 +446,7 @@ def get_single_emline_spectrum(lam, flam, ivar, ebv, model, z):
     lam_rest = lam/(1+z)
     emline_spec = emline_spec*(1+z)
     ivar_rest = ivar/((1+z)**2)
-
+    
     return (lam_rest, emline_spec, ivar_rest)
 
 ###################################################################################################
