@@ -13,7 +13,7 @@ The following functions are available:
     9) plot_from_params_highz(table, index, title = None)
 
 Author : Ragadeepika Pucha
-Version : 2024, October 24
+Version : 2025, March 30
 
 """
 
@@ -318,11 +318,12 @@ class plot_spectra_fits:
                     fontsize = 20, color = 'k')
 
         ## Hb fit residuals
-        res_hb = (flam_hb - hb_fit(lam_hb))
-        hb_res.scatter(lam_hb, res_hb, color = 'r', marker = '.')
-        hb_res.axhline(0.0, color = 'k', ls = ':')
-        hb_res.set(xlabel = '$\lambda_{rest}$')
-        hb_res.set_ylabel('Data - Model', fontsize = 14)
+        res_hb = (flam_hb - hb_fit(lam_hb))/flam_hb
+        hb_res.scatter(lam_hb, res_hb, color = 'k', marker = '.', alpha = 0.7)
+        hb_res.axhline(0.0, color = 'grey', ls = ':')
+        hb_res.set(yticks = [0])
+        hb_res.set(xlabel = '$\lambda_{rest}$', ylim = [-10, 10])
+        
         ############################################################################################
         ############################## [OIII] spectra + models #####################################
 
@@ -371,11 +372,10 @@ class plot_spectra_fits:
                       fontsize = 20, color = 'k')
 
         ## [OIII] fit residuals
-        res_oiii = (flam_oiii - oiii_fit(lam_oiii))
-        oiii_res.scatter(lam_oiii, res_oiii, color = 'r', marker = '.')
+        res_oiii = (flam_oiii - oiii_fit(lam_oiii))/flam_oiii
+        oiii_res.scatter(lam_oiii, res_oiii, color = 'k', marker = '.', alpha = 0.7)
         oiii_res.axhline(0.0, color = 'k', ls = ':')
-        oiii_res.set(xlabel = '$\lambda_{rest}$')
-        oiii_res.set_ylabel('Data - Model', fontsize = 14)
+        oiii_res.set(xlabel = '$\lambda_{rest}$', ylim = [-10, 10], yticks = [0])
 
         ############################################################################################
         ############################## [NII]+Ha spectra + models ###################################
@@ -451,11 +451,10 @@ class plot_spectra_fits:
                     fontsize = 20, color = 'k')
 
         ## [NII]+Ha fit residuals
-        res_nii = (flam_nii - nii_ha_fit(lam_nii))
-        ha_res.scatter(lam_nii, res_nii, color = 'r', marker = '.')
+        res_nii = (flam_nii - nii_ha_fit(lam_nii))/flam_nii
+        ha_res.scatter(lam_nii, res_nii, color = 'k', marker = '.', alpha = 0.7)
         ha_res.axhline(0.0, color = 'k', ls = ':')
-        ha_res.set(xlabel = '$\lambda_{rest}$')
-        ha_res.set_ylabel('Data - Model', fontsize = 14)
+        ha_res.set(xlabel = '$\lambda_{rest}$', ylim = [-10, 10], yticks = [0])
 
         ############################################################################################
         ############################## [SII] spectra + models ######################################
@@ -505,11 +504,10 @@ class plot_spectra_fits:
                      fontsize = 20, color = 'k')
 
         ## [SII] fit residuals
-        res_sii = (flam_sii - sii_fit(lam_sii))
-        sii_res.scatter(lam_sii, res_sii, color = 'r', marker = '.')
+        res_sii = (flam_sii - sii_fit(lam_sii))/flam_sii
+        sii_res.scatter(lam_sii, res_sii, color = 'k', marker = '.', alpha = 0.7)
         sii_res.axhline(0.0, color = 'k', ls = ':')
-        sii_res.set(xlabel = '$\lambda_{rest}$')
-        sii_res.set_ylabel('Data - Model', fontsize = 14)
+        sii_res.set(xlabel = '$\lambda_{rest}$', ylim = [-10, 10], yticks = [0])
 
         plt.tight_layout()
         plt.close()
@@ -651,11 +649,10 @@ class plot_spectra_fits:
                    fontsize = 20, color = 'k')
 
         ## Hb + [OIII] Fit residuals
-        res_hb_oiii = (flam_hb_oiii - hb_oiii_fit(lam_hb_oiii))
-        hb_res.scatter(lam_hb_oiii, res_hb_oiii, color = 'r', marker = '.')
+        res_hb_oiii = (flam_hb_oiii - hb_oiii_fit(lam_hb_oiii))/flam_hb_oiii
+        hb_res.scatter(lam_hb_oiii, res_hb_oiii, color = 'k', marker = '.', alpha = 0.7)
         hb_res.axhline(0.0, color = 'k', ls = ':')
-        hb_res.set(xlabel = '$\lambda_{rest}$')
-        hb_res.set_ylabel('Data - Model', fontsize = 14)
+        hb_res.set(xlabel = '$\lambda_{rest}$', ylim = [-10,10], yticks = [0])
 
         ############################################################################################
         ###################### [NII] + Ha + [SII] spectra and models ###############################
@@ -720,11 +717,10 @@ class plot_spectra_fits:
                    fontsize = 20, color = 'k')
 
         ## [NII]+Ha+[SII] fit residuals
-        res_nii_ha_sii = (flam_nii_ha_sii - nii_ha_sii_fit(lam_nii_ha_sii))
-        ha_res.scatter(lam_nii_ha_sii, res_nii_ha_sii, color = 'r', marker = '.')
+        res_nii_ha_sii = (flam_nii_ha_sii - nii_ha_sii_fit(lam_nii_ha_sii))/flam_nii_ha_sii
+        ha_res.scatter(lam_nii_ha_sii, res_nii_ha_sii, color = 'k', marker = '.', alpha = 0.7)
         ha_res.axhline(0.0, color = 'k', ls = ':')
-        ha_res.set(xlabel = '$\lambda_{rest}$')
-        ha_res.set_ylabel('Data - Model', fontsize = 14)
+        ha_res.set(xlabel = '$\lambda_{rest}$', ylim = [-10, 10], yticks = [0])
 
         plt.tight_layout()
         plt.close()
