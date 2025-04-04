@@ -13,7 +13,6 @@ The following functions are available:
 
 Author : Ragadeepika Pucha
 Version : 2025, April 03
-
 """
 ###################################################################################################
 
@@ -429,7 +428,7 @@ def get_single_emline_spectrum(lam, flam, ivar, ebv, model, z):
     mw_trans_spec = dust_transmission(lam, ebv)
     flam = flam.flatten()/mw_trans_spec
     ivar = ivar.flatten()*(mw_trans_spec**2)
-    
+
     ## Continuum model
     cont_model = model[0,:]
     ## Smooth Continuum model
