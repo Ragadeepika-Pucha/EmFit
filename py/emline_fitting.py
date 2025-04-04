@@ -2,7 +2,7 @@
 This script consists of functions related to fitting the emission line spectra. 
 It consists of the following functions:
     1) fit_spectra(specprod, survey, program, healpix, targetid, z)
-    2) fit_single_spectrum(table, fmeta, models, targeted, lam, flam, ivar, \
+    2) fit_single_spectrum(table, model, lam, flam, ivar, \
                             ebv, rsigma, res_matrix)
     3) fit_original_spectra.normal_fit(lam_rest, flam_rest, ivar_rest, rsigma)
     4) fit_original_spectra.extreme_fit(lam_rest, flam_rest, ivar_rest, rsigma)
@@ -214,10 +214,10 @@ def fit_single_spectrum(table, model, lam, flam, ivar, \
     Parameters:
     ----------
     table : Astropy Table
-        Table of sources from a given survey-program-healpix file.
+        Table row of the given source
 
     model : List
-        FastSpecFit models for the associated targets.
+        FastSpecFit model for the associated target.
 
     lam : numpy array
         Rest-Frame Wavelength array of the target.
