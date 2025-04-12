@@ -20,9 +20,11 @@ It consists of the following functions:
     11) highz_fit.find_free_hb_best_fit(lam_hb, flam_hb, ivar_hb, rsig_hb)
     12) highz_fit.find_fixed_hb_best_fit(lam_hb, flam_hb, ivar_hb, rsig_hb, \
                                         oiii_bestfit, rsig_oiii)
+    13) find_nev_best_fit(lam_nev, flam_nev, ivar_nev, rsig_nev, \
+                                        sii_bestfit, rsig_sii)
 
 Author : Ragadeepika Pucha
-Version : 2024, October 24
+Version : 2025, April 11
 """
 
 ###################################################################################################
@@ -296,8 +298,6 @@ class nii_ha_fit:
                                           gfit_b['ha_b'].stddev.value, \
                                           rsig_nii_ha)
         ha_b_fwhm = mfit.sigma_to_fwhm(ha_b_sig)
-        
-        
         
         ## If narrow Ha flux is zero, but broad Ha flux is not zero
         ## If broad Hb flux = 0, then also default to no broad fit
@@ -1206,6 +1206,64 @@ def find_highz_hb_best_fit(lam_hb, flam_hb, ivar_hb, rsig_hb, oiii_bestfit, rsig
     
 ####################################################################################################
 ####################################################################################################
+
+def find_nev_best_fit(lam_nev, flam_nev, ivar_nev, rsig_nev, sii_bestfit, rsig_sii):
+    """
+    Find the best fit for [NeV] emission lines.
+    The code picks one or two-component fits depending on the number of components of the 
+    [SII] emission line. The number of components is same as [SII].
+
+    Parameters
+    ----------
+    lam_nev : numpy array
+        Wavelength array of the [NeV] region where the fits need to be perfomed.
+
+    flam_nev : numpy array
+        Flux array for the spectra in the [NeV] region.
+
+    ivar_nev : numpy array
+        Inverse variance array of the spectra in the [NeV] region.
+
+    rsig_nev : float
+        Median resolution element in the [NeV] region.
+
+    sii_bestfit: Astropy model
+        Best fit model for the [SII] emission-lines.
+
+    rsig_sii : float
+        Median resolution element in the [SII] region.
+
+    Returns
+    -------
+    nev_bestfit : Astropy model
+        Best-fit model for the [NeV] emission lines.
+
+    n_dof : int
+        Number of degrees of freedom.
+    """
+
+    ## Functions change depending on the number of components in [SII]
+    sii_models = sii_bestfit.submodel_names
+
+    if (('sii6716_out' not in sii_models)&('sii6731_out' not in sii_models)):
+        ## One-component model
+        gfit = fl.fit_nev_lines.fit_one_component(lam_nev, flam_nev, ivar_nev, rsig_nev, \
+                                                 sii_bestfit, rsig_sii)
+        n_dof = 4
+    else:
+        ## Two-component model
+        gfit = fl.fit_nev_lines.fit_two_components(lam_nev, flam_nev, ivar_nev, rsig_nev, \
+                                                  sii_bestfit, rsig_sii)
+        n_dof = 6
+
+
+    return (gfit, n_dof)
+
+####################################################################################################
+####################################################################################################
+    
+    
+
 
 # class highz_fit:
 #     """
