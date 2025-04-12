@@ -1,5 +1,5 @@
 """
-This script consists of funcitons for fitting emission-lines.
+This script consists of functions for fitting emission-lines.
 The different functions are divided into different classes for different emission lines:
     1) fit_sii_lines.fit_one_component(lam_sii, flam_sii, ivar_sii, rsig_sii)
     2) fit_sii_lines.fit_two_components(lam_sii, flam_sii, ivar_sii, rsig_sii)
@@ -35,7 +35,7 @@ The different functions are divided into different classes for different emissio
                                             rsig_oiii, priors = [4,5], broad_comp = True)
                                                         
 Author : Ragadeepika Pucha
-Version : 2024, October 24
+Version : 2025, April 11
 """
 
 ###################################################################################################
@@ -2370,6 +2370,259 @@ class fit_highz_hb_line:
 
 ####################################################################################################
 ####################################################################################################
+
+class fit_nev_lines:
+    """
+    Different functions associated with [NeV]3346,3426 doublet fitting:
+        1) fit_one_component(lam_nev, flam_nev, ivar_nev, rsig_nev, \
+        sii_bestfit, rsig_sii)
+        2) fit_two_components(lam_nev, flam_nev, ivar_nev, rsig_nev, \
+        sii_bestfit, rsig_sii)
+    """
+
+    def fit_one_component(lam_nev, flam_nev, ivar_nev, rsig_nev, sii_bestfit, rsig_sii):
+        """
+        Function to fit a single component to [NeV]3346,3426 doublet.
+        The width of the [NeV] lines is kept fixed to [SII].
+        
+        Parameters
+        ----------
+        lam_nev : numpy array
+            Wavelength array of the [NeV] region where the fits need to be performed.
+
+        flam_nev : numpy array
+            Flux array of the spectra in the [NeV] region.
+
+        ivar_nev : numpy array
+            Inverse variance array of the spectra in the [NeV] region.
+
+        rsig_nev : float
+            Median Resolution element in the [NeV] region.
+
+        sii_bestfit: Astropy model
+            Best fit model for the [Sii] emission-lines.
+
+        rsig_sii : float
+            Median resolution element in the [SII] region.
+
+        Returns
+        -------
+        gfit : Astropy model
+            Best-fit 1-component model
+        """
+    
+        ############################ [NeV]3346, 3426 doublet fitting ###########################
+        ## Initial estimate of amplitude for [NeV]3346,3426
+    
+        amp_nev3346 = np.max(flam_nev[(lam_nev > 3344)&(lam_nev < 3348)])
+        amp_nev3426 = np.max(flam_nev[(lam_nev > 3424)&(lam_nev < 3428)])
+    
+        ## Initial estimates of standard deviation for [NeV]
+        sii_std = sii_bestfit['sii6716'].stddev.value
+        
+        std_nev3346 = (3346.79/sii_bestfit['sii6716'].mean.value)*sii_std
+        std_nev3426 = (3426.85/sii_bestfit['sii6716'].mean.value)*sii_std
+    
+        ## [Ne V] Gaussians
+        g_nev3346 = Gaussian1D(amplitude = amp_nev3346, mean = 3346.79, \
+                              stddev = std_nev3346, name = 'nev3346', \
+                              bounds = {'amplitude': (0.0, None)})
+        g_nev3426 = Gaussian1D(amplitude = amp_nev3426, mean = 3426.85, \
+                              stddev = std_nev3426, name = 'nev3426', \
+                              bounds = {'amplitude': (0.0, None)})
+    
+        ## Tie means of [NeV] doublet gaussians
+        def tie_mean_nev(model):
+            return ((3426.85/3346.79)*model['nev3346'].mean)
+    
+        g_nev3426.mean.tied = tie_mean_nev
+    
+        ## Tie standard deviation of all the narrow components
+        ## Intrinsic sigma values match with [SII]
+    
+        def tie_std_nev3346(model):
+            term1 = (model['nev3346'].mean/sii_bestfit['sii6716'].mean)**2
+            term2 = ((sii_bestfit['sii6716'].stddev)**2) - (rsig_sii**2)
+            term3 = (term1*term2)+(rsig_nev**2)
+            return (np.sqrt(term3))
+    
+        g_nev3346.stddev.tied = tie_std_nev3346
+        g_nev3346.stddev.fixed = True
+    
+        def tie_std_nev3426(model):
+            term1 = (model['nev3426'].mean/sii_bestfit['sii6716'].mean)**2
+            term2 = ((sii_bestfit['sii6716'].stddev)**2) - (rsig_sii**2)
+            term3 = (term1*term2)+(rsig_nev**2)
+            return (np.sqrt(term3))
+    
+        g_nev3426.stddev.tied = tie_std_nev3426
+        g_nev3426.stddev.fixed = True
+    
+        g_nev = g_nev3346 + g_nev3426
+    
+        ## Continuum
+        cont = Const1D(amplitude = 0.0, name = 'nev_cont')
+    
+        ## Initial Fit
+        g_init = cont + g_nev
+        fitter_1comp = fitting.LevMarLSQFitter()
+    
+        gfit = fitter_1comp(g_init, lam_nev, flam_nev, \
+                            weights = np.sqrt(ivar_nev), maxiter = 1000)
+    
+        ## Return the fit
+        return (gfit)
+
+####################################################################################################
+    def fit_two_components(lam_nev, flam_nev, ivar_nev, rsig_nev, sii_bestfit, rsig_sii):
+        """
+        Function to fit two components to the [NeV]3346, 3426 doublet.
+        The width of the narrow (outflow) [NeV] components is kept fixed to narrow (outflow [SII]).
+        This is when [SII] has two components.
+
+        Parameters 
+        ----------
+        lam_nev : numpy array
+            Wavelength array of the [NeV] region where the fits need to be performed.
+
+        flam_nev : numpy array
+            Flux array of the spectra in the [NeV] region.
+
+        ivar_nev : numpy array
+            Inverse variance array of the spectra in the [NeV] region.
+
+        rsig_nev : float
+            Median Resolution element in the [NeV] region.
+
+        sii_bestfit: Astropy model
+            Best fit model for the [Sii] emission-lines.
+
+        rsig_sii : float
+            Median resolution element in the [SII] region.
+
+        Returns
+        -------
+        gfit : Astropy model
+            Best-fit 2-component model
+        
+        """
+        ############################ [NeV]3346, 3426 doublet fitting ###########################
+        ## Initial estimate of amplitude for [NeV]3346,3426
+    
+        amp_nev3346 = np.max(flam_nev[(lam_nev > 3344)&(lam_nev < 3348)])
+        amp_nev3426 = np.max(flam_nev[(lam_nev > 3424)&(lam_nev < 3428)])
+    
+        ## Initial estimates of standard deviation for [NeV]
+        sii_std = sii_bestfit['sii6716'].stddev.value
+        sii_out_std = sii_bestfit['sii6716_out'].stddev.value
+        del_lam_sii = (sii_bestfit['sii6716_out'].mean.value - sii_bestfit['sii6716'].mean.value)
+        
+        std_nev3346 = (3346.79/sii_bestfit['sii6716'].mean.value)*sii_std
+        std_nev3426 = (3426.85/sii_bestfit['sii6716'].mean.value)*sii_std
+    
+        std_nev3346_out = (3346.79/sii_bestfit['sii6716_out'].mean.value)*sii_out_std
+        std_nev3426_out = (3426.85/sii_bestfit['sii6716_out'].mean.value)*sii_out_std
+    
+        ## [Ne V] Gaussians
+        g_nev3346 = Gaussian1D(amplitude = amp_nev3346, mean = 3346.79, \
+                              stddev = std_nev3346, name = 'nev3346', \
+                              bounds = {'amplitude': (0.0, None)})
+        g_nev3426 = Gaussian1D(amplitude = amp_nev3426, mean = 3426.85, \
+                              stddev = std_nev3426, name = 'nev3426', \
+                              bounds = {'amplitude': (0.0, None)})
+    
+        ## Tie means of [NeV] doublet gaussians
+        def tie_mean_nev(model):
+            return ((3426.85/3346.79)*model['nev3346'].mean)
+    
+        g_nev3426.mean.tied = tie_mean_nev
+    
+        ## Tie the standard deviation of all the narrow components
+        ## Intrinsic sigma values match with [SII]
+    
+        def tie_std_nev3346(model):
+            term1 = (model['nev3346'].mean/sii_bestfit['sii6716'].mean)**2
+            term2 = ((sii_bestfit['sii6716'].stddev)**2) - (rsig_sii**2)
+            term3 = (term1*term2)+(rsig_nev**2)
+            return (np.sqrt(term3))
+    
+        g_nev3346.stddev.tied = tie_std_nev3346
+        g_nev3346.stddev.fixed = True
+    
+        def tie_std_nev3426(model):
+            term1 = (model['nev3426'].mean/sii_bestfit['sii6716'].mean)**2
+            term2 = ((sii_bestfit['sii6716'].stddev)**2) - (rsig_sii**2)
+            term3 = (term1*term2)+(rsig_nev**2)
+            return (np.sqrt(term3))
+    
+        g_nev3426.stddev.tied = tie_std_nev3426
+        g_nev3426.stddev.fixed = True
+    
+        ## [NeV] outflow Gaussians
+        g_nev3346_out = Gaussian1D(amplitude = amp_nev3346/3, mean = 3346.79, \
+                                  stddev = std_nev3346_out, name = 'nev3346_out', \
+                                  bounds = {'amplitude' : (0.0, None)})
+    
+        g_nev3426_out = Gaussian1D(amplitude = amp_nev3426/3, mean = 3426.85, \
+                                  stddev = std_nev3426_out, name = 'nev3426_out', \
+                                  bounds = {'amplitude' : (0.0, None)})
+    
+        ## Tie relative positions of narrow and outflow components
+        def tie_relmean_nev3346_out(model):
+            return (((3346.79/6718.294)*del_lam_sii) + model['nev3346'].mean)
+    
+        g_nev3346_out.mean.tied = tie_relmean_nev3346_out
+    
+        def tie_relmean_nev3426_out(model):
+            return (((3426.85/6718.294)*del_lam_sii) + model['nev3426'].mean)
+    
+        g_nev3426_out.mean.tied = tie_relmean_nev3426_out
+    
+        ## Tie means of the two outflow Gaussians
+        def tie_mean_nev_out(model):
+            return ((3426.85/3346.79)*model['nev3346_out'].mean)
+    
+        g_nev3426_out.mean.tied = tie_mean_nev_out
+    
+        ## Tie the standard deviation of all the outflow components
+        ## Intrinsic sigma values match with [SII] outflow
+        def tie_std_nev3346_out(model):
+            term1 = (model['nev3346_out'].mean/sii_bestfit['sii6716_out'].mean)**2
+            term2 = ((sii_bestfit['sii6716_out'].stddev)**2) - (rsig_sii**2)
+            term3 = (term1*term2)+(rsig_nev**2)
+            return (np.sqrt(term3))
+    
+        g_nev3346_out.stddev.tied = tie_std_nev3346_out
+        g_nev3346_out.stddev.fixed = True
+    
+        def tie_std_nev3426_out(model):
+            term1 = (model['nev3426_out'].mean/sii_bestfit['sii6716_out'].mean)**2
+            term2 = ((sii_bestfit['sii6716_out'].stddev)**2) - (rsig_sii**2)
+            term3 = (term1*term2)+(rsig_nev**2)
+            return (np.sqrt(term3))
+    
+        g_nev3426_out.stddev.tied = tie_std_nev3426_out
+        g_nev3426_out.stddev.fixed = True
+    
+        g_nev = g_nev3346 + g_nev3346_out + g_nev3426 + g_nev3426_out
+    
+        ## Continuum
+        ## Continuum
+        cont = Const1D(amplitude = 0.0, name = 'nev_cont')
+    
+        ## Initial Fit
+        g_init = cont + g_nev
+        fitter_2comp = fitting.LevMarLSQFitter()
+    
+        gfit = fitter_2comp(g_init, lam_nev, flam_nev, \
+                            weights = np.sqrt(ivar_nev), maxiter = 1000)
+    
+        ## Return the fit
+        return (gfit)
+
+####################################################################################################
+####################################################################################################
+
 
 # class fit_highz_hb_oiii_lines:
 #     """
