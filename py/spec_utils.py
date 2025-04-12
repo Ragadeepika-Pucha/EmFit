@@ -12,7 +12,7 @@ The following functions are available:
     8) compute_resolution_sigma(coadd_spec)
 
 Author : Ragadeepika Pucha
-Version : 2025, April 03
+Version : 2025, April 11
 """
 ###################################################################################################
 
@@ -542,6 +542,8 @@ def get_fit_window(lam_rest, flam_rest, ivar_rest, rsigma, em_line):
         lam_ii = (lam_rest >= 6300)&(lam_rest <= 6700)
     elif (em_line == 'sii'):
         lam_ii = (lam_rest >= 6630)&(lam_rest <= 6900)
+    elif (em_line == 'nev'):
+        lam_ii = (lam_rest >= 3300)&(lam_rest <= 3450)
     elif (em_line == 'nii_ha_sii'):
         lam_ii = (lam_rest >= 6300)&(lam_rest <= 6900)
     elif (em_line == 'hb_oiii'):
