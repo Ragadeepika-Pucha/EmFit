@@ -11,7 +11,7 @@ The script consists of following functions:
     8) correct_for_rsigma(mean, std, rsig)
     
 Author : Ragadeepika Pucha
-Version : 2024, April 18
+Version : 2025, April 11
 """
 
 ###################################################################################################
@@ -82,7 +82,6 @@ def lamspace_to_velspace(del_lam, lam_ref, del_lam_err = None, lam_ref_err = Non
     lam_ref_err : float
         Error in reference wavelength
         Default is None
-        
         
     Returns
     -------
@@ -189,6 +188,8 @@ def compute_noise_emline(lam_rest, flam_rest, em_line):
         lam_ii = ((lam_rest >= 6330)&(lam_rest <= 6450))|((lam_rest >= 6650)&(lam_rest <= 6690))
     elif (em_line == 'sii'):
         lam_ii = ((lam_rest >= 6650)&(lam_rest <= 6690))|((lam_rest >= 6760)&(lam_rest <= 6800))
+    elif (em_line == 'nev'):
+        lam_ii = ((lam_rest >= 3300)&(lam_rest <= 3330))|((lam_rest >= 3370)&(lam_rest <= 3410))
     else:
         raise NameError('Emission-line not available!')
     
