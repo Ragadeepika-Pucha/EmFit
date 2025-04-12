@@ -33,6 +33,10 @@ The different functions are divided into different classes for different emissio
                                             broad_comp = True)
     15) fit_highz_hb_oiii_lines.fit_fixed_hb(lam_hb, flam_hb, ivar_hb, rsig_hb, oiii_bestfit, \
                                             rsig_oiii, priors = [4,5], broad_comp = True)
+    16) fit_nev_lines.fit_one_component(lam_nev, flam_nev, ivar_nev, rsig_nev, \
+                                        sii_bestfit, rsig_sii)
+    17) fit_nev_lines.fit_two_components(lam_nev, flam_nev, ivar_nev, rsig_nev, \
+                                        sii_bestfit, rsig_sii)
                                                         
 Author : Ragadeepika Pucha
 Version : 2025, April 11
