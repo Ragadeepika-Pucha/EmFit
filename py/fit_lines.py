@@ -2443,7 +2443,6 @@ class fit_nev_lines:
     
         ## Tie standard deviation of all the narrow components
         ## Intrinsic sigma values match with [SII]
-    
         def tie_std_nev3346(model):
             term1 = (model['nev3346'].mean/sii_bestfit['sii6716'].mean)**2
             term2 = ((sii_bestfit['sii6716'].stddev)**2) - (rsig_sii**2)

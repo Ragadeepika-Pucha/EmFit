@@ -1256,7 +1256,6 @@ def find_nev_best_fit(lam_nev, flam_nev, ivar_nev, rsig_nev, sii_bestfit, rsig_s
                                                   sii_bestfit, rsig_sii)
         n_dof = 6
 
-
     return (gfit, n_dof)
 
 ####################################################################################################
