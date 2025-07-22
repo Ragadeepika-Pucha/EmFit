@@ -243,7 +243,7 @@ class plot_spectra_fits:
         rchi2_hb, rchi2_oiii, rchi2_nii_ha, rchi2_sii = rchi2s
 
         fig = plt.figure(figsize = (40, 8))
-        plt.suptitle(title, fontsize = 20)
+        plt.suptitle(title)
         gs = fig.add_gridspec(5, 16)
         gs.update(hspace = 0.0)
 
@@ -574,7 +574,7 @@ class plot_spectra_fits:
             cont_nii_ha_sii = smooth_cont[nii_ha_sii_lam]
             
         fig = plt.figure(figsize = (40, 10))
-        plt.suptitle(title, fontsize = 20)
+        plt.suptitle(title)
         gs = fig.add_gridspec(5, 16)
         gs.update(hspace = 0.0)
 
@@ -802,7 +802,7 @@ class plot_fits_from_table:
         rchi2_sii = table['SII_RCHI2'].data[index]
 
         fig = plt.figure(figsize = (40, 8))
-        plt.suptitle(title, fontsize = 20)
+        plt.suptitle(title)
         gs = fig.add_gridspec(5, 16)
         gs.update(hspace = 0.0)
 
@@ -1099,7 +1099,7 @@ class plot_fits_from_table:
         nii_ha_sii_rchi2 = table['NII_HA_SII_RCHI2'].data[index]
 
         fig = plt.figure(figsize = (40, 10))
-        plt.suptitle(title, fontsize = 20)
+        plt.suptitle(title)
         gs = fig.add_gridspec(5, 16)
         gs.update(hspace = 0.0)
 
