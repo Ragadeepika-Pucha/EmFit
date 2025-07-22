@@ -14,7 +14,7 @@ It consists of the following functions:
     8) construct_fits_from_table.extreme_fit(t, index)
 
 Author : Ragadeepika Pucha
-Version : 2025, April 03
+Version : 2025, July 22nd
 """
 
 ####################################################################################################
@@ -192,7 +192,7 @@ def fit_spectra(specprod, survey, program, healpix, targetid, z):
     tgt['program'] = [program]
     tgt['healpix'] = [healpix]
     tgt['z'] = [z]
-    tgt['per_broad'] = [per_ha]
+    tgt['prob_broad'] = [per_ha]
     
     t_final = Table(tgt|hb_params|oiii_params|nii_ha_params|sii_params)
     
@@ -344,7 +344,7 @@ def fit_single_spectrum(table, model, lam, flam, ivar, \
     tgt['program'] = [program]
     tgt['healpix'] = [healpix]
     tgt['z'] = [z]
-    tgt['per_broad'] = [per_ha]
+    tgt['prob_broad'] = [per_ha]
 
     t_final = Table(tgt|hb_params|oiii_params|nii_ha_params|sii_params)
 
