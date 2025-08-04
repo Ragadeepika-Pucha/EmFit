@@ -12,7 +12,7 @@ The following functions are available:
     8) compute_resolution_sigma(coadd_spec)
 
 Author : Ragadeepika Pucha
-Version : 2025, April 03
+Version : 2025, August 04
 """
 ###################################################################################################
 
@@ -152,6 +152,7 @@ def get_fastspec_files(specprod, survey, program, healpix, targets):
     # Latest Fuji version: v3.2
     # Latest Guadalupe version: v3.1
     # Latest Iron version: v2.1
+    # Latest Loa version: v1.0
     
     if (specprod == 'fuji'):
         ver = 'v3.2'
@@ -159,10 +160,16 @@ def get_fastspec_files(specprod, survey, program, healpix, targets):
         ver = 'v3.1'
     elif (specprod == 'iron'):
         ver = 'v2.1'
+    elif (specprod == 'loa'):
+        ver = 'v1.0'
 
     ## Fastspecfit healpix directory
     ## Read-only file - using /dvs_ro/cfs/.. directory
-    fastspec_dir = f'/dvs_ro/cfs/cdirs/desi/spectro/fastspecfit/{specprod}/{ver}/healpix'
+    ## Added August 4, 2025 -- Loa directory follows a different path.
+    if (specprod == 'loa'):
+        fastspec_dir = f'/dvs_ro/cfs/cdirs/desi/vac/dr2/fastspecfit/{specprod}/{ver}/healpix'
+    else:
+        fastspec_dir = f'/dvs_ro/cfs/cdirs/desi/spectro/fastspecfit/{specprod}/{ver}/healpix'
     ## Specific healpix directory of the target
     target_dir = f'{survey}/{program}/{healpix//100}/{healpix}'
     ## Fastspecfit file directory of the target
@@ -246,10 +253,16 @@ def find_fastspec_models(specprod, survey, program, healpix, targetid, fspec = F
         ver = 'v3.1'
     elif (specprod == 'iron'):
         ver = 'v2.1'
+    elif (specprod == 'loa'):
+        ver = 'v1.0'
 
     ## Fastspecfit healpix directory
     ## Read-only file - using /dvs_ro/cfs/.. directory
-    fastspec_dir = f'/dvs_ro/cfs/cdirs/desi/spectro/fastspecfit/{specprod}/{ver}/healpix'
+    ## Added August 4, 2025 -- Loa directory follows a different path.
+    if (specprod == 'loa'):
+        fastspec_dir = f'/dvs_ro/cfs/cdirs/desi/vac/dr2/fastspecfit/{specprod}/{ver}/healpix'
+    else:
+        fastspec_dir = f'/dvs_ro/cfs/cdirs/desi/spectro/fastspecfit/{specprod}/{ver}/healpix'
     ## Specific healpix directory of the target
     target_dir = f'{survey}/{program}/{healpix//100}/{healpix}'
     ## Fastspecfit file directory of the target
