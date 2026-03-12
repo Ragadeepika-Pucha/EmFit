@@ -12,7 +12,7 @@ It consists of the following functions:
     7) fix_sigma(table)
     
 Author : Ragadeepika Pucha
-Version : 2025, March 02
+Version : 2026, March 12
 """
 
 ###################################################################################################
@@ -101,7 +101,7 @@ def get_bestfit_parameters(table, models, emline):
         
     emline : str
         Emission-line name of the models
-        Can be "hb", "oiii", "nii_ha", or "sii"
+        Can be "hb", "oiii", "oi", "nii_ha", or "sii"
         
     Returns
     -------
@@ -205,13 +205,13 @@ class get_allfit_params:
     def normal_fit(fits, lam, flam, rsig_vals):
         """
         Function to get all the required parameters for the
-        Hb, [OIII], [NII]+Ha, and [SII] fits.
+        Hb, [OIII], [OI], [NII]+Ha, and [SII] fits.
         This is for the normal source fitting method.
         
         Parameters
         ----------
         fits : list
-            List of [Hb, [OIII], [NII]+Ha, [SII]] bestfits
+            List of [Hb, [OIII], [OI], [NII]+Ha, [SII]] bestfits
             
         lam : array
             Wavelength array of the spectra
@@ -221,7 +221,7 @@ class get_allfit_params:
             
         rsig_vals : list
             List of Median resolution elements for 
-            [Hb, [OIII], [NII]+Ha, [SII]] regions.
+            [Hb, [OIII], [OI], [NII]+Ha, [SII]] regions.
             
         Returns
         -------
@@ -231,6 +231,10 @@ class get_allfit_params:
             
         oiii_params : dict
             Gaussian parameters of the [OIII] fit, 
+            followed by continuum and noise measurements.
+
+        oi_params : dict
+            Gaussian parameters of the [OI] fit,
             followed by continuum and noise measurements.
             
         nii_ha_params : dict
@@ -242,52 +246,57 @@ class get_allfit_params:
             followed by continuum and noise measurements.
         """
   
-        gfit_hb, gfit_oiii, gfit_nii_ha, gfit_sii = fits
-        rsig_hb, rsig_oiii, rsig_nii_ha, rsig_sii = rsig_vals
+        gfit_hb, gfit_oiii, gfit_oi, gfit_nii_ha, gfit_sii = fits
+        rsig_hb, rsig_oiii, rsig_oi, rsig_nii_ha, rsig_sii = rsig_vals
 
         ## Parameters for the fit
         hb_models = ['hb_n', 'hb_out', 'hb_b']
         oiii_models = ['oiii4959', 'oiii4959_out', 'oiii5007', 'oiii5007_out']
+        oi_models = ['oi6300', 'oi6300_out', 'oi6363', 'oi6363_out']
         nii_ha_models = ['nii6548', 'nii6548_out', 'nii6583', 'nii6583_out', \
                          'ha_n', 'ha_out', 'ha_b']
         sii_models = ['sii6716', 'sii6716_out', 'sii6731', 'sii6731_out']
 
         hb_params = get_parameters(gfit_hb, hb_models, rsig_hb)
         oiii_params = get_parameters(gfit_oiii, oiii_models, rsig_oiii)
+        oi_params = get_parameters(gfit_oi, oi_models, rsig_oi)
         nii_ha_params = get_parameters(gfit_nii_ha, nii_ha_models, rsig_nii_ha)
         sii_params = get_parameters(gfit_sii, sii_models, rsig_sii)
 
         ## Continuum
         hb_params['hb_continuum'] = [gfit_hb['hb_cont'].amplitude.value]
         oiii_params['oiii_continuum'] = [gfit_oiii['oiii_cont'].amplitude.value]
+        oi_params['oi_continuum'] = [gfit_oi['oi_cont'].amplitude.value]
         nii_ha_params['nii_ha_continuum'] = [gfit_nii_ha['nii_ha_cont'].amplitude.value]
         sii_params['sii_continuum'] = [gfit_sii['sii_cont'].amplitude.value]
 
         ## NOISE
         hb_noise = mfit.compute_noise_emline(lam, flam, 'hb')
         oiii_noise = mfit.compute_noise_emline(lam, flam, 'oiii')
+        oi_noise = mfit.compute_noise_emline(lam, flam, 'oi')
         nii_ha_noise = mfit.compute_noise_emline(lam, flam, 'nii_ha')
         sii_noise = mfit.compute_noise_emline(lam, flam, 'sii')
 
         hb_params['hb_noise'] = [hb_noise]
         oiii_params['oiii_noise'] = [oiii_noise]
+        oi_params['oi_noise'] = [oi_noise]
         nii_ha_params['nii_ha_noise'] = [nii_ha_noise]
         sii_params['sii_noise'] = [sii_noise]
 
-        return (hb_params, oiii_params, nii_ha_params, sii_params)
+        return (hb_params, oiii_params, oi_params, nii_ha_params, sii_params)
     
 ###################################################################################################
 
     def extreme_fit(fits, lam, flam, rsig_vals):
         """
         Function to get all the required parameters for the 
-        Hb, [OIII], [NII]+Ha, and [SII] fits.
+        Hb, [OIII], [OI], [NII]+Ha, and [SII] fits.
         This is for the extreme broad-line source fitting.
         
         Parameters
         ----------
         fits : list
-            List of [Hb+[OIII], [NII]+Ha+[SII]] bestfits
+            List of [Hb+[OIII], [OI], [NII]+Ha+[SII]] bestfits
             
         lam : array
             Wavelength array of the spectra
@@ -297,7 +306,7 @@ class get_allfit_params:
             
         rsig_vals : list
             List of Median resolution elements for 
-            [Hb+[OIII], [NII]+Ha+[SII]] regions.
+            [Hb+[OIII], [OI], [NII]+Ha+[SII]] regions.
             
         Returns
         -------
@@ -307,6 +316,10 @@ class get_allfit_params:
             
         oiii_params : dict
             Gaussian parameters of the [OIII] fit, 
+            followed by continuum and noise measurements.
+
+        oi_params : dict
+            Gaussian parameters of the [OI] fit,
             followed by continuum and noise measurements.
             
         nii_ha_params : dict
@@ -318,39 +331,44 @@ class get_allfit_params:
             followed by continuum and noise measurements.
         """
         
-        gfit_hb_oiii, gfit_nii_ha_sii = fits
-        rsig_hb_oiii, rsig_nii_ha_sii = rsig_vals
+        gfit_hb_oiii, gfit_oi, gfit_nii_ha_sii = fits
+        rsig_hb_oiii, rsig_oi, rsig_nii_ha_sii = rsig_vals
 
         ## Parameters for the fit
         hb_models = ['hb_n', 'hb_out', 'hb_b']
         oiii_models = ['oiii4959', 'oiii4959_out', 'oiii5007', 'oiii5007_out']
+        oi_models = ['oi6300', 'oi6300_out', 'oi6363', 'oi6363_out']
         nii_ha_models = ['nii6548', 'nii6548_out', 'nii6583', 'nii6583_out', \
                          'ha_n', 'ha_out', 'ha_b']
         sii_models = ['sii6716', 'sii6716_out', 'sii6731', 'sii6731_out']
 
         hb_params = get_parameters(gfit_hb_oiii, hb_models, rsig_hb_oiii)
         oiii_params = get_parameters(gfit_hb_oiii, oiii_models, rsig_hb_oiii)
+        oi_params = get_parameters(gfit_oi, oi_models, rsig_oi)
         nii_ha_params = get_parameters(gfit_nii_ha_sii, nii_ha_models, rsig_nii_ha_sii)
         sii_params = get_parameters(gfit_nii_ha_sii, sii_models, rsig_nii_ha_sii)
 
         ## Continuum
         hb_params['hb_continuum'] = [gfit_hb_oiii['hb_oiii_cont'].amplitude.value]
         oiii_params['oiii_continuum'] = [gfit_hb_oiii['hb_oiii_cont'].amplitude.value]
+        oi_params['oi_continuum'] = [gfit_oi['oi_cont'].amplitude.value]
         nii_ha_params['nii_ha_continuum'] = [gfit_nii_ha_sii['nii_ha_sii_cont'].amplitude.value]
         sii_params['sii_continuum'] = [gfit_nii_ha_sii['nii_ha_sii_cont'].amplitude.value]
 
         ## NOISE
         hb_noise = mfit.compute_noise_emline(lam, flam, 'hb')
         oiii_noise = mfit.compute_noise_emline(lam, flam, 'oiii')
+        oi_noise = mfit.compute_noise_emline(lam, flam, 'oi')
         nii_ha_noise = mfit.compute_noise_emline(lam, flam, 'nii_ha')
         sii_noise = mfit.compute_noise_emline(lam, flam, 'sii')
 
         hb_params['hb_noise'] = [hb_noise]
         oiii_params['oiii_noise'] = [oiii_noise]
+        oi_params['oi_noise'] = [oi_noise]
         nii_ha_params['nii_ha_noise'] = [nii_ha_noise]
         sii_params['sii_noise'] = [sii_noise]
 
-        return (hb_params, oiii_params, nii_ha_params, sii_params)
+        return (hb_params, oiii_params, oi_params, nii_ha_params, sii_params)
 
 ###################################################################################################
 ###################################################################################################
@@ -364,7 +382,7 @@ class get_allbestfit_params:
     
     def normal_fit(t_fits, ndofs_list, lam_rest, flam_rest, ivar_rest, rsigma):
         """
-        Function to get all the required parameters for the Hb, [OIII], [NII]+Ha, and [SII] 
+        Function to get all the required parameters for the Hb, [OIII], [OI], [NII]+Ha, and [SII] 
         bestfits from the table of parameters of iterations.
         This is for the normal source fitting method.
         
@@ -397,6 +415,10 @@ class get_allbestfit_params:
         oiii_params : dict
             Gaussian parameters of the [OIII] bestfit, 
             followed by NDOF and reduced chi2.
+
+        oi_params : dict
+            Gaussian parameters of the [OI] bestfit,
+            followed by NDOF and reduced chi2.
             
         nii_ha_params : dict
             Gaussian parameters of the [NII]+Ha bestfit, 
@@ -410,26 +432,28 @@ class get_allbestfit_params:
         ## Parameters for the bestfit
         hb_models = ['hb_n', 'hb_out', 'hb_b']
         oiii_models = ['oiii4959', 'oiii4959_out', 'oiii5007', 'oiii5007_out']
+        oi_models = ['oi6300', 'oi6300_out', 'oi6363', 'oi6363_out']
         nii_ha_models = ['nii6548', 'nii6548_out', 'nii6583', 'nii6583_out', \
                          'ha_n', 'ha_out', 'ha_b']
         sii_models = ['sii6716', 'sii6716_out', 'sii6731', 'sii6731_out']
 
         hb_params = get_bestfit_parameters(t_fits, hb_models, 'hb')
         oiii_params = get_bestfit_parameters(t_fits, oiii_models, 'oiii')
+        oi_params = get_bestfit_parameters(t_fits, oi_models, 'oi')
         nii_ha_params = get_bestfit_parameters(t_fits, nii_ha_models, 'nii_ha')
         sii_params = get_bestfit_parameters(t_fits, sii_models, 'sii')
         
         ## Join into a table
-        t_params = Table(hb_params|oiii_params|nii_ha_params|sii_params)
+        t_params = Table(hb_params|oiii_params|oi_params|nii_ha_params|sii_params)
         
         for col in t_params.colnames:
             t_params.rename_column(col, col.upper())
         
         ## N(DOF) of the different fits
-        ndof_hb, ndof_oiii, ndof_nii_ha, ndof_sii = ndofs_list
+        ndof_hb, ndof_oiii, ndof_oi, ndof_nii_ha, ndof_sii = ndofs_list
         
         ## Gaussian Fits
-        gfit_hb, gfit_oiii, \
+        gfit_hb, gfit_oiii, gfit_oi, \
         gfit_nii_ha, gfit_sii = emfit.construct_fits_from_table.normal_fit(t_params, 0)
 
         ## Reduced chi2 computation
@@ -439,6 +463,11 @@ class get_allbestfit_params:
         lam_oiii, flam_oiii, ivar_oiii, _ = spec_utils.get_fit_window(lam_rest, flam_rest, \
                                                                       ivar_rest, rsigma, \
                                                                       em_line = 'oiii')
+
+        lam_oi, flam_oi, ivar_oi, _ = spec_utils.get_fit_window(lam_rest, flam_rest, \
+                                                                ivar_rest, rsigma, \
+                                                                em_line = 'oi')
+        
         lam_nii_ha, flam_nii_ha, \
         ivar_nii_ha, _ = spec_utils.get_fit_window(lam_rest, flam_rest, \
                                                    ivar_rest, rsigma, \
@@ -452,6 +481,8 @@ class get_allbestfit_params:
                                       reduced_chi2 = True)
         rchi2_oiii = mfit.calculate_chi2(flam_oiii, gfit_oiii(lam_oiii), ivar_oiii, ndof_oiii, \
                                         reduced_chi2 = True)
+        rchi2_oi = mfit.calculate_chi2(flam_oi, gfit_oi(lam_oi), ivar_oi, ndof_oi, \
+                                      reduced_chi2 = True)
         rchi2_nii_ha = mfit.calculate_chi2(flam_nii_ha, gfit_nii_ha(lam_nii_ha), ivar_nii_ha, \
                                           ndof_nii_ha, reduced_chi2 = True)
         rchi2_sii = mfit.calculate_chi2(flam_sii, gfit_sii(lam_sii), ivar_sii, ndof_sii, \
@@ -463,6 +494,9 @@ class get_allbestfit_params:
         
         oiii_params['oiii_ndof'] = [ndof_oiii]
         oiii_params['oiii_rchi2'] = [rchi2_oiii]
+
+        oi_params['oi_ndof'] = [ndof_oi]
+        oi_params['oi_rchi2'] = [rchi2_oi]
         
         nii_ha_params['nii_ha_ndof'] = [ndof_nii_ha]
         nii_ha_params['nii_ha_rchi2'] = [rchi2_nii_ha]
@@ -477,13 +511,13 @@ class get_allbestfit_params:
         sii_params['nii_ha_sii_ndof'] = [int(0)]
         sii_params['nii_ha_sii_rchi2'] = [0.0]
         
-        return (hb_params, oiii_params, nii_ha_params, sii_params)
+        return (hb_params, oiii_params, oi_params, nii_ha_params, sii_params)
     
 ###################################################################################################
 
     def extreme_fit(t_fits, ndofs_list, lam_rest, flam_rest, ivar_rest, rsigma):
         """
-        Function to get all the required parameters for the Hb, [OIII], [NII]+Ha, and [SII] 
+        Function to get all the required parameters for the Hb, [OIII], [OI], [NII]+Ha, and [SII] 
         bestfits from the table of parameters of iterations.
         This is for the extreme BL source fitting method.
         
@@ -516,6 +550,10 @@ class get_allbestfit_params:
         oiii_params : dict
             Gaussian parameters of the [OIII] bestfit, 
             followed by NDOF and reduced chi2.
+
+        oi_params : dict
+            Gaussian parameters of the [OI] bestfit,
+            followed by NDOF and reduced chi2.
             
         nii_ha_params : dict
             Gaussian parameters of the [NII]+Ha bestfit, 
@@ -529,32 +567,40 @@ class get_allbestfit_params:
         ## Parameters for the bestfit
         hb_models = ['hb_n', 'hb_out', 'hb_b']
         oiii_models = ['oiii4959', 'oiii4959_out', 'oiii5007', 'oiii5007_out']
+        oi_models = ['oi6300', 'oi6300_out', 'oi6363', 'oi6363_out']
         nii_ha_models = ['nii6548', 'nii6548_out', 'nii6583', 'nii6583_out', \
                          'ha_n', 'ha_out', 'ha_b']
         sii_models = ['sii6716', 'sii6716_out', 'sii6731', 'sii6731_out']
 
         hb_params = get_bestfit_parameters(t_fits, hb_models, 'hb')
         oiii_params = get_bestfit_parameters(t_fits, oiii_models, 'oiii')
+        oi_params = get_bestfit_parameters(t_fits, oi_models, 'oi')
         nii_ha_params = get_bestfit_parameters(t_fits, nii_ha_models, 'nii_ha')
         sii_params = get_bestfit_parameters(t_fits, sii_models, 'sii')
         
         ## Join into a table
-        t_params = Table(hb_params|oiii_params|nii_ha_params|sii_params)
+        t_params = Table(hb_params|oiii_params|oi_params|nii_ha_params|sii_params)
         
         for col in t_params.colnames:
             t_params.rename_column(col, col.upper())
         
         ## N(DOF) of the different fits
-        ndof_hb_oiii, ndof_nii_ha_sii = ndofs_list
+        ndof_hb_oiii, ndof_oi, ndof_nii_ha_sii = ndofs_list
         
         ## Gaussian Fits
-        gfit_hb_oiii, gfit_nii_ha_sii = emfit.construct_fits_from_table.extreme_fit(t_params, 0)
+        gfit_hb_oiii, gfit_oi, \
+        gfit_nii_ha_sii = emfit.construct_fits_from_table.extreme_fit(t_params, 0)
 
         ## Reduced chi2 computation
         lam_hb_oiii, flam_hb_oiii,\
         ivar_hb_oiii, _ = spec_utils.get_fit_window(lam_rest, flam_rest, \
                                                     ivar_rest, rsigma, \
                                                     em_line = 'hb_oiii')
+        
+        lam_oi, flam_oi, ivar_oi, _ = spec_utils.get_fit_window(lam_rest, flam_rest, \
+                                                                ivar_rest, rsigma, \
+                                                                em_line = 'oi')
+        
         lam_nii_ha_sii, flam_nii_ha_sii, \
         ivar_nii_ha_sii, _ = spec_utils.get_fit_window(lam_rest, flam_rest, \
                                                        ivar_rest, rsigma, \
@@ -565,6 +611,9 @@ class get_allbestfit_params:
         rchi2_hb_oiii = mfit.calculate_chi2(flam_hb_oiii, gfit_hb_oiii(lam_hb_oiii), \
                                             ivar_hb_oiii, ndof_hb_oiii, \
                                             reduced_chi2 = True)
+
+        rchi2_oi = mfit.calculate_chi2(flam_oi, gfit_oi(lam_oi), ivar_oi, ndof_oi, \
+                                      reduced_chi2 = True)
         
         rchi2_nii_ha_sii = mfit.calculate_chi2(flam_nii_ha_sii, gfit_nii_ha_sii(lam_nii_ha_sii), \
                                                ivar_nii_ha_sii, ndof_nii_ha_sii, \
@@ -576,6 +625,9 @@ class get_allbestfit_params:
         
         oiii_params['oiii_ndof'] = [int(0)]
         oiii_params['oiii_rchi2'] = [0.0]
+
+        oi_params['oi_ndof'] = [ndof_oi]
+        oi_params['oi_rchi2'] = [rchi2_oi]
         
         nii_ha_params['nii_ha_ndof'] = [int(0)]
         nii_ha_params['nii_ha_rchi2'] = [0.0]
@@ -590,7 +642,7 @@ class get_allbestfit_params:
         sii_params['nii_ha_sii_ndof'] = [ndof_nii_ha_sii]
         sii_params['nii_ha_sii_rchi2'] = [rchi2_nii_ha_sii]
         
-        return (hb_params, oiii_params, nii_ha_params, sii_params)
+        return (hb_params, oiii_params, oi_params, nii_ha_params, sii_params)
     
 ###################################################################################################
 ###################################################################################################
@@ -630,6 +682,16 @@ def fix_sigma(table):
     if (table['OIII5007_OUT_SIGMA_FLAG'].data == 1):
         table['OIII4959_OUT_SIGMA'].data[0] = table['OIII5007_OUT_SIGMA'].data[0]
         
+    ######################################################################################
+    ## [OI] Sigma values
+    if ((table['OI6300_SIGMA_FLAG'].data == 1)|(table['OI6363_SIGMA_FLAG'].data == 1)):
+        table['OI6300_SIGMA'].data[0] = table['SII6716_SIGMA'].data[0]
+        table['OI6363_SIGMA'].data[0] = table['SII6716_SIGMA'].data[0]
+
+    if ((table['OI6300_OUT_SIGMA_FLAG'].data == 1)|(table['OI6363_OUT_SIGMA_FLAG'].data == 1)):
+        table['OI6300_OUT_SIGMA'].data[0] = table['SII6716_OUT_SIGMA'].data[0]
+        table['OI6363_OUT_SIGMA'].data[0] = table['SII6716_OUT_SIGMA'].data[0]
+    
     ######################################################################################
     ## Ha, Hb Sigma values
     if (table['HA_N_SIGMA_FLAG'].data == 1):

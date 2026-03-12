@@ -14,7 +14,7 @@ It consists of the following functions:
     8) construct_fits_from_table.extreme_fit(t, index)
 
 Author : Ragadeepika Pucha
-Version : 2025, July 22nd
+Version : 2026, March 12
 """
 
 ####################################################################################################
@@ -124,7 +124,6 @@ def fit_spectra(specprod, survey, program, healpix, targetid, z):
     
     ext_cond = ((sii_frac_cond)&(sii_diff_cond))|(sii_out_cond)
 
-    
     ## Original Fits
     if ext_cond:
         ## Fit using extreme-line fitting code
@@ -174,13 +173,13 @@ def fit_spectra(specprod, survey, program, healpix, targetid, z):
     ## Get bestfit parameters
     if ext_cond:
         ## Extreme-line fitting
-        hb_params, oiii_params, \
+        hb_params, oiii_params, oi_params, \
         nii_ha_params, sii_params = emp.get_allbestfit_params.extreme_fit(t_fits, ndofs_orig, \
                                                                           lam_rest, flam_rest, \
                                                                           ivar_rest, rsigma)
     else:
         ## Normal source fitting
-        hb_params, oiii_params, \
+        hb_params, oiii_params, oi_params, \
         nii_ha_params, sii_params = emp.get_allbestfit_params.normal_fit(t_fits, ndofs_orig, \
                                                                          lam_rest, flam_rest, \
                                                                          ivar_rest, rsigma)
@@ -194,7 +193,7 @@ def fit_spectra(specprod, survey, program, healpix, targetid, z):
     tgt['z'] = [z]
     tgt['prob_broad'] = [per_ha]
     
-    t_final = Table(tgt|hb_params|oiii_params|nii_ha_params|sii_params)
+    t_final = Table(tgt|hb_params|oiii_params|oi_params|nii_ha_params|sii_params)
     
     for col in t_final.colnames:
         t_final.rename_column(col, col.upper())
@@ -320,13 +319,13 @@ def fit_single_spectrum(table, model, lam, flam, ivar, \
     ## Get bestfit parameters
     if ext_cond:
         ## Extreme-line fitting
-        hb_params, oiii_params, \
+        hb_params, oiii_params, oi_params, \
         nii_ha_params, sii_params = emp.get_allbestfit_params.extreme_fit(t_fits, ndofs_orig, \
                                                                           lam_rest, flam_rest, \
                                                                           ivar_rest, rsigma)
     else:
         ## Normal source fitting
-        hb_params, oiii_params, \
+        hb_params, oiii_params, oi_params, \
         nii_ha_params, sii_params = emp.get_allbestfit_params.normal_fit(t_fits, ndofs_orig, \
                                                                          lam_rest, flam_rest, \
                                                                          ivar_rest, rsigma)
@@ -346,7 +345,7 @@ def fit_single_spectrum(table, model, lam, flam, ivar, \
     tgt['z'] = [z]
     tgt['prob_broad'] = [per_ha]
 
-    t_final = Table(tgt|hb_params|oiii_params|nii_ha_params|sii_params)
+    t_final = Table(tgt|hb_params|oiii_params|oi_params|nii_ha_params|sii_params)
 
     for col in t_final.colnames:
         t_final.rename_column(col, col.upper())
@@ -390,10 +389,10 @@ class fit_original_spectra:
             Table of the output parameters
             
         fits : list
-            List of [Hb, [OIII], [NII]+Ha, and [SII]] fits
+            List of [Hb, [OIII], [OI], [NII]+Ha, and [SII]] fits
             
         ndofs : list
-            List of number of degrees of freedom in [Hb, [OIII], [NII]+Ha, and [SII]] fits
+            List of number of degrees of freedom in [Hb, [OIII], [OI], [NII]+Ha, and [SII]] fits
             
         prior_sel : list
             Prior selected for the [NII]+Ha bestfit.
@@ -408,6 +407,12 @@ class fit_original_spectra:
         ivar_oiii, rsig_oiii = spec_utils.get_fit_window(lam_rest, flam_rest,\
                                                          ivar_rest, rsigma, \
                                                          em_line = 'oiii')
+
+        lam_oi, flam_oi, \
+        ivar_oi, rsig_oi = spec_utils.get_fit_window(lam_rest, flam_rest, \
+                                                    ivar_rest, rsigma, \
+                                                    em_line = 'oi')
+        
         lam_nii_ha, flam_nii_ha, \
         ivar_nii_ha, rsig_nii_ha = spec_utils.get_fit_window(lam_rest, flam_rest, \
                                                              ivar_rest, rsigma, \
@@ -422,6 +427,9 @@ class fit_original_spectra:
                                                             ivar_sii, rsig_sii)
         gfit_oiii, ndof_oiii = find_bestfit.find_oiii_best_fit(lam_oiii, flam_oiii, \
                                                                ivar_oiii, rsig_oiii)
+        gfit_oi, ndof_oi = find_bestfit.find_oi_best_fit(lam_oi, flam_oi, \
+                                                        ivar_oi, rsig_oi, \
+                                                        gfit_sii, rsig_sii)
         gfit_nii_ha, ndof_nii_ha, prior_sel = find_bestfit.find_nii_ha_best_fit(lam_nii_ha, \
                                                                                 flam_nii_ha, \
                                                                                 ivar_nii_ha, \
@@ -432,33 +440,36 @@ class fit_original_spectra:
                                                          ivar_hb, rsig_hb, \
                                                          gfit_nii_ha, rsig_nii_ha)
 
-        fits = [gfit_hb, gfit_oiii, gfit_nii_ha, gfit_sii]
-        ndofs = [ndof_hb, ndof_oiii, ndof_nii_ha, ndof_sii]
-        rsig_vals = [rsig_hb, rsig_oiii, rsig_nii_ha, rsig_sii]
+        fits = [gfit_hb, gfit_oiii, gfit_oi, gfit_nii_ha, gfit_sii]
+        ndofs = [ndof_hb, ndof_oiii, ndof_oi, ndof_nii_ha, ndof_sii]
+        rsig_vals = [rsig_hb, rsig_oiii, rsig_oi, rsig_nii_ha, rsig_sii]
         
         ## Compute reduced chi2:
         rchi2_sii = mfit.calculate_chi2(flam_sii, gfit_sii(lam_sii), ivar_sii, \
                                         ndof_sii, reduced_chi2 = True)
         rchi2_oiii = mfit.calculate_chi2(flam_oiii, gfit_oiii(lam_oiii), ivar_oiii, \
                                          ndof_oiii, reduced_chi2 = True)
+        rchi2_oi = mfit.calculate_chi2(flam_oi, gfit_oi(lam_oi), ivar_oi, \
+                                      ndof_oi, reduced_chi2 = True)
         rchi2_hb = mfit.calculate_chi2(flam_hb, gfit_hb(lam_hb), ivar_hb, \
                                        ndof_hb, reduced_chi2 = True)
         rchi2_nii_ha = mfit.calculate_chi2(flam_nii_ha, gfit_nii_ha(lam_nii_ha), \
                                                ivar_nii_ha, ndof_nii_ha, reduced_chi2 = True)
         
-        hb_params, oiii_params, \
+        hb_params, oiii_params, oi_params, \
         nii_ha_params, sii_params = emp.get_allfit_params.normal_fit(fits, lam_rest, \
                                                                      flam_rest, rsig_vals)
         
         hb_params['hb_rchi2'] = [rchi2_hb]
         oiii_params['oiii_rchi2'] = [rchi2_oiii]
+        oi_params['oi_rchi2'] = [rchi2_oi]
         nii_ha_params['nii_ha_rchi2'] = [rchi2_nii_ha]
         sii_params['sii_rchi2'] = [rchi2_sii]
         
         oiii_params['hb_oiii_rchi2'] = [0.0]
         sii_params['nii_ha_sii_rchi2'] = [0.0]
 
-        t_params = Table(hb_params|oiii_params|nii_ha_params|sii_params)
+        t_params = Table(hb_params|oiii_params|oi_params|nii_ha_params|sii_params)
 
         return (t_params, fits, ndofs, prior_sel)
     
@@ -488,10 +499,10 @@ class fit_original_spectra:
             Table of the output parameters
             
         fits : list
-            List of [Hb+[OIII] and [NII]+Ha+[SII]] fits
+            List of [Hb+[OIII], [OI], and [NII]+Ha+[SII]] fits
             
         ndofs : list
-            List of number of degrees of freedom in [Hb+[OIII] and [NII]+Ha+[SII]] fits
+            List of number of degrees of freedom in [Hb+[OIII], [OI], and [NII]+Ha+[SII]] fits
             
         prior_sel : list
             Prior selected for the [NII]+Ha+[SII] bestfit.
@@ -502,6 +513,11 @@ class fit_original_spectra:
         ivar_nii_ha_sii, rsig_nii_ha_sii = spec_utils.get_fit_window(lam_rest, flam_rest, \
                                                                      ivar_rest, rsigma, \
                                                                      em_line = 'nii_ha_sii')
+
+        lam_oi, flam_oi, \
+        ivar_oi, rsig_oi = spec_utils.get_fit_window(lam_rest, flam_rest, \
+                                                    ivar_rest, rsigma, \
+                                                    em_line = 'oi')
 
         lam_hb_oiii, flam_hb_oiii, \
         ivar_hb_oiii, rsig_hb_oiii  = spec_utils.get_fit_window(lam_rest, flam_rest, \
@@ -514,6 +530,11 @@ class fit_original_spectra:
                                                                            flam_nii_ha_sii, \
                                                                            ivar_nii_ha_sii, \
                                                                            rsig_nii_ha_sii)
+        gfit_oi, ndof_oi = find_bestfit.find_oi_best_fit(lam_oi, flam_oi, \
+                                                         ivar_oi, rsig_oi, \
+                                                         gfit_nii_ha_sii, \
+                                                         rsig_nii_ha_sii)
+        
         gfit_hb_oiii, ndof_hb_oiii = find_bestfit.find_hb_oiii_best_fit(lam_hb_oiii, \
                                                                         flam_hb_oiii, \
                                                                         ivar_hb_oiii, \
@@ -521,20 +542,21 @@ class fit_original_spectra:
                                                                         gfit_nii_ha_sii, \
                                                                         rsig_nii_ha_sii)
 
-        fits = [gfit_hb_oiii, gfit_nii_ha_sii]
-        ndofs = [ndof_hb_oiii, ndof_nii_ha_sii]
-        rsig_vals = [rsig_hb_oiii, rsig_nii_ha_sii]
+        fits = [gfit_hb_oiii, gfit_oi, gfit_nii_ha_sii]
+        ndofs = [ndof_hb_oiii, ndof_oi, ndof_nii_ha_sii]
+        rsig_vals = [rsig_hb_oiii, rsig_oi, rsig_nii_ha_sii]
         
         ## Compute reduced chi2
         rchi2_nii_ha_sii = mfit.calculate_chi2(flam_nii_ha_sii, gfit_nii_ha_sii(lam_nii_ha_sii), \
                                               ivar_nii_ha_sii, ndof_nii_ha_sii, reduced_chi2 = True)
+        rchi2_oi = mfit.calculate_chi2(flam_oi, gfit_oi(lam_oi), ivar_oi, ndof_oi, \
+                                      reduced_chi2 = True)
         rchi2_hb_oiii = mfit.calculate_chi2(flam_hb_oiii, gfit_hb_oiii(lam_hb_oiii), \
                                            ivar_hb_oiii, ndof_hb_oiii, reduced_chi2 = True)
 
-        hb_params, oiii_params, \
+        hb_params, oiii_params, oi_params, \
         nii_ha_params, sii_params = emp.get_allfit_params.extreme_fit(fits, lam_rest, \
                                                                       flam_rest, rsig_vals)
-        
         
         hb_params['hb_rchi2'] = [0.0]
         oiii_params['oiii_rchi2'] = [0.0]
@@ -542,9 +564,10 @@ class fit_original_spectra:
         sii_params['sii_rchi2'] = [0.0]
         
         oiii_params['hb_oiii_rchi2'] = [rchi2_hb_oiii]
+        oi_params['oi_rchi2'] = [rchi2_oi]
         sii_params['nii_ha_sii_rchi2'] = [rchi2_nii_ha_sii]
 
-        t_params = Table(hb_params|oiii_params|nii_ha_params|sii_params)
+        t_params = Table(hb_params|oiii_params|oi_params|nii_ha_params|sii_params)
 
         return (t_params, fits, ndofs, prior_sel)
 
@@ -577,7 +600,7 @@ class fit_spectra_iteration:
             1D array of Intrumental resolution elements
             
         fits_orig : list
-            List of original fits in the order - [Hb, [OIII], [NII]+Ha, [SII]]
+            List of original fits in the order - [Hb, [OIII], [OI], [NII]+Ha, [SII]]
             
         psel : list
             Prior selected for the [NII]+Ha bestfit
@@ -589,7 +612,7 @@ class fit_spectra_iteration:
         """
     
         ## Original Fits
-        hb_orig, oiii_orig, nii_ha_orig, sii_orig = fits_orig
+        hb_orig, oiii_orig, oi_orig, nii_ha_orig, sii_orig = fits_orig
 
         ## Fitting windows for the different emission-lines
         lam_hb, flam_hb, \
@@ -600,6 +623,12 @@ class fit_spectra_iteration:
         ivar_oiii, rsig_oiii = spec_utils.get_fit_window(lam_rest, flam_new, \
                                                          ivar_rest, rsigma, \
                                                          em_line = 'oiii')
+        
+        lam_oi, flam_oi, \
+        ivar_oi, rsig_oi = spec_utils.get_fit_window(lam_rest, flam_new, \
+                                                    ivar_rest, rsigma, \
+                                                    em_line = 'oi')
+        
         lam_nii_ha, flam_nii_ha, \
         ivar_nii_ha, rsig_nii_ha = spec_utils.get_fit_window(lam_rest, flam_new, \
                                                              ivar_rest, rsigma, \
@@ -639,6 +668,20 @@ class fit_spectra_iteration:
             ## two-component model
             gfit_oiii = fl.fit_oiii_lines.fit_two_components(lam_oiii, flam_oiii, \
                                                              ivar_oiii, rsig_oiii)
+
+        ################################### [OI] Fitting ##########################################
+        ## If [SII] has one component -- repeat one-component fits
+        ## If [SII] has two components -- repeat two-component model
+
+        if ('sii6716_out' not in sii_models):
+            ## one-component model
+            gfit_oi = fl.fit_oi_lines.fit_one_component(lam_oi, flam_oi, ivar_oi, rsig_oi, \
+                                                        gfit_sii, rsig_sii)
+
+        else:
+            ## two-component model
+            gfit_oi = fl.fit_oi_lines.fit_two_components(lam_oi, flam_oi, ivar_oi, rsig_oi, \
+                                                        gfit_sii, rsig_sii)
 
         ################################### [NII]+Ha Fitting #######################################
         ## Fit [NII]+Ha
@@ -741,14 +784,14 @@ class fit_spectra_iteration:
 
         ############################################################################################
 
-        fits = [gfit_hb, gfit_oiii, gfit_nii_ha, gfit_sii]
-        rsig_vals = [rsig_hb, rsig_oiii, rsig_nii_ha, rsig_sii]
+        fits = [gfit_hb, gfit_oiii, gfit_oi, gfit_nii_ha, gfit_sii]
+        rsig_vals = [rsig_hb, rsig_oiii, rsig_oi, rsig_nii_ha, rsig_sii]
 
-        hb_params, oiii_params, \
+        hb_params, oiii_params, oi_params, \
         nii_ha_params, sii_params = emp.get_allfit_params.normal_fit(fits, lam_rest, \
                                                                      flam_new, rsig_vals)
 
-        t_params = Table(hb_params|oiii_params|nii_ha_params|sii_params)
+        t_params = Table(hb_params|oiii_params|oi_params|nii_ha_params|sii_params)
 
         return (t_params)
     
@@ -773,7 +816,7 @@ class fit_spectra_iteration:
             1D array of Intrumental resolution elements
             
         fits_orig : list
-            List of original fits in the order - [Hb+[OIII], [NII]+Ha+[SII]]
+            List of original fits in the order - [Hb+[OIII], [OI], [NII]+Ha+[SII]]
             
         psel : list
             Prior selected for the [NII]+Ha+[SII] bestfit
@@ -793,6 +836,11 @@ class fit_spectra_iteration:
                                                                      ivar_rest, rsigma, \
                                                                      em_line = 'nii_ha_sii')
 
+        lam_oi, flam_oi, \
+        ivar_oi, rsig_oi = spec_utils.get_fit_window(lam_rest, flam_new, \
+                                                    ivar_rest, rsigma, \
+                                                    em_line = 'oi')
+
         lam_hb_oiii, flam_hb_oiii, \
         ivar_hb_oiii, rsig_hb_oiii = spec_utils.get_fit_window(lam_rest, flam_new, \
                                                                ivar_rest, rsigma, \
@@ -807,6 +855,12 @@ class fit_spectra_iteration:
                                                                           ivar_nii_ha_sii, \
                                                                           rsig_nii_ha_sii, \
                                                                           priors = psel)
+
+        ######################################## [OI] Fitting #####################################
+
+        ## Single-component fitting
+        gfit_oi = fl.fit_oi_lines.fit_one_component(lam_oi, flam_oi, ivar_oi, rsig_oi, \
+                                                   gfit_nii_ha_sii, rsig_nii_ha_sii)
 
         ############################## Hb + [OIII] Fitting #########################################
 
@@ -833,14 +887,14 @@ class fit_spectra_iteration:
 
         ############################################################################################
 
-        fits = [gfit_hb_oiii, gfit_nii_ha_sii]
-        rsig_vals = [rsig_hb_oiii, rsig_nii_ha_sii]
+        fits = [gfit_hb_oiii, gfit_oi, gfit_nii_ha_sii]
+        rsig_vals = [rsig_hb_oiii, rsig_oi, rsig_nii_ha_sii]
 
-        hb_params, oiii_params, \
+        hb_params, oiii_params, oi_params, \
         nii_ha_params, sii_params = emp.get_allfit_params.extreme_fit(fits, lam_rest, \
                                                                       flam_new, rsig_vals)
 
-        t_params = Table(hb_params|oiii_params|nii_ha_params|sii_params)
+        t_params = Table(hb_params|oiii_params|oi_params|nii_ha_params|sii_params)
 
         return (t_params)
 
@@ -871,7 +925,7 @@ class construct_fits_from_table:
         Returns
         -------
         fits : list
-            List of [Hb, [OIII], [NII]+Ha, [SII]] fits
+            List of [Hb, [OIII], [OI], [NII]+Ha, [SII]] fits
 
         """
         ######################################################################################
@@ -945,7 +999,45 @@ class construct_fits_from_table:
         for model in oiii_models:
             gfit_oiii = gfit_oiii + model
 
-          
+        ######################################################################################
+        ######################################################################################
+        ## [OI] model
+
+        ## [OI] continuum model
+        oi_cont = Const1D(amplitude = t['OI_CONTINUUM'].data[index], name = 'oi_cont')
+        ## Gaussian model for [OI]6300 narrow component
+        gfit_oi6300 = Gaussian1D(amplitude = t['OI6300_AMPLITUDE'].data[index], \
+                                mean = t['OI6300_MEAN'].data[index], \
+                                stddev = t['OI6300_STD'].data[index], name = 'oi6300')
+        ## Gaussian model for [OI]6300 narrow component
+        gfit_oi6363 = Gaussian1D(amplitude = t['OI6363_AMPLITUDE'].data[index], \
+                                mean = t['OI6363_MEAN'].data[index], \
+                                stddev = t['OI6363_STD'].data[index], name = 'oi6363')
+
+        gfit_oi = oi_cont + gfit_oi6300 + gfit_oi6363
+
+        oi_models = []
+
+        if (t['OI6300_OUT_MEAN'].data[index] != 0):
+            ## Gaussian model for [OI]6300 outflow component if available
+            gfit_oi6300_out = Gaussian1D(amplitude = t['OI6300_OUT_AMPLITUDE'].data[index], \
+                                        mean = t['OI6300_OUT_MEAN'].data[index], \
+                                        stddev = t['OI6300_OUT_STD'].data[index], \
+                                        name = 'oi6300_out')
+
+            ## Gaussian model for [OI]6363 outflow component if available
+            gfit_oi6363_out = Gaussian1D(amplitude = t['OI6363_OUT_AMPLITUDE'].data[index], \
+                                        mean = t['OI6363_OUT_MEAN'].data[index], \
+                                        stddev = t['OI6363_OUT_STD'].data[index], \
+                                        name = 'oi6363_out')
+
+            oi_models.append(gfit_oi6300_out)
+            oi_models.append(gfit_oi6363_out)
+
+        ## Total [OI] model
+        for model in oi_models:
+            gfit_oi = gfit_oi + model
+
         ######################################################################################
         ######################################################################################
         ## [NII] + Ha model
@@ -1040,7 +1132,7 @@ class construct_fits_from_table:
         for model in sii_models:
             gfit_sii = gfit_sii + model
 
-        fits_tab = [gfit_hb, gfit_oiii, gfit_nii_ha, gfit_sii]
+        fits_tab = [gfit_hb, gfit_oiii, gfit_oi, gfit_nii_ha, gfit_sii]
 
         return (fits_tab)
 
@@ -1114,6 +1206,22 @@ class construct_fits_from_table:
         for model in hb_oiii_models:
             gfit_hb_oiii = gfit_hb_oiii + model
 
+        ######################################################################################
+        ######################################################################################
+        ## [OI] model
+
+        ## [OI] continuum model
+        oi_cont = Const1D(amplitude = t['OI_CONTINUUM'].data[index], name = 'oi_cont')
+        ## Gaussian model for [OI]6300 narrow component
+        gfit_oi6300 = Gaussian1D(amplitude = t['OI6300_AMPLITUDE'].data[index], \
+                                mean = t['OI6300_MEAN'].data[index], \
+                                stddev = t['OI6300_STD'].data[index], name = 'oi6300')
+        ## Gaussian model for [OI]6300 narrow component
+        gfit_oi6363 = Gaussian1D(amplitude = t['OI6363_AMPLITUDE'].data[index], \
+                                mean = t['OI6363_MEAN'].data[index], \
+                                stddev = t['OI6363_STD'].data[index], name = 'oi6363')
+
+        gfit_oi = oi_cont + gfit_oi6300 + gfit_oi6363
     
         ######################################################################################
         ######################################################################################
@@ -1163,7 +1271,7 @@ class construct_fits_from_table:
         gfit_ha + gfit_sii6716 + gfit_sii6731
 
         ## Fits list
-        fits_tab = [gfit_hb_oiii, gfit_nii_ha_sii]
+        fits_tab = [gfit_hb_oiii, gfit_oi, gfit_nii_ha_sii]
 
         return (fits_tab)
 

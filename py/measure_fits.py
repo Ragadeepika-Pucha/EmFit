@@ -11,7 +11,7 @@ The script consists of following functions:
     8) correct_for_rsigma(mean, std, rsig)
     
 Author : Ragadeepika Pucha
-Version : 2024, April 18
+Version : 2026, March 12
 """
 
 ###################################################################################################
@@ -185,6 +185,8 @@ def compute_noise_emline(lam_rest, flam_rest, em_line):
         lam_ii = ((lam_rest >= 4700) & (lam_rest <= 4800))|((lam_rest >= 4920)&(lam_rest <= 4935))
     elif (em_line == 'oiii'):
         lam_ii = ((lam_rest >= 4900)&(lam_rest <= 4935))|((lam_rest >= 5050)&(lam_rest <= 5100))
+    elif (em_line == 'oi'):
+        lam_ii = ((lam_rest >= 6200)&(lam_rest <= 6290))|((lam_rest >= 6320)&(lam_rest <= 6340))
     elif (em_line == 'nii_ha'):
         lam_ii = ((lam_rest >= 6330)&(lam_rest <= 6450))|((lam_rest >= 6650)&(lam_rest <= 6690))
     elif (em_line == 'sii'):
