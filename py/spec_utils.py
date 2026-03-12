@@ -527,6 +527,7 @@ def get_fit_window(lam_rest, flam_rest, ivar_rest, rsigma, em_line):
         Emission-line(s) which needs to be fit
         'hb' for Hb
         'oiii' for [OIII]
+        'oi' for [OI]
         'nii_ha' for [NII]+Ha
         'sii' for [SII]
         'nii_ha_sii' for [NII]+Ha+[SII]
@@ -551,6 +552,8 @@ def get_fit_window(lam_rest, flam_rest, ivar_rest, rsigma, em_line):
         lam_ii = (lam_rest >= 4700)&(lam_rest <= 4930)
     elif (em_line == 'oiii'):
         lam_ii = (lam_rest >= 4900)&(lam_rest <= 5100)
+    elif (em_line == 'oi'):
+        lam_ii = (lam_rest >= 6270)&(lam_rest <= 6390)
     elif (em_line == 'nii_ha'):
         lam_ii = (lam_rest >= 6300)&(lam_rest <= 6700)
     elif (em_line == 'sii'):
