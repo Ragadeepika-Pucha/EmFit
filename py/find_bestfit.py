@@ -3,26 +3,28 @@ This script consists of functions for finding the bestfit for the emission-lines
 It consists of the following functions:
     1) find_sii_best_fit(lam_sii, flam_sii, ivar_sii, rsig_sii)
     2) find_oiii_best_fit(lam_oiii, flam_oiii, ivar_oiii, rsig_oiii)
-    3) nii_ha_fit.free_ha_one_component(lam_nii_ha, flam_nii_ha, ivar_nii_ha, rsig_nii_ha, \
+    3) find_oi_best_fit(lam_oi, flam_oi, ivar_oi, rsig_oi, \
+                        sii_bestfit, rsig_sii)
+    4) nii_ha_fit.free_ha_one_component(lam_nii_ha, flam_nii_ha, ivar_nii_ha, rsig_nii_ha, \
                                         sii_bestfit, rsig_sii)
-    4) nii_ha_fit.fixed_ha_one_component(lam_nii_ha, flam_nii_ha, ivar_nii_ha, rsig_nii_ha, \
+    5) nii_ha_fit.fixed_ha_one_component(lam_nii_ha, flam_nii_ha, ivar_nii_ha, rsig_nii_ha, \
                                         sii_bestfit, rsig_sii)
-    5) nii_ha_fit.fixed_ha_two_components(lam_nii_ha, flam_nii_ha, ivar_nii_ha, rsig_nii_ha, \
+    6) nii_ha_fit.fixed_ha_two_components(lam_nii_ha, flam_nii_ha, ivar_nii_ha, rsig_nii_ha, \
                                         sii_bestfit, rsig_sii)
-    6) find_nii_ha_best_fit(lam_nii_ha, flam_nii_ha, ivar_nii_ha, rsig_nii_ha, \
+    7) find_nii_ha_best_fit(lam_nii_ha, flam_nii_ha, ivar_nii_ha, rsig_nii_ha, \
                             sii_bestfit, rsig_sii)
-    7) find_hb_best_fit(lam_hb, flam_hb, ivar_hb, rsig_hb, nii_ha_bestfit, rsig_nii_ha)
-    8) find_free_hb_best_fit(lam_hb, flam_hb, ivar_hb, rsig_hb)
-    9) find_nii_ha_sii_best_fit(lam_nii_ha_sii, flam_nii_ha_sii, ivar_nii_ha_sii, \
+    8) find_hb_best_fit(lam_hb, flam_hb, ivar_hb, rsig_hb, nii_ha_bestfit, rsig_nii_ha)
+    9) find_free_hb_best_fit(lam_hb, flam_hb, ivar_hb, rsig_hb)
+    10) find_nii_ha_sii_best_fit(lam_nii_ha_sii, flam_nii_ha_sii, ivar_nii_ha_sii, \
                                 rsig_nii_ha_sii)
-    10) find_hb_oiii_best_fit(lam_hb_oiii, flam_hb_oiii, ivar_hb_oiii, rsig_hb_oiii, \
+    11) find_hb_oiii_best_fit(lam_hb_oiii, flam_hb_oiii, ivar_hb_oiii, rsig_hb_oiii, \
                             nii_ha_sii_bestfit, rsig_nii_ha_sii)
-    11) highz_fit.find_free_hb_best_fit(lam_hb, flam_hb, ivar_hb, rsig_hb)
-    12) highz_fit.find_fixed_hb_best_fit(lam_hb, flam_hb, ivar_hb, rsig_hb, \
+    12) highz_fit.find_free_hb_best_fit(lam_hb, flam_hb, ivar_hb, rsig_hb)
+    13) highz_fit.find_fixed_hb_best_fit(lam_hb, flam_hb, ivar_hb, rsig_hb, \
                                         oiii_bestfit, rsig_oiii)
 
 Author : Ragadeepika Pucha
-Version : 2024, October 24
+Version : 2026, March 12
 """
 
 ###################################################################################################
@@ -198,6 +200,59 @@ def find_oiii_best_fit(lam_oiii, flam_oiii, ivar_oiii, rsig_oiii):
         
     return (oiii_bestfit, n_dof)
     
+####################################################################################################
+####################################################################################################
+
+def find_oi_best_fit(lam_oi, flam_oi, ivar_oi, rsig_oi, sii_bestfit, rsig_sii):
+    """
+    Find the best fit for [OI]6300,6363 doublet. The number of components of [OI] is same as [SII].
+    The redshift (mean) and width of the lines are fixed to the [SII] components.
+
+    Parameters
+    ----------
+    lam_oi : numpy array
+        Wavelength array of the [OI] region.
+
+    flam_oi : numpy array
+        Flux array of the spectra in the [OI] region.
+
+    ivar_oi : numpy array
+        Inverse variance array of the spectra in the [OI] region.
+
+    rsig_oi : float
+        Median resolution element in the [OI] region.
+
+    sii_bestfit : Astropy model
+        Best fit model for the [SII] emission-lines.
+
+    rsig_sii : float
+        Median Resolution element in the [OI] region.
+
+    Returns
+    -------
+    oi_bestfit : Astropy model
+        Best-fit model for the [OI]6300,6363 doublet.
+
+    n_dof : int
+        Number of degrees of freedom
+    """
+    ## Functions change depending on the number of components in [SII]
+    sii_models = sii_bestfit.submodel_names
+
+    if (('sii6717_out' not in sii_models)&('sii6731_out' not in sii_models)):
+        ## One-component fit
+        oi_bestfit = fl.fit_oi_lines.fit_one_component(lam_oi, flam_oi, ivar_oi, \
+                                                       rsig_oi, sii_bestfit, rsig_sii)
+        n_dof = 2
+
+    else:
+        ## Two-component fit
+        oi_bestfit = fl.fit_oi_lines.fit_two_components(lam_oi, flam_oi, ivar_oi, \
+                                                        rsig_oi, sii_bestfit, rsig_sii)
+        n_dof = 3
+
+    return (oi_bestfit, n_dof)
+
 ####################################################################################################
 ####################################################################################################
 

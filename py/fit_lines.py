@@ -5,37 +5,41 @@ The different functions are divided into different classes for different emissio
     2) fit_sii_lines.fit_two_components(lam_sii, flam_sii, ivar_sii, rsig_sii)
     3) fit_oiii_lines.fit_one_component(lam_oiii, flam_oiii, ivar_oiii, rsig_oiii)
     4) fit_oiii_lines.fit_two_components(lam_oiii, flam_oiii, ivar_oiii, rsig_oiii)
-    5) fit_nii_ha_lines.fit_nii_free_ha_one_component(lam_nii_ha, flam_nii_ha, ivar_nii_ha, \
+    5) fit_oi_lines.fit_one_component(lam_oi, flam_oi, ivar_oi, rsig_oi, \
+                                      sii_bestfit, rsig_sii)
+    6) fit_oi_lines.fit_two_components(lam_oi, flam_oi, ivar_oi, rsig_oi, \
+                                       sii_bestfit, rsig_sii)
+    6) fit_nii_ha_lines.fit_nii_free_ha_one_component(lam_nii_ha, flam_nii_ha, ivar_nii_ha, \
                                                       rsig_nii_ha, sii_bestfit, rsig_sii, \
                                                       priors = [4,5], broad_comp = True)
-    6) fit_nii_ha_lines.fit_nii_ha_one_component(lam_nii_ha, flam_nii_ha, ivar_nii_ha, \
+    7) fit_nii_ha_lines.fit_nii_ha_one_component(lam_nii_ha, flam_nii_ha, ivar_nii_ha, \
                                                 rsig_nii_ha, sii_bestfit, rsig_sii, \
                                                 priors = [4,5], broad_comp = True)
-    7) fit_nii_ha_lines.fit_nii_ha_two_components(lam_nii_ha, flam_nii_ha, ivar_nii_ha, \
+    8) fit_nii_ha_lines.fit_nii_ha_two_components(lam_nii_ha, flam_nii_ha, ivar_nii_ha, \
                                                 rsig_nii_ha, sii_bestfit, rsig_sii, \
                                                 priors = [4,5], broad_comp = True)
-    8) fit_hb_line.fit_hb_one_component(lam_hb, flam_hb, ivar_hb, rsig_hb, \
+    9) fit_hb_line.fit_hb_one_component(lam_hb, flam_hb, ivar_hb, rsig_hb, \
                                         nii_ha_bestfit, rsig_nii_ha)
-    9) fit_hb_line.fit_hb_two_components(lam_hb, flam_hb, ivar_hb, rsig_hb, \
+    10) fit_hb_line.fit_hb_two_components(lam_hb, flam_hb, ivar_hb, rsig_hb, \
                                         nii_ha_bestfit, rsig_nii_ha)
-    10) fit_hb_line.fit_free_hb_one_component(lam_hb, flam_hb, ivar_hb, rsig_hb, \
+    11) fit_hb_line.fit_free_hb_one_component(lam_hb, flam_hb, ivar_hb, rsig_hb, \
                                             priors = [4,5], broad_comp = True)
-    11) fit_extreme_broadline_sources.fit_nii_ha_sii(lam_nii_ha_sii, flam_nii_ha_sii, \
+    12) fit_extreme_broadline_sources.fit_nii_ha_sii(lam_nii_ha_sii, flam_nii_ha_sii, \
                                                     ivar_nii_ha_sii, rsig_nii_ha_sii, \
                                                     priors = [5,8])
-    12) fit_extreme_broadline_sources.fit_hb_oiii_1comp(lam_hb_oiii, flam_hb_oiii, ivar_hb_oiii, \
+    13) fit_extreme_broadline_sources.fit_hb_oiii_1comp(lam_hb_oiii, flam_hb_oiii, ivar_hb_oiii, \
                                                         rsig_hb_oiii, nii_ha_sii_bestfit, \
                                                         rsig_nii_ha_sii)
-    13) fit_extreme_broadline_sources.fit_hb_oiii_2comp(lam_hb_oiii, flam_hb_oiii, ivar_hb_oiii, \
+    14) fit_extreme_broadline_sources.fit_hb_oiii_2comp(lam_hb_oiii, flam_hb_oiii, ivar_hb_oiii, \
                                                         rsig_hb_oiii, nii_ha_sii_bestfit, \
                                                         rsig_nii_ha_sii)
-    14) fit_highz_hb_oiii_lines.fit_free_hb(lam_hb, flam_hb, ivar_hb, rsig_hb, priors = [4,5], \
+    15) fit_highz_hb_oiii_lines.fit_free_hb(lam_hb, flam_hb, ivar_hb, rsig_hb, priors = [4,5], \
                                             broad_comp = True)
-    15) fit_highz_hb_oiii_lines.fit_fixed_hb(lam_hb, flam_hb, ivar_hb, rsig_hb, oiii_bestfit, \
+    16) fit_highz_hb_oiii_lines.fit_fixed_hb(lam_hb, flam_hb, ivar_hb, rsig_hb, oiii_bestfit, \
                                             rsig_oiii, priors = [4,5], broad_comp = True)
                                                         
 Author : Ragadeepika Pucha
-Version : 2024, October 24
+Version : 2026, March 12
 """
 
 ###################################################################################################
@@ -476,6 +480,299 @@ class fit_oiii_lines:
             gfit_2comp = cont + gfit_oiii4959 + gfit_oiii5007 + \
             gfit_oiii4959_out + gfit_oiii5007_out
             
+        return (gfit_2comp)
+
+####################################################################################################
+####################################################################################################
+
+class fit_oi_lines:
+    """
+    Different functions associated with [OI]6300,6363 doublet fitting:
+        1) fit_one_component(lam_oi, flam_oi, ivar_oi, rsig_oi, \
+                             sii_bestfit, rsig_sii)
+        2) fit_two_components(lam_oi, flam_oi, ivar_oi, rsig_oi, \
+                              sii_bestfit, rsig_sii)
+    """
+
+    def fit_one_component(lam_oi, flam_oi, ivar_oi, rsig_oi, sii_bestfit, rsig_sii):
+        """
+        Function to fit a single component to [OI]6300,6363 doublet.
+        The mean of [OI] lines is kept fixed relative to [SII].
+        The width of [OI] lines is kept fixed to [SII].
+
+        Parameters
+        ----------
+        lam_oi : numpy array
+            Wavelength array of the [OI] region.
+
+        flam_oi : numpy array
+            Flux array of the spectra in the [OI] region.
+
+        ivar_oi : numpy array
+            Inverse variance array of the spectra in the [OI] region.
+
+        rsig_oi : float
+            Median resolution element in the [OI] region.
+
+        sii_bestfit : Astropy model
+            Best fit model for the [SII] emission-lines.
+
+        rsig_sii : float
+            Median Resolution element in the [OI] region.
+
+        Returns
+        -------
+        gfit : Astropy model
+            Best-fit one-component model for the [OI]-doublet.
+        
+        """
+        ########################################## [OI]6300,6363 Doublet ###########################
+        ## Initial estimate of amplitude for [OI]6300,6363
+        amp_oi6300 = np.max(flam_oi[(lam_oi > 6301)&(lam_oi < 6303)])
+        amp_oi6363 = np.max(flam_oi[(lam_oi > 6364)&(lam_oi < 6366)])
+    
+        ## Initial estimates for standard deviation for [OI]
+        sii_std = sii_bestfit['sii6716'].stddev.value
+    
+        std_oi6300 = (6302.046/sii_bestfit['sii6716'].mean.value)*sii_std
+        std_oi6363 = (6365.535/sii_bestfit['sii6716'].mean.value)*sii_std
+    
+        ## [OI] Gaussians
+        g_oi6300 = Gaussian1D(amplitude = amp_oi6300, mean = 6302.046, \
+                             stddev = std_oi6300, name = 'oi6300', \
+                             bounds = {'amplitude' : (0.0, None)})
+    
+        g_oi6363 = Gaussian1D(amplitude = amp_oi6363, mean = 6365.535, \
+                             stddev = std_oi6363, name = 'oi6363', \
+                             bounds = {'amplitude' : (0.0, None)})
+    
+        ## Tie mean of [OI]6300 to [SII]6716
+        def tie_mean_oi6300(model):
+            return ((6302.046/6718.294)*sii_bestfit['sii6716'].mean)
+    
+        g_oi6300.mean.tied = tie_mean_oi6300
+        g_oi6300.mean.fixed = True
+    
+        ## Tie means of [OI] doublet gaussians
+        def tie_mean_oi6363(model):
+            return ((6365.535/6302.046)*model['oi6300'].mean)
+    
+        g_oi6363.mean.tied = tie_mean_oi6363
+    
+        ## Tie Amplitudes of two [OI] Gaussians
+        def tie_amp_oi(model):
+            return (model['oi6363'].amplitude*2.997)
+    
+        g_oi6300.amplitude.tied = tie_amp_oi
+    
+        ## Tie standard deviations of all the narrow components
+        ## Intrinsic sigma values match with [SII]
+        def tie_std_oi6300(model):
+            term1 = (model['oi6300'].mean/sii_bestfit['sii6716'].mean)**2
+            term2 = ((sii_bestfit['sii6716'].stddev)**2) - (rsig_sii**2)
+            term3 = (term1*term2)+(rsig_oi**2)
+    
+            return (np.sqrt(term3))
+    
+        g_oi6300.stddev.tied = tie_std_oi6300
+        g_oi6300.stddev.fixed = True
+    
+        def tie_std_oi6363(model):
+            term1 = (model['oi6363'].mean/sii_bestfit['sii6716'].mean)**2
+            term2 = ((sii_bestfit['sii6716'].stddev)**2) - (rsig_sii**2)
+            term3 = (term1*term2)+(rsig_oi**2)
+    
+            return (np.sqrt(term3))
+    
+        g_oi6363.stddev.tied = tie_std_oi6363
+        g_oi6363.stddev.fixed = True
+    
+        ## Continuum
+        cont = Const1D(amplitude = 0.0, name = 'oi_cont')
+    
+        ## Initial Gaussian Fit
+        g_init = cont + g_oi6300 + g_oi6363
+        fitter_1comp = fitting.LevMarLSQFitter()
+    
+        ## Fit
+        gfit_1comp = fitter_1comp(g_init, lam_oi, flam_oi, \
+                                 weights = np.sqrt(ivar_oi), maxiter = 1000)
+    
+        return (gfit_1comp)
+        
+####################################################################################################
+
+    def fit_two_components(lam_oi, flam_oi, ivar_oi, rsig_oi, sii_bestfit, rsig_sii):
+        """
+        Function to fit two components to [OI]6300,6363 doublet.
+        The mean of [OI] lines is kept fixed relative to [SII].
+        The width of [OI] lines is kept fixed to [SII].
+
+        Parameters
+        ----------
+        lam_oi : numpy array
+            Wavelength array of the [OI] region.
+
+        flam_oi : numpy array
+            Flux array of the spectra in the [OI] region.
+
+        ivar_oi : numpy array
+            Inverse variance array of the spectra in the [OI] region.
+
+        rsig_oi : float
+            Median resolution element in the [OI] region.
+
+        sii_bestfit : Astropy model
+            Best fit model for the [SII] emission-lines.
+
+        rsig_sii : float
+            Median Resolution element in the [OI] region.
+
+        Returns
+        -------
+        gfit : Astropy model
+            Best-fit two-component model for the [OI]-doublet.
+        
+        """
+        ########################################## [OI]6300,6363 Doublet ###########################
+        ## Initial estimate of amplitude for [OI]6300,6363
+        amp_oi6300 = np.max(flam_oi[(lam_oi > 6301)&(lam_oi < 6303)])
+        amp_oi6363 = np.max(flam_oi[(lam_oi > 6364)&(lam_oi < 6366)])
+    
+        ## Information from [SII] Bestfit
+        sii_std = sii_bestfit['sii6716'].stddev.value
+        sii_out_std = sii_bestfit['sii6716_out'].stddev.value
+        del_lam_sii = (sii_bestfit['sii6716_out'].mean.value - sii_bestfit['sii6716'].mean.value)
+    
+        ## Initial estimates of standard deviation for [OI]
+        std_oi6300 = (6302.046/sii_bestfit['sii6716'].mean.value)*sii_std
+        std_oi6363 = (6365.535/sii_bestfit['sii6716'].mean.value)*sii_std
+    
+        std_oi6300_out = (6302.046/sii_bestfit['sii6716_out'].mean.value)*sii_out_std
+        std_oi6363_out = (6365.535/sii_bestfit['sii6716_out'].mean.value)*sii_out_std
+    
+        ## [OI] Gaussians
+        g_oi6300 = Gaussian1D(amplitude = amp_oi6300, mean = 6302.046, \
+                             stddev = std_oi6300, name = 'oi6300', \
+                             bounds = {'amplitude' : (0.0, None)})
+    
+        g_oi6363 = Gaussian1D(amplitude = amp_oi6363, mean = 6365.535, \
+                             stddev = std_oi6363, name = 'oi6363', \
+                             bounds = {'amplitude' : (0.0, None)})
+    
+        ## Tie mean of [OI]6300 to [SII]6716
+        def tie_mean_oi6300(model):
+            return ((6302.046/6718.294)*sii_bestfit['sii6716'].mean)
+    
+        g_oi6300.mean.tied = tie_mean_oi6300
+        g_oi6300.mean.fixed = True
+    
+        ## Tie means of [OI] doublet gaussians
+        def tie_mean_oi6363(model):
+            return ((6365.535/6302.046)*model['oi6300'].mean)
+    
+        g_oi6363.mean.tied = tie_mean_oi6363
+    
+        ## Tie Amplitudes of two [OI] Gaussians
+        def tie_amp_oi(model):
+            return (model['oi6363'].amplitude*2.997)
+    
+        g_oi6300.amplitude.tied = tie_amp_oi
+    
+        ## Tie standard deviations of all the narrow components
+        ## Intrinsic sigma values match with [OI]
+        def tie_std_oi6300(model):
+            term1 = (model['oi6300'].mean/sii_bestfit['sii6716'].mean)**2
+            term2 = ((sii_bestfit['sii6716'].stddev)**2) - (rsig_sii**2)
+            term3 = (term1*term2)+(rsig_oi**2)
+    
+            return (np.sqrt(term3))
+    
+        g_oi6300.stddev.tied = tie_std_oi6300
+        g_oi6300.stddev.fixed = True
+    
+        def tie_std_oi6363(model):
+            term1 = (model['oi6363'].mean/sii_bestfit['sii6716'].mean)**2
+            term2 = ((sii_bestfit['sii6716'].stddev)**2) - (rsig_sii**2)
+            term3 = (term1*term2)+(rsig_oi**2)
+    
+            return (np.sqrt(term3))
+    
+        g_oi6363.stddev.tied = tie_std_oi6363
+        g_oi6363.stddev.fixed = True
+    
+        ## [OI] Outflow Gaussians
+        g_oi6300_out = Gaussian1D(amplitude = amp_oi6300/3, mean = 6302.046, \
+                                 stddev = std_oi6300_out, name = 'oi6300_out', \
+                                 bounds = {'amplitude' : (0.0, None)})
+    
+        g_oi6363_out = Gaussian1D(amplitude = amp_oi6363/3, mean = 6365.535, \
+                                 stddev = std_oi6363_out, name = 'oi6363_out', \
+                                 bounds = {'amplitude' : (0.0, None)})
+    
+        ## Tie relative positions of narrow and outflow components
+        def tie_relmean_oi6300_out(model):
+            return (((6302.046/6718.294)*del_lam_sii) + model['oi6300'].mean)
+    
+        g_oi6300_out.mean.tied = tie_relmean_oi6300_out
+        
+        def tie_relmean_oi6363_out(model):
+            return (((6365.535/6718.294)*del_lam_sii) + model['oi6363'].mean)
+    
+        g_oi6363_out.mean.tied = tie_relmean_oi6363_out
+    
+        ## Tie mean of [OI]6300,out to [SII]6716, out
+        def tie_mean_oi6300_out(model):
+            return ((6302.046/6718.284)*sii_bestfit['sii6716_out'].mean)
+    
+        g_oi6300_out.mean.tied = tie_mean_oi6300_out
+        g_oi6300_out.mean.fixed = True
+    
+        ## Tie mean of [OI] Outflow Gaussians
+        def tie_mean_oi6363_out(model):
+            return ((6365.535/6302.046)*model['oi6300_out'].mean)
+    
+        g_oi6363_out.mean.tied = tie_mean_oi6363_out
+    
+        ## Tie amplitudes of two [OI] Gaussians
+        def tie_amp_oi_out(model):
+            return (model['oi6363_out'].amplitude*2.997)
+    
+        g_oi6300_out.amplitude.tied = tie_amp_oi_out
+    
+        ## Tie standard deviations of the outflow components
+        ## Intrinsic sigma values match with [SII]out
+        def tie_std_oi6300_out(model):
+            term1 = (model['oi6300_out'].mean/sii_bestfit['sii6716_out'].mean)**2
+            term2 = ((sii_bestfit['sii6716_out'].stddev)**2) - (rsig_sii**2)
+            term3 = (term1*term2)+(rsig_oi**2)
+    
+            return (np.sqrt(term3))
+    
+        g_oi6300_out.stddev.tied = tie_std_oi6300_out
+        g_oi6300_out.stddev.fixed = True
+    
+        def tie_std_oi6363_out(model):
+            term1 = (model['oi6363_out'].mean/sii_bestfit['sii6716_out'].mean)**2
+            term2 = ((sii_bestfit['sii6716_out'].stddev)**2) - (rsig_sii**2)
+            term3 = (term1*term2)+(rsig_oi**2)
+    
+            return (np.sqrt(term3))
+    
+        g_oi6363_out.stddev.tied = tie_std_oi6363_out
+        g_oi6363_out.stddev.fixed = True
+    
+        ## Continuum
+        cont = Const1D(amplitude = 0.0, name = 'oi_cont')
+    
+        ## Initial Gaussian Fit
+        g_init = cont + g_oi6300 + g_oi6300_out + g_oi6363 + g_oi6363_out
+        fitter_2comp = fitting.LevMarLSQFitter()
+    
+        ## Fit
+        gfit_2comp = fitter_2comp(g_init, lam_oi, flam_oi, \
+                                 weights = np.sqrt(ivar_oi), maxiter = 1000)
+    
         return (gfit_2comp)
 
 ####################################################################################################
