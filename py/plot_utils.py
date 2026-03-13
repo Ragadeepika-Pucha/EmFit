@@ -13,7 +13,7 @@ The following functions are available:
     9) plot_from_params_highz(table, index, title = None)
 
 Author : Ragadeepika Pucha
-Version : 2025, March 30
+Version : 2026, March 12
 
 """
 
@@ -736,27 +736,28 @@ class plot_fits_from_table:
         1) normal_fit(table, index, title = None)
         2) extreme_fit(table, index, title = None)
     """
+    
     def normal_fit(table, index, ha_xlim = None, title = None):
         """
         Function to plot the spectra+fits from the table of parameters for default cases.
-
+    
         Parameters
         ----------
         table : Astropy table
             Table of fit parameters
-
+    
         index : int
             Index number of the source in the table
-
+    
         title : str
             Title of the plot. Default is None.
-
+    
         Returns
         -------
         fig : Figure
             Figure with spectra + best-fit model
         """
-
+    
         ## Required variables
         specprod = table['SPECPROD'].astype(str).data[index]
         survey = table['SURVEY'].astype(str).data[index]
@@ -764,86 +765,95 @@ class plot_fits_from_table:
         healpix = table['HEALPIX'].data[index]
         targetid = table['TARGETID'].data[index]
         z = table['Z'].data[index]
-
+    
         ## Accessing the rest-frame spectra
         _, lam_rest, flam_rest, ivar_rest = spec_utils.get_emline_spectra(specprod, survey, program, healpix, \
                                                                          targetid, z, rest_frame = True)
         if (title == None):
             title = f'TARGETID: {targetid}; z : {round(z, 2)}'
-
+    
         ## Select [OIII] region 
         oiii_lam = (lam_rest >= 4900)&(lam_rest <= 5050)
         lam_oiii = lam_rest[oiii_lam]
         flam_oiii = flam_rest[oiii_lam]
-
+    
+        ## Select [OI] region
+        oi_lam = (lam_rest >= 6270)&(lam_rest <= 6390)
+        lam_oi = lam_rest[oi_lam]
+        flam_oi = flam_rest[oi_lam]
+    
         ## Select [NII] + Ha region 
         nii_lam = (lam_rest >= 6400)&(lam_rest <= 6700)
         lam_nii = lam_rest[nii_lam]
         flam_nii = flam_rest[nii_lam]
-
+    
         ## Select Hb region 
         hb_lam = (lam_rest >= 4800)&(lam_rest <= 4930)
         lam_hb = lam_rest[hb_lam]
         flam_hb = flam_rest[hb_lam]
-
+    
         ## Select [SII] region 
         sii_lam = (lam_rest >= 6650)&(lam_rest <= 6800)
         lam_sii = lam_rest[sii_lam]
         flam_sii = flam_rest[sii_lam]
-
+    
         ## Construct Fits
         fits = emfit.construct_fits_from_table.normal_fit(table, index)
         ## Separate the fits 
-        hb_fit, oiii_fit, nii_ha_fit, sii_fit = fits
+        hb_fit, oiii_fit, oi_fit, nii_ha_fit, sii_fit = fits
         ## Reduced chi2 values from the table
         rchi2_hb = table['HB_RCHI2'].data[index]
         rchi2_oiii = table['OIII_RCHI2'].data[index]
+        rchi2_oi = table['OI_RCHI2'].data[index]
         rchi2_nii_ha = table['NII_HA_RCHI2'].data[index]
         rchi2_sii = table['SII_RCHI2'].data[index]
-
-        fig = plt.figure(figsize = (40, 8))
-        plt.suptitle(title)
-        gs = fig.add_gridspec(5, 16)
+    
+        fig = plt.figure(figsize = (30, 16))
+        gs = fig.add_gridspec(11, 12)
         gs.update(hspace = 0.0)
-
+        
         ## Subplots for Hb
         hb = fig.add_subplot(gs[0:4, 0:4])
-        hb_res = fig.add_subplot(gs[4:, 0:4], sharex = hb)
-
+        hb_res = fig.add_subplot(gs[4:5, 0:4], sharex = hb)
+        
         ## Subplots for [OIII]
         oiii = fig.add_subplot(gs[0:4, 4:8])
-        oiii_res = fig.add_subplot(gs[4:, 4:8], sharex = oiii)
-
+        oiii_res = fig.add_subplot(gs[4:5, 4:8], sharex = oiii)
+        
+        ## Subplots for [OI]
+        oi = fig.add_subplot(gs[0:4, 8:12])
+        oi_res = fig.add_subplot(gs[4:5, 8:12], sharex = oi)
+        
         ## Subplots for [NII]+Ha
-        ha = fig.add_subplot(gs[0:4, 8:12])
-        ha_res = fig.add_subplot(gs[4:, 8:12], sharex = ha)
-
+        ha = fig.add_subplot(gs[6:10, 2:6])
+        ha_res = fig.add_subplot(gs[10:, 2:6], sharex = ha)
+        
         ## Subplots for [SII]
-        sii = fig.add_subplot(gs[0:4, 12:])
-        sii_res = fig.add_subplot(gs[4:, 12:], sharex = sii)
-
+        sii = fig.add_subplot(gs[6:10, 6:10])
+        sii_res = fig.add_subplot(gs[10:, 6:10], sharex = sii)
+    
         ############################################################################################
         ############################## Hb spectra + models #########################################
-
+    
         hb.plot(lam_hb, flam_hb, color = 'k')
         hb.plot(lam_hb, hb_fit(lam_hb), color = 'r', lw = 4.0, ls = '--')
         hb.set(ylabel = '$F_{\lambda}$')
         plt.setp(hb.get_xticklabels(), visible = False)
-
+    
         ## Hb fits
         n_hb = hb_fit.n_submodels
-
+    
         ## Hb continuum
         hb_cont = hb_fit['hb_cont'].amplitude.value
-
+    
         ## Narrow component of Hb
         hb.plot(lam_hb, hb_fit['hb_n'](lam_hb) + hb_cont, color = 'orange', lw = 2.0)
         sig_hb_n = table['HB_N_SIGMA'].data[index]
-
+    
         hb.annotate('$\sigma \\rm(H\\beta;n)$ = '+str(round(sig_hb_n, 1))+' km/s', xy = (0.55, 0.9), \
                     xycoords = (hb.get_yaxis_transform(), hb.get_xaxis_transform()), \
                     fontsize = 20, color = 'k')
-
+    
         ## Outflow component of Hb, if available 
         if ('hb_out' in hb_fit.submodel_names):
             hb.plot(lam_hb, hb_fit['hb_out'](lam_hb) + hb_cont, color = 'orange', lw = 2.0)
@@ -851,7 +861,7 @@ class plot_fits_from_table:
             hb.annotate('$\sigma \\rm(H\\beta;out)$ = '+str(round(sig_hb_out, 1))+' km/s', xy = (0.55, 0.8), \
                         xycoords = (hb.get_yaxis_transform(), hb.get_xaxis_transform()), \
                         fontsize = 20, color = 'k')
-
+    
         ## Broad component of Hb, if available
         if ('hb_b' in hb_fit.submodel_names):
             hb.plot(lam_hb, hb_fit['hb_b'](lam_hb) + hb_cont, color = 'blue', lw = 2.0)
@@ -859,7 +869,7 @@ class plot_fits_from_table:
             hb.annotate('$\sigma \\rm(H\\beta;b)$ = '+str(round(sig_hb_b, 1))+' km/s', xy = (0.55, 0.7), \
                         xycoords = (hb.get_yaxis_transform(), hb.get_xaxis_transform()), \
                         fontsize = 20, color = 'k')
-
+    
         ## Rchi2 value
         hb.annotate('$H\\beta$', xy = (0.03, 0.9), \
                     xycoords = (hb.get_yaxis_transform(), hb.get_xaxis_transform()), \
@@ -867,37 +877,37 @@ class plot_fits_from_table:
         hb.annotate('$\chi^{2}_{red}$ = '+str(round(rchi2_hb, 2)), xy = (0.03, 0.8), \
                     xycoords = (hb.get_yaxis_transform(), hb.get_xaxis_transform()), \
                     fontsize = 20, color = 'k')
-
+    
         ## Hb fit residuals
         res_hb = (flam_hb - hb_fit(lam_hb))/flam_hb
         hb_res.scatter(lam_hb, res_hb, color = 'k', marker = '.', alpha = 0.7)
         hb_res.axhline(0.0, color = 'grey', ls = ':')
         hb_res.set(yticks = [0])
         hb_res.set(xlabel = '$\lambda_{rest}$', ylim = [-10, 10])
-
+    
         ############################################################################################
         ############################## [OIII] spectra + models #####################################
-
+    
         oiii.plot(lam_oiii, flam_oiii, color = 'k')
         oiii.plot(lam_oiii, oiii_fit(lam_oiii), color = 'r', lw = 4.0, ls = '--')
         oiii.set(ylabel = '$F_{\lambda}$')
         plt.setp(oiii.get_xticklabels(), visible = False)
-
+    
         n_oiii = oiii_fit.n_submodels
         names_oiii = oiii_fit.submodel_names
-
+    
         ### [OIII] continuum
         oiii_cont = oiii_fit['oiii_cont'].amplitude.value
-
+    
         ## [OIII]4959,5007 components, including outflow components, if available
         for ii in range(1, n_oiii):
             oiii.plot(lam_oiii, oiii_fit[names_oiii[ii]](lam_oiii) + oiii_cont, color = 'orange', lw = 2.0)
-
+    
         sig_oiii = table['OIII5007_SIGMA'].data[index]
         oiii.annotate('$\sigma$ ([OIII]) = '+str(round(sig_oiii, 1))+' km/s', xy = (0.03, 0.7), \
                       xycoords = (oiii.get_yaxis_transform(), oiii.get_xaxis_transform()), \
                       fontsize = 20, color = 'k')
-
+    
         ## Outflow component sigma values if available
         if ('oiii4959_out' in names_oiii):
             sig_oiii_out = table['OIII5007_OUT_SIGMA'].data[index]
@@ -905,7 +915,7 @@ class plot_fits_from_table:
                           xy = (0.03, 0.6), \
                           xycoords = (oiii.get_yaxis_transform(), oiii.get_xaxis_transform()), \
                           fontsize = 20, color = 'k')
-
+    
         ## Rchi2 value
         oiii.annotate('[OIII]4959,5007', xy = (0.03, 0.9), \
                       xycoords = (oiii.get_yaxis_transform(), oiii.get_xaxis_transform()),\
@@ -914,16 +924,61 @@ class plot_fits_from_table:
                       xy = (0.03, 0.8), \
                       xycoords = (oiii.get_yaxis_transform(), oiii.get_xaxis_transform()), \
                       fontsize = 20, color = 'k')
-
+    
         ## [OIII] fit residuals
         res_oiii = (flam_oiii - oiii_fit(lam_oiii))/flam_oiii
         oiii_res.scatter(lam_oiii, res_oiii, color = 'k', marker = '.', alpha = 0.7)
         oiii_res.axhline(0.0, color = 'k', ls = ':')
         oiii_res.set(xlabel = '$\lambda_{rest}$', ylim = [-10, 10], yticks = [0])
-
+    
+        ############################################################################################
+        ################################## [OI] spectra + models ###################################
+    
+        oi.plot(lam_oi, flam_oi, color = 'k')
+        oi.plot(lam_oi, oi_fit(lam_oi), color = 'r', lw = 4.0, ls = '--')
+        oi.set(ylabel = '$F_{\lambda}$')
+        plt.setp(oi.get_xticklabels(), visible = False)
+    
+        n_oi = oi_fit.n_submodels
+        names_oi = oi_fit.submodel_names
+    
+        ## [OI] continuum
+        oi_cont = oi_fit['oi_cont'].amplitude.value
+    
+        ## [OI]6300,6363 components, including outflow components, if available
+        for ii in range(1, n_oi):
+            oi.plot(lam_oi, oi_fit[names_oi[ii]](lam_oi) + oi_cont, color = 'orange', lw = 2.0)
+    
+        sig_oi = table['OI6300_SIGMA'].data[index]
+        oi.annotate('$\sigma$ ([OI]) = '+str(round(sig_oi, 1))+' km/s', xy = (0.6, 0.9), \
+                   xycoords = (oi.get_yaxis_transform(), oi.get_xaxis_transform()), \
+                   fontsize = 20, color = 'k')
+    
+        ## Outflow component sigma values if available
+        if ('oi6300_out' in names_oi):
+            sig_oi_out = table['OI6300_OUT_SIGMA'].data[index]
+            oi.annotate('$\sigma$ ([OI];out) = '+str(round(sig_oi_out, 1))+' km/s', \
+                        xy = (0.6, 0.8), \
+                        xycoords = (oi.get_yaxis_transform(), oi.get_xaxis_transform()), \
+                        fontsize = 20, color = 'k')
+    
+        ## Rchi2 value
+        oi.annotate('[OI]6300,6363', xy = (0.03, 0.9), \
+                    xycoords = (oi.get_yaxis_transform(), oi.get_xaxis_transform()), \
+                    fontsize = 20, color = 'k')
+        oi.annotate('$\chi^{2}_{red}$ = '+str(round(rchi2_oi, 2)), xy = (0.03, 0.8), \
+                    xycoords = (oi.get_yaxis_transform(), oi.get_xaxis_transform()), \
+                    fontsize = 20, color = 'k')
+    
+        ## [OI] fit residuals
+        res_oi = (flam_oi - oi_fit(lam_oi))/flam_oi
+        oi_res.scatter(lam_oi, res_oi, color = 'k', marker = '.', alpha = 0.7)
+        oi_res.axhline(0.0, color = 'k', ls = ':')
+        oi_res.set(xlabel = '$\lambda_{rest}$', ylim = [-10,10], yticks = [0])
+    
         ############################################################################################
         ############################## [NII]+Ha spectra + models ###################################
-
+    
         ha.plot(lam_nii, flam_nii, color = 'k')
         ha.plot(lam_nii, nii_ha_fit(lam_nii), color = 'r', lw = 4.0, ls = '--')
         ha.set(ylabel = '$F_{\lambda}$')
@@ -932,52 +987,52 @@ class plot_fits_from_table:
         if (ha_xlim is not None):
             ha.set(xlim = ha_xlim)
         
-
+    
         ## [NII] + Ha continuum
         nii_ha_cont = nii_ha_fit['nii_ha_cont'].amplitude.value
-
+    
         ## Plot narrow components
         ha.plot(lam_nii, nii_ha_fit['nii6548'](lam_nii) + nii_ha_cont, color = 'orange', lw = 2.0)
         ha.plot(lam_nii, nii_ha_fit['nii6583'](lam_nii) + nii_ha_cont, color = 'orange', lw = 2.0)
         ha.plot(lam_nii, nii_ha_fit['ha_n'](lam_nii) + nii_ha_cont, color = 'orange', lw = 2.0)
-
+    
         sig_nii = table['NII6583_SIGMA'].data[index]
         ha.annotate('$\sigma$ ([NII]) = \n'+str(round(sig_nii, 1))+' km/s', \
                     xy = (0.75, 0.85), xycoords = (ha.get_yaxis_transform(), ha.get_xaxis_transform()), \
                     fontsize = 20, color = 'k')
-
+    
         sig_ha = table['HA_N_SIGMA'].data[index]
         ha.annotate('$\sigma \\rm(H\\alpha)$ = \n'+str(round(sig_ha, 1))+' km/s', \
                     xy = (0.75, 0.7), xycoords = (ha.get_yaxis_transform(), ha.get_xaxis_transform()), \
                     fontsize = 20, color = 'k')
-
+    
         ## Outflow components, if available
         if ('nii6548_out' in nii_ha_fit.submodel_names):
             ha.plot(lam_nii, nii_ha_fit['nii6548_out'](lam_nii) + nii_ha_cont, color = 'orange', lw = 2.0)
             ha.plot(lam_nii, nii_ha_fit['nii6583_out'](lam_nii) + nii_ha_cont, color = 'orange', lw = 2.0)
             ha.plot(lam_nii, nii_ha_fit['ha_out'](lam_nii) + nii_ha_cont, color = 'orange', lw = 2.0)
-
+    
             sig_nii_out = table['NII6583_OUT_SIGMA'].data[index]
             ha.annotate('$\sigma$ ([NII];out) = \n'+str(round(sig_nii_out, 1))+' km/s', \
                         xy = (0.75, 0.55), xycoords = (ha.get_yaxis_transform(), ha.get_xaxis_transform()), \
                         fontsize = 20, color = 'k')
-
+    
             sig_ha_out = table['HA_OUT_SIGMA'].data[index]
             ha.annotate('$\sigma \\rm(H\\alpha;out)$ = \n'+str(round(sig_ha_out, 1))+' km/s', \
                         xy = (0.75, 0.4), xycoords = (ha.get_yaxis_transform(), ha.get_xaxis_transform()), \
                         fontsize = 20, color = 'k')
-
+    
         ## Broad component, if available
         if ('ha_b' in nii_ha_fit.submodel_names):
             ha.plot(lam_nii, nii_ha_fit['ha_b'](lam_nii) + nii_ha_cont, color = 'blue', lw = 2.0)
-
+    
             sig_ha_b = table['HA_B_SIGMA'].data[index]
             fwhm_ha_b = 2.355*sig_ha_b
             ha.annotate('FWHM $\\rm(H\\alpha;b)$ = \n'+str(round(fwhm_ha_b, 1))+' km/s', xy = (0.03, 0.65),\
                         xycoords = (ha.get_yaxis_transform(), ha.get_xaxis_transform()), \
                         fontsize = 20, color = 'k')
-
-
+    
+    
         ## Rchi2 value
         ha.annotate('$H\\alpha$ + [NII]6548,6583', xy = (0.03, 0.9),\
                     xycoords = (ha.get_yaxis_transform(), ha.get_xaxis_transform()),\
@@ -985,7 +1040,7 @@ class plot_fits_from_table:
         ha.annotate('$\chi^{2}_{red}$ = '+str(round(rchi2_nii_ha, 2)),\
                     xy = (0.03, 0.8), xycoords = (ha.get_yaxis_transform(), ha.get_xaxis_transform()),\
                     fontsize = 20, color = 'k')
-
+    
         ## [NII]+Ha fit residuals
         res_nii = (flam_nii - nii_ha_fit(lam_nii))/flam_nii
         ha_res.scatter(lam_nii, res_nii, color = 'k', marker = '.', alpha = 0.7)
@@ -993,38 +1048,38 @@ class plot_fits_from_table:
         ha_res.set(xlabel = '$\lambda_{rest}$', ylim = [-10, 10], yticks = [0])
         if (ha_xlim is not None):
             ha_res.set(xlim = ha_xlim)
-
+    
         ############################################################################################
         ############################## [SII] spectra + models ######################################
-
+    
         sii.plot(lam_sii, flam_sii, color = 'k')
         sii.plot(lam_sii, sii_fit(lam_sii), color = 'r', lw = 4.0, ls = '--')
         sii.set(ylabel = '$F_{\lambda}$')
         plt.setp(sii.get_xticklabels(), visible = False)
-
+    
         ## [SII] fits
         n_sii = sii_fit.n_submodels
         names_sii = sii_fit.submodel_names
-
+    
         ## [SII] continuum
         sii_cont = sii_fit['sii_cont'].amplitude.value
-
+    
         ## All components of [SII], outflow components included, if available
         for ii in range(1, n_sii):
             sii.plot(lam_sii, sii_fit[names_sii[ii]](lam_sii) + sii_cont, color = 'orange')
-
+    
         sig_sii = table['SII6716_SIGMA'].data[index]
         sii.annotate('$\sigma$ ([SII]) = '+str(round(sig_sii, 1))+' km/s', xy = (0.6, 0.9), \
                      xycoords = (sii.get_yaxis_transform(), sii.get_xaxis_transform()), \
                      fontsize = 20, color = 'k')
-
+    
         ## Outflow sigma values, if available
         if ('sii6716_out' in names_sii):
             sig_sii_out = table['SII6716_OUT_SIGMA'].data[index]
             sii.annotate('$\sigma$ ([SII];out) = '+str(round(sig_sii_out, 1))+' km/s', xy = (0.6, 0.8), \
                          xycoords = (sii.get_yaxis_transform(), sii.get_xaxis_transform()), \
                          fontsize = 20, color = 'k')
-
+    
         ## Rchi2 value
         sii.annotate('[SII]6716, 6731', xy = (0.03, 0.9),\
                      xycoords = (sii.get_yaxis_transform(), sii.get_xaxis_transform()),\
@@ -1032,7 +1087,7 @@ class plot_fits_from_table:
         sii.annotate('$\chi^{2}_{red}$ = '+str(round(rchi2_sii, 2)), xy = (0.03, 0.8), \
                      xycoords = (sii.get_yaxis_transform(), sii.get_xaxis_transform()),\
                      fontsize = 20, color = 'k')
-
+    
         ## [SII] fit residuals
         res_sii = (flam_sii - sii_fit(lam_sii))/flam_sii
         sii_res.scatter(lam_sii, res_sii, color = 'k', marker = '.', alpha = 0.7)
@@ -1040,7 +1095,7 @@ class plot_fits_from_table:
         sii_res.set(xlabel = '$\lambda_{rest}$', ylim = [-10, 10], yticks = [0])
         plt.tight_layout()
         plt.close()
-
+    
         return (fig)
     
 ####################################################################################################
