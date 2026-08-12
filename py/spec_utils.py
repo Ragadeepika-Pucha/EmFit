@@ -22,7 +22,7 @@ from astropy.table import Table
 import fitsio
 
 from desiutil.dust import dust_transmission
-from desispec.io import read_spectra
+from desispec.io.spectra import read_spectra         ## Changed August 11, 2026
 from desispec.coaddition import coadd_cameras
 
 import plot_utils
@@ -67,9 +67,12 @@ def find_desi_spectra(specprod, survey, program, healpix, targets):
     coadd_dir = f'{hpx_dir}/{target_dir}'
     ## Coadded file name
     coadd_file = f'{coadd_dir}/coadd-{survey}-{program}-{healpix}.fits'
+
+    ## Skipping HDUs that are not needed
+    hdus_to_skip = ['EXP_FIBERMAP', 'SCORES', 'EXTRA_CATALOG', 'MASK']         ## Added August 11, 2026
     
     ## Get spectra
-    spec = read_spectra(coadd_file).select(targets = targets)
+    spec = read_spectra(coadd_file, skip_hdus = hdus_to_skip).select(targets = targets)   ## Changed August 11, 2026
     
     return (spec)
 
@@ -593,7 +596,7 @@ def compute_resolution_sigma(coadd_spec):
     res_matrix = coadd_spec.resolution_data['brz']
     lam = coadd_spec.wave['brz']
     
-    ## Dimensionaily of the resolution data array
+    ## Dimensionality of the resolution data array
     nspec, nband, npix = res_matrix.shape
     
     ## Create arrays for calculating Line Spread Function moments
